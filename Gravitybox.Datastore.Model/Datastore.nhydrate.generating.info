@@ -1,0 +1,11 @@
+<configuration GeneratedVersion="60" ModelerVersion="6.0.0.205">
+  <excludeList>
+    <item>nHydrate.Generator.Datasite.DatasiteProjectGenerator</item>
+    <item>nHydrate.Generator.EFDAL.EFDALProjectGenerator</item>
+    <item>nHydrate.Generator.EFDAL.Interfaces.EFDALInterfaceProjectGenerator</item>
+    <item>nHydrate.Generator.XSDSchema.XSDProjectGenerator</item>
+  </excludeList>
+  <generatedModuleList />
+  <tableFacadeSettings />
+  <columnFacadeSettings />
+</configuration>

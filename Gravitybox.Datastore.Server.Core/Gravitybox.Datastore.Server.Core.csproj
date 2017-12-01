@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{D21202B7-97D4-46D6-A5FA-3EDB4F6ADDB2}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Gravitybox.Datastore.Server.Core</RootNamespace>
+    <AssemblyName>Gravitybox.Datastore.Server.Core</AssemblyName>
+    <TargetFrameworkVersion>v4.6.2</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
+    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
+    <RestorePackages>true</RestorePackages>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="EntityFramework, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\EntityFramework.6.1.3\lib\net45\EntityFramework.dll</HintPath>
+    </Reference>
+    <Reference Include="EntityFramework.SqlServer, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\EntityFramework.6.1.3\lib\net45\EntityFramework.SqlServer.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.SqlServer.Types, Version=10.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.SqlServer.Types.10.50.1600.1\lib\Net20\Microsoft.SqlServer.Types.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Polly, Version=5.3.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Polly.5.3.1\lib\net45\Polly.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.ComponentModel.DataAnnotations" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.IO.Compression.FileSystem" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.ServiceModel" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\Docs\AssemblyInfoGlobal.cs">
+      <Link>Properties\AssemblyInfoGlobal.cs</Link>
+    </Compile>
+    <Compile Include="ConcurrentHashSet.cs" />
+    <Compile Include="Constants.cs" />
+    <Compile Include="DataManager.cs" />
+    <Compile Include="DimensionCache.cs" />
+    <Compile Include="Housekeeping\HkClearRepositoryLog.cs" />
+    <Compile Include="Housekeeping\HousekeepingMonitor.cs" />
+    <Compile Include="Housekeeping\IHousekeepingTask.cs" />
+    <Compile Include="InternalResults.cs" />
+    <Compile Include="PatchesDomain.cs" />
+    <Compile Include="QueryBuilders\AggregateBuilder.cs" />
+    <Compile Include="QueryBuilders\CountBuilder.cs" />
+    <Compile Include="QueryBuilders\DataQueryGroupedResults.cs" />
+    <Compile Include="QueryBuilders\IQueryBuilder.cs" />
+    <Compile Include="QueryBuilders\ListDimensionBuilder.cs" />
+    <Compile Include="Locking.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="QueryBuilders\ListDimensionCache.cs" />
+    <Compile Include="QueryBuilders\NormalDimensionBuilder.cs" />
+    <Compile Include="QueryBuilders\ObjectConfiguration.cs" />
+    <Compile Include="QueryBuilders\RecordBuilder.cs" />
+    <Compile Include="QueryBuilders\RepositoryHealthMonitor.cs" />
+    <Compile Include="QueryCache.cs" />
+    <Compile Include="QueryLogManager.cs" />
+    <Compile Include="QueryThreaded.cs" />
+    <Compile Include="RepositoryManager.cs" />
+    <Compile Include="SqlHelper.cs" />
+    <Compile Include="LockLogger.cs" />
+    <Compile Include="StatLogger.cs" />
+    <Compile Include="SystemCore.cs" />
+    <Compile Include="RepositoryStats.cs" />
+    <Compile Include="TableStatsMaintenace.cs" />
+    <Compile Include="UpdateScheduleResults.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Gravitybox.Datastore.Common\Gravitybox.Datastore.Common.csproj">
+      <Project>{0fd1eab9-5fc3-480a-bd54-6c88c8f5de41}</Project>
+      <Name>Gravitybox.Datastore.Common</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Gravitybox.Datastore.Server.Interfaces\Gravitybox.Datastore.Server.Interfaces.csproj">
+      <Project>{22c2f327-06fc-4c0e-8a72-3224d55459aa}</Project>
+      <Name>Gravitybox.Datastore.Server.Interfaces</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Gravitybox.Datastore.EFDAL\Gravitybox.Datastore.EFDAL.csproj">
+      <Project>{b3cb7678-00f7-429d-84fe-c9d3c090bb2f}</Project>
+      <Name>Gravitybox.Datastore.EFDAL</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PreBuildEvent>
+    </PreBuildEvent>
+  </PropertyGroup>
+  <PropertyGroup>
+    <PostBuildEvent>
+    </PostBuildEvent>
+  </PropertyGroup>
+  <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Enable NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('$(SolutionDir)\.nuget\NuGet.targets')" Text="$([System.String]::Format('$(ErrorText)', '$(SolutionDir)\.nuget\NuGet.targets'))" />
+  </Target>
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

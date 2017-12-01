@@ -1,0 +1,39 @@
+<?xml version="1.0"?>
+<configuration type="entity" name="Repository" id="5b0293c0-a352-41ee-9688-cb9ea27b3823" allowaudittracking="0" allowcreateaudit="1" allowmodifyaudit="1" allowtimestamp="1" codefacade="" immutable="0" enforceprimarykey="1" isassociative="0" typedentity="None" schema="dbo" generatesdoublederived="0" isgenerated="1" isTenant="0">
+		<summary><![CDATA[]]></summary>
+		<fieldset>
+				<field id="4202cd66-a924-4012-825a-912413894bc8" name="Changestamp" nullable="0" datatype="Int" identity="None" codefacade="" dataformatstring="" default="0" defaultisfunc="0" formula="" isgenerated="1" isindexed="0" isprimarykey="0" Iscalculated="0" isunique="0" length="4" scale="0" sortorder="10" isreadonly="0" category="" collate="" friendlyname="" isbrowsable="1" max="NaN" min="NaN" validationexpression="" obsolete="0">
+						<summary><![CDATA[Value is reset on when a repository is changed]]></summary>
+				</field>
+				<field id="6c1a84f8-8a5b-47e4-b2e4-d7de70384055" name="DefinitionData" nullable="1" datatype="NVarChar" identity="None" codefacade="" dataformatstring="" default="" defaultisfunc="0" formula="" isgenerated="1" isindexed="0" isprimarykey="0" Iscalculated="0" isunique="0" length="0" scale="0" sortorder="12" isreadonly="0" category="" collate="" friendlyname="" isbrowsable="1" max="NaN" min="NaN" validationexpression="" obsolete="0">
+						<summary><![CDATA[]]></summary>
+				</field>
+				<field id="fc8557b0-94a3-4e8f-baa8-9bd7adf27aa6" name="Dimensionstamp" nullable="0" datatype="Int" identity="None" codefacade="" dataformatstring="" default="0" defaultisfunc="0" formula="" isgenerated="1" isindexed="0" isprimarykey="0" Iscalculated="0" isunique="0" length="4" scale="0" sortorder="11" isreadonly="0" category="" collate="" friendlyname="" isbrowsable="1" max="NaN" min="NaN" validationexpression="" obsolete="0">
+						<summary><![CDATA[Value is reset on when the dimensions of a repository changed]]></summary>
+				</field>
+				<field id="d6e151d6-a8ae-426b-b58f-f98f96e8bdbe" name="IsDeleted" nullable="0" datatype="Bit" identity="None" codefacade="" dataformatstring="" default="0" defaultisfunc="0" formula="" isgenerated="1" isindexed="1" isprimarykey="0" Iscalculated="0" isunique="0" length="1" scale="0" sortorder="8" isreadonly="0" category="" collate="" friendlyname="" isbrowsable="1" max="NaN" min="NaN" validationexpression="" obsolete="0">
+						<summary><![CDATA[Determines if this item has been marked for deletion]]></summary>
+				</field>
+				<field id="4ccd287e-ab70-48d8-9fa5-17db62654a12" name="IsInitialized" nullable="0" datatype="Bit" identity="None" codefacade="" dataformatstring="" default="1" defaultisfunc="0" formula="" isgenerated="1" isindexed="1" isprimarykey="0" Iscalculated="0" isunique="0" length="1" scale="0" sortorder="9" isreadonly="0" category="" collate="" friendlyname="" isbrowsable="1" max="NaN" min="NaN" validationexpression="" obsolete="0">
+						<summary><![CDATA[Determines if the item has been fully created]]></summary>
+				</field>
+				<field id="d9921cc7-3a21-4b6f-a0b7-6a5346c29a04" name="ItemCount" nullable="0" datatype="Int" identity="None" codefacade="" dataformatstring="" default="" defaultisfunc="0" formula="" isgenerated="1" isindexed="0" isprimarykey="0" Iscalculated="0" isunique="0" length="4" scale="0" sortorder="2" isreadonly="0" category="" collate="" friendlyname="" isbrowsable="1" max="NaN" min="NaN" validationexpression="" obsolete="0">
+						<summary><![CDATA[]]></summary>
+				</field>
+				<field id="059a83b1-e54a-4dad-afde-9e2ce04fdf6e" name="Name" nullable="0" datatype="NVarChar" identity="None" codefacade="" dataformatstring="" default="" defaultisfunc="0" formula="" isgenerated="1" isindexed="0" isprimarykey="0" Iscalculated="0" isunique="0" length="50" scale="0" sortorder="5" isreadonly="0" category="" collate="" friendlyname="" isbrowsable="1" max="NaN" min="NaN" validationexpression="" obsolete="0">
+						<summary><![CDATA[]]></summary>
+				</field>
+				<field id="fa965f87-ff7f-42eb-8072-7417078b4c18" name="ParentId" nullable="1" datatype="Int" identity="None" codefacade="" dataformatstring="" default="" defaultisfunc="0" formula="" isgenerated="1" isindexed="1" isprimarykey="0" Iscalculated="0" isunique="0" length="4" scale="0" sortorder="13" isreadonly="0" category="" collate="" friendlyname="" isbrowsable="1" max="NaN" min="NaN" validationexpression="" obsolete="0">
+						<summary><![CDATA[The parent abstract repository]]></summary>
+				</field>
+				<field id="8e601f2b-8998-4e35-b7a0-ad86e47c5601" name="RepositoryId" nullable="0" datatype="Int" identity="Database" codefacade="" dataformatstring="" default="" defaultisfunc="0" formula="" isgenerated="1" isindexed="1" isprimarykey="1" Iscalculated="0" isunique="1" length="4" scale="0" sortorder="1" isreadonly="0" category="" collate="" friendlyname="" isbrowsable="1" max="NaN" min="NaN" validationexpression="" obsolete="0">
+						<summary><![CDATA[]]></summary>
+				</field>
+				<field id="7182c47f-aafd-45cb-b6a2-61a27ce14c8f" name="UniqueKey" nullable="0" datatype="UniqueIdentifier" identity="None" codefacade="" dataformatstring="" default="" defaultisfunc="0" formula="" isgenerated="1" isindexed="1" isprimarykey="0" Iscalculated="0" isunique="0" length="16" scale="0" sortorder="3" isreadonly="0" category="" collate="" friendlyname="" isbrowsable="1" max="NaN" min="NaN" validationexpression="" obsolete="0">
+						<summary><![CDATA[]]></summary>
+				</field>
+				<field id="539fb241-8624-4ab3-a154-c6f70a336d96" name="VersionHash" nullable="0" datatype="BigInt" identity="None" codefacade="" dataformatstring="" default="" defaultisfunc="0" formula="" isgenerated="1" isindexed="0" isprimarykey="0" Iscalculated="0" isunique="0" length="8" scale="0" sortorder="7" isreadonly="0" category="" collate="" friendlyname="" isbrowsable="1" max="NaN" min="NaN" validationexpression="" obsolete="0">
+						<summary><![CDATA[]]></summary>
+				</field>
+		</fieldset>
+</configuration>

@@ -1,0 +1,206 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="12.0">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>9.0.30729</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{7EE75F7F-B5F5-4380-94B7-794941545E88}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Gravitybox.Datastore.Install</RootNamespace>
+    <AssemblyName>Gravitybox.Datastore.Install</AssemblyName>
+    <TargetFrameworkVersion>v4.6.2</TargetFrameworkVersion>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Core">
+      <RequiredTargetFramework>3.5</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="System.Configuration.Install" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.IO.Compression.FileSystem" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="AzureCopy.cs" />
+    <Compile Include="AzureCopyControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="AzureCopyControl.Designer.cs">
+      <DependentUpon>AzureCopyControl.cs</DependentUpon>
+    </Compile>
+    <Compile Include="CustomMethods.cs" />
+    <Compile Include="DatabaseInstaller.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="DatabaseInstaller.Designer.cs">
+      <DependentUpon>DatabaseInstaller.cs</DependentUpon>
+    </Compile>
+    <Compile Include="HistoryForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="IdentifyDatabaseForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="IdentifyDatabaseForm.Designer.cs">
+      <DependentUpon>IdentifyDatabaseForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="InstallSettings.cs" />
+    <Compile Include="InstallSettingsUI.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="InstallSettingsUI.Designer.cs">
+      <DependentUpon>InstallSettingsUI.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="..\Docs\AssemblyInfoGlobal.cs">
+      <Link>Properties\AssemblyInfoGlobal.cs</Link>
+    </Compile>
+    <Compile Include="SqlErrorForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="SqlErrorForm.Designer.cs">
+      <DependentUpon>SqlErrorForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="SqlServers.cs" />
+    <Compile Include="UpgradeInstaller.cs" />
+    <Compile Include="XmlHelper.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="AzureCopyControl.resx">
+      <DependentUpon>AzureCopyControl.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="HistoryForm.resx">
+      <DependentUpon>HistoryForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="IdentifyDatabaseForm.resx">
+      <DependentUpon>IdentifyDatabaseForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="InstallSettingsUI.resx">
+      <DependentUpon>InstallSettingsUI.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="SqlErrorForm.resx">
+      <DependentUpon>SqlErrorForm.cs</DependentUpon>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="1_UserDefinedInitialization\UnVersioned\UnversionedUpgradeScript.sql" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="5_Programmability\ScriptOrder.nOrder" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="5_Programmability\Functions\Model\Functions.sql" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="1_UserDefinedInitialization\Always\ReadMe.txt" />
+    <Content Include="1_UserDefinedInitialization\NewDatabase\ReadMe.txt" />
+    <Content Include="1_UserDefinedInitialization\ReadMe.txt" />
+    <Content Include="1_UserDefinedInitialization\UnVersioned\ReadMe.txt" />
+    <Content Include="1_UserDefinedInitialization\Versioned\ReadMe.txt" />
+    <EmbeddedResource Include="5_Programmability\Views\Model\Views.sql" />
+    <EmbeddedResource Include="5_Programmability\Stored Procedures\Internal\StoredProcedures.sql" />
+    <EmbeddedResource Include="5_Programmability\Stored Procedures\Model\StoredProcedures.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\00_00_00_00_0006_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\00_00_00_00_0007_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\00_00_00_00_0008_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\00_00_00_00_0009_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\00_00_00_00_0010_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\00_00_00_00_0011_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\00_00_00_00_0012_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\00_00_00_00_0013_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\00_00_00_00_0014_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\00_00_00_00_0015_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\00_00_00_00_0016_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\00_00_00_00_0024_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\00_00_00_00_0025_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\00_00_00_00_0026_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\00_00_00_00_0027_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\00_00_00_00_0001_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\00_00_00_00_0002_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\0000_0000_0000_0000_0030_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\0000_0000_0000_0000_0031_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\0000_0000_0000_0000_0033_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\0000_0000_0000_0000_0034_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\0000_0000_0000_0000_0036_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\0000_0000_0000_0000_0037_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\0000_0000_0000_0000_0038_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\0000_0000_0000_0000_0039_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\0000_0000_0000_0000_0040_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\0000_0000_0000_0000_0041_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\0000_0000_0000_0000_0043_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\0000_0000_0000_0000_0045_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\0000_0000_0000_0000_0046_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\0000_0000_0000_0000_0047_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\0000_0000_0000_0000_0048_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\0000_0000_0000_0000_0052_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\0000_0000_0000_0000_0054_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\0000_0000_0000_0000_0055_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\0000_0000_0000_0000_0056_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\0000_0000_0000_0000_0058_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\0002_0001_0000_0000_0059_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\0002_0001_0000_0000_0060_UpgradeScript.sql" />
+    <Content Include="2_Upgrade Scripts\ReadMe.txt" />
+    <EmbeddedResource Include="3_GeneratedTablesAndData\1_CreateSchema.sql" />
+    <EmbeddedResource Include="3_GeneratedTablesAndData\2_CreateData.sql" />
+    <EmbeddedResource Include="3_GeneratedTablesAndData\4_CreateSchemaAuditTriggers.sql" />
+    <EmbeddedResource Include="3_GeneratedTablesAndData\3_CreateRelations.sql" />
+    <Content Include="3_GeneratedTablesAndData\ReadMe.txt" />
+    <Content Include="4_UserDefinedPostTablesAndData\Always\ReadMe.txt" />
+    <Content Include="4_UserDefinedPostTablesAndData\NewDatabase\ReadMe.txt" />
+    <Content Include="4_UserDefinedPostTablesAndData\ReadMe.txt" />
+    <Content Include="4_UserDefinedPostTablesAndData\UnVersioned\ReadMe.txt" />
+    <Content Include="4_UserDefinedPostTablesAndData\Versioned\ReadMe.txt" />
+    <Content Include="5_Programmability\Functions\User Defined\ReadMe.txt" />
+    <Content Include="5_Programmability\Stored Procedures\User Defined\ReadMe.txt" />
+    <Content Include="5_Programmability\Views\User Defined\ReadMe.txt" />
+    <Content Include="6_UserDefinedFinalize\Always\ReadMe.txt" />
+    <Content Include="6_UserDefinedFinalize\NewDatabase\ReadMe.txt" />
+    <EmbeddedResource Include="6_UserDefinedFinalize\NewDatabase\script.sql" />
+    <Content Include="6_UserDefinedFinalize\ReadMe.txt" />
+    <Content Include="6_UserDefinedFinalize\UnVersioned\ReadMe.txt" />
+    <EmbeddedResource Include="6_UserDefinedFinalize\UnVersioned\script.sql" />
+    <Content Include="6_UserDefinedFinalize\Versioned\ReadMe.txt" />
+  </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PreBuildEvent>
+    </PreBuildEvent>
+  </PropertyGroup>
+  <PropertyGroup>
+    <PostBuildEvent>
+    </PostBuildEvent>
+  </PropertyGroup>
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+			 Other similar extension points exist, see Microsoft.Common.targets.
+	<Target Name="BeforeBuild">
+	</Target>
+	<Target Name="AfterBuild">
+	</Target>
+	-->
+</Project>

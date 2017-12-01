@@ -1,0 +1,8 @@
+<root>
+  <tables>
+    <table>Useraccount</table>
+  </tables>
+  <views />
+  <storedprocedures />
+  <functions />
+</root>

@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{0FD1EAB9-5FC3-480A-BD54-6C88C8F5DE41}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Gravitybox.Datastore.Common</RootNamespace>
+    <AssemblyName>Gravitybox.Datastore.Common</AssemblyName>
+    <TargetFrameworkVersion>v4.6.2</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
+    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
+    <RestorePackages>true</RestorePackages>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+    <DocumentationFile>bin\Release\Gravitybox.Datastore.Common.XML</DocumentationFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="NLog, Version=4.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL">
+      <HintPath>..\packages\NLog.4.4.12\lib\net45\NLog.dll</HintPath>
+    </Reference>
+    <Reference Include="Polly, Version=5.3.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Polly.5.3.1\lib\net45\Polly.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Management" />
+    <Reference Include="System.Runtime.Caching" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.ServiceModel" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Web" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\Docs\AssemblyInfoGlobal.cs">
+      <Link>Properties\AssemblyInfoGlobal.cs</Link>
+    </Compile>
+    <Compile Include="BaseRemotingObject.cs" />
+    <Compile Include="ByteSize.cs" />
+    <Compile Include="Cache.cs" />
+    <Compile Include="DataFieldUpdate.cs" />
+    <Compile Include="FieldSortTimestamp.cs" />
+    <Compile Include="FieldFilterTimestamp.cs" />
+    <Compile Include="LockInfoItem.cs" />
+    <Compile Include="ObjectCloner.cs" />
+    <Compile Include="Queryable\DatastoreSliceable.cs" />
+    <Compile Include="Queryable\DatastoreGroupable.cs" />
+    <Compile Include="Queryable\FieldGrouping.cs" />
+    <Compile Include="Queryable\IDatastoreRepository.cs" />
+    <Compile Include="Queryable\MemberExpressionVisitor.cs" />
+    <Compile Include="PermissionItem.cs" />
+    <Compile Include="Queryable\DatastoreDeletable.cs" />
+    <Compile Include="Queryable\DatastoreExpressionParser.cs" />
+    <Compile Include="Queryable\DatastoreExtensions.cs" />
+    <Compile Include="Queryable\DatastoreFunctions.cs" />
+    <Compile Include="Queryable\DatastoreProvider.cs" />
+    <Compile Include="Queryable\DatastoreQueryable.cs" />
+    <Compile Include="Queryable\DatastoreRepository.cs" />
+    <Compile Include="Queryable\DatastoreRepositoryAttribute.cs" />
+    <Compile Include="Queryable\DatastoreResults.cs" />
+    <Compile Include="Queryable\DatastoreService.cs" />
+    <Compile Include="Queryable\DatastoreUpdatable.cs" />
+    <Compile Include="Queryable\ExpressionHelper.cs" />
+    <Compile Include="Queryable\IDatastoreItem.cs" />
+    <Compile Include="Queryable\SelectExpressionConverter.cs" />
+    <Compile Include="Queryable\WhereExpressionParser.cs" />
+    <Compile Include="RetryHelper.cs" />
+    <Compile Include="SummarySliceValue.cs" />
+    <Compile Include="SummarySlice.cs" />
+    <Compile Include="DerivedField.cs" />
+    <Compile Include="DerivedFieldValue.cs" />
+    <Compile Include="EncryptionDomain.cs" />
+    <Compile Include="EventArguments\BeforeValueEventArgs.cs" />
+    <Compile Include="Exceptions\APIVersionException.cs" />
+    <Compile Include="Exceptions\RepositoryNotInitializedException.cs" />
+    <Compile Include="Exceptions\SchemaVersionException.cs" />
+    <Compile Include="IDerivedField.cs" />
+    <Compile Include="IDimensionItem.cs" />
+    <Compile Include="IDimensionStore.cs" />
+    <Compile Include="IRefinementItem.cs" />
+    <Compile Include="IRepositoryConnection.cs" />
+    <Compile Include="IRemotingObject.cs" />
+    <Compile Include="ISystemCore.cs" />
+    <Compile Include="ListingDerivedField.cs" />
+    <Compile Include="LoggerCQ.cs" />
+    <Compile Include="SecurityHelper.cs" />
+    <Compile Include="SystemCoreInteractDomain.cs" />
+    <Compile Include="SystemStats.cs" />
+    <Compile Include="RepositorySummmaryStats.cs" />
+    <Compile Include="IListingItem.cs" />
+    <Compile Include="IListingResults.cs" />
+    <Compile Include="DataQuery.cs" />
+    <Compile Include="DataQueryResults.cs" />
+    <Compile Include="DataItem.cs" />
+    <Compile Include="DimensionDefinition.cs" />
+    <Compile Include="DimensionItem.cs" />
+    <Compile Include="Extensions.cs" />
+    <Compile Include="FieldDefinition.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="FieldFilter.cs" />
+    <Compile Include="FieldSort.cs" />
+    <Compile Include="GeoCode.cs" />
+    <Compile Include="GeoCodeFieldFilter.cs" />
+    <Compile Include="ICloneable.cs" />
+    <Compile Include="IDataModel.cs" />
+    <Compile Include="IFieldDefinition.cs" />
+    <Compile Include="IFieldFilter.cs" />
+    <Compile Include="IFieldSort.cs" />
+    <Compile Include="IListingQuery.cs" />
+    <Compile Include="NamedItem.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RealtimeStats.cs" />
+    <Compile Include="RefinementItem.cs" />
+    <Compile Include="RepositorySchema.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="BaseListingQuery.cs" />
+    <Compile Include="SystemCredentials.cs" />
+    <Compile Include="PagingInfo.cs" />
+    <Compile Include="UserCredentials.cs" />
+    <Compile Include="Utilities.cs" />
+    <Compile Include="XmlHelper.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PreBuildEvent>mkdir "$(SolutionDir)bin"
+attrib -r "$(SolutionDir)Bin\*.*"</PreBuildEvent>
+  </PropertyGroup>
+  <PropertyGroup>
+    <PostBuildEvent>copy "$(TargetDir)$(TargetName).*" "$(SolutionDir)Bin\"</PostBuildEvent>
+  </PropertyGroup>
+  <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Enable NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('$(SolutionDir)\.nuget\NuGet.targets')" Text="$([System.String]::Format('$(ErrorText)', '$(SolutionDir)\.nuget\NuGet.targets'))" />
+  </Target>
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>
