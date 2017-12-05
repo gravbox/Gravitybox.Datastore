@@ -144,11 +144,9 @@
     <Content Include="5_Programmability\Stored Procedures\User Defined\ReadMe.txt" />
     <Content Include="5_Programmability\Views\User Defined\ReadMe.txt" />
     <Content Include="6_UserDefinedFinalize\Always\ReadMe.txt" />
-    <None Include="6_UserDefinedFinalize\create-db.sql" />
     <Content Include="6_UserDefinedFinalize\NewDatabase\ReadMe.txt" />
     <EmbeddedResource Include="6_UserDefinedFinalize\NewDatabase\script.sql" />
     <Content Include="6_UserDefinedFinalize\ReadMe.txt" />
-    <None Include="6_UserDefinedFinalize\conversion.sql" />
     <Content Include="6_UserDefinedFinalize\UnVersioned\ReadMe.txt" />
     <EmbeddedResource Include="6_UserDefinedFinalize\UnVersioned\script.sql" />
     <Content Include="6_UserDefinedFinalize\Versioned\ReadMe.txt" />

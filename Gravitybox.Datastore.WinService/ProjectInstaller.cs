@@ -12,18 +12,11 @@ namespace Gravitybox.Datastore.WinService
         {
             InitializeComponent();
 
-            var serviceName = GetServiceNameAppConfig("serviceName");
-
+            var serviceName = "Gravitybox Datastore";
             if (!string.IsNullOrWhiteSpace(serviceName))
             {
                 this.serviceInstaller.ServiceName = serviceName;
             }
-        }
-
-        public string GetServiceNameAppConfig(string serviceName)
-        {
-            var config = ConfigurationManager.OpenExeConfiguration(Assembly.GetAssembly(typeof(ProjectInstaller)).Location);
-            return config.AppSettings.Settings[serviceName].Value;
         }
     }
 }
