@@ -9,7 +9,6 @@ using System.Text;
 using System.Threading.Tasks;
 using Gravitybox.Datastore.Common;
 using Gravitybox.Datastore.EFDAL;
-using Gravitybox.Datastore.Server.Interfaces;
 
 namespace Gravitybox.Datastore.Server.Core
 {

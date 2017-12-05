@@ -41,6 +41,17 @@ namespace Gravitybox.Datastore.Common.Queryable
         /// </summary>
         public DatastoreRepository(Guid repositoryId, string serverName = "localhost", int port = 1973)
         {
+            //If configured for failover then grab the current server
+            if (serverName == "@config")
+            {
+                if (FailoverConfiguration.CurrentServer != null)
+                {
+                    serverName = FailoverConfiguration.CurrentServer.Server;
+                    port = FailoverConfiguration.CurrentServer.Port;
+                }
+                else
+                    throw new Exception("Cannot find a configured server");
+            }
             _datastoreService = new DatastoreService(repositoryId, serverName, port);
         }
 
@@ -108,7 +119,7 @@ namespace Gravitybox.Datastore.Common.Queryable
             query.IncludeDimensions = false;
 
             var retval = false;
-            RetryHelper.DefaultRetryPolicy(5)
+            RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
                 .Execute(() =>
                 {
                     var results = _datastoreService.Query(query);
@@ -118,12 +129,37 @@ namespace Gravitybox.Datastore.Common.Queryable
         }
 
         /// <summary>
+        /// Determines if the service is responding
+        /// </summary>
+        public virtual bool IsServerAlive()
+        {
+            return _datastoreService.IsServerAlive();
+        }
+
+        /// <summary>
+        /// Determines if the service is the master
+        /// </summary>
+        public virtual bool IsServerMaster()
+        {
+            return _datastoreService.IsServerMaster();
+        }
+
+        /// <summary>
+        /// Resets the service to initial load state to ensure it is ready to accept requests.
+        /// This should be called right before a fail over to this service.
+        /// </summary>
+        public virtual bool ResetMaster()
+        {
+            return _datastoreService.ResetMaster();
+        }
+
+        /// <summary>
         /// Determines if the specified repository exists
         /// </summary>
         public virtual bool RepositoryExists()
         {
             var retval = false;
-            RetryHelper.DefaultRetryPolicy(5)
+            RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
                 .Execute(() =>
                 {
                     retval = _datastoreService.RepositoryExists();
@@ -137,7 +173,7 @@ namespace Gravitybox.Datastore.Common.Queryable
         public virtual bool DeleteRepository()
         {
             var retval = false;
-            RetryHelper.DefaultRetryPolicy(5)
+            RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
                 .Execute(() =>
                 {
                     retval = _datastoreService.DeleteRepository();
@@ -151,7 +187,7 @@ namespace Gravitybox.Datastore.Common.Queryable
         public virtual ActionDiagnostics ClearRepository()
         {
             ActionDiagnostics retval = null;
-            RetryHelper.DefaultRetryPolicy(5)
+            RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
                 .Execute(() =>
                 {
                     retval = _datastoreService.ClearRepository();
@@ -167,7 +203,7 @@ namespace Gravitybox.Datastore.Common.Queryable
             var schema = LoadSchemaTemplate();
             schema.ID = this.RepositoryId;
             schema.Name = name ?? string.Empty;
-            RetryHelper.DefaultRetryPolicy(3)
+            RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
                 .Execute(() =>
                 {
                     _datastoreService.CreateRepository(schema);
@@ -182,7 +218,7 @@ namespace Gravitybox.Datastore.Common.Queryable
             var schema = LoadSchemaTemplate();
             schema.ID = repositoryid;
             schema.Name = name ?? string.Empty;
-            RetryHelper.DefaultRetryPolicy(3)
+            RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
                 .Execute(() =>
                 {
                     _datastoreService.CreateRepository(schema);
@@ -205,7 +241,7 @@ namespace Gravitybox.Datastore.Common.Queryable
         public virtual RepositorySchema GetSchema()
         {
             RepositorySchema retval = null;
-            RetryHelper.DefaultRetryPolicy(5)
+            RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
                 .Execute(() =>
                 {
                     retval = _datastoreService.Schema;
@@ -221,7 +257,7 @@ namespace Gravitybox.Datastore.Common.Queryable
         public virtual long GetDataVersion()
         {
             long retval = 0;
-            RetryHelper.DefaultRetryPolicy(5)
+            RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
                 .Execute(() =>
                 {
                     retval = _datastoreService.GetDataVersion();
@@ -255,7 +291,7 @@ namespace Gravitybox.Datastore.Common.Queryable
         public virtual ActionDiagnostics UpdateSchema(RepositorySchema schema)
         {
             ActionDiagnostics retval = null;
-            RetryHelper.DefaultRetryPolicy(5)
+            RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
                 .Execute(() =>
                 {
                     retval = _datastoreService.UpdateSchema(schema);
@@ -269,7 +305,7 @@ namespace Gravitybox.Datastore.Common.Queryable
         /// </summary>
         public virtual void ResetSchema(RepositorySchema schema)
         {
-            RetryHelper.DefaultRetryPolicy(5)
+            RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
                 .Execute(() =>
                 {
                     _datastoreService.Schema = schema;
@@ -292,7 +328,7 @@ namespace Gravitybox.Datastore.Common.Queryable
             var genericType = typeof(TSourceType);
             RepositorySchema schema = null;
 
-            RetryHelper.DefaultRetryPolicy(5)
+            RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
                 .Execute(() =>
                 {
                     schema = _datastoreService.Schema;
@@ -344,7 +380,7 @@ namespace Gravitybox.Datastore.Common.Queryable
             }
 
             ActionDiagnostics retval = null;
-            RetryHelper.DefaultRetryPolicy(5)
+            RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
                 .Execute(() => {
                     retval = _datastoreService.UpdateData(dataItems);
                 });
@@ -376,7 +412,7 @@ namespace Gravitybox.Datastore.Common.Queryable
         /// <summary />
         public virtual void AddPermissions(IEnumerable<PermissionItem> list)
         {
-            RetryHelper.DefaultRetryPolicy(5)
+            RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
                 .Execute(() => {
                     _datastoreService.AddPermissions(list);
                 });
@@ -385,7 +421,7 @@ namespace Gravitybox.Datastore.Common.Queryable
         /// <summary />
         public virtual void ClearPermissions(string fieldValue)
         {
-            RetryHelper.DefaultRetryPolicy(5)
+            RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
                 .Execute(() => {
                     _datastoreService.ClearPermissions(fieldValue);
                 });
@@ -394,7 +430,7 @@ namespace Gravitybox.Datastore.Common.Queryable
         /// <summary />
         public virtual void ClearPermissions(int? fieldValue)
         {
-            RetryHelper.DefaultRetryPolicy(5)
+            RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
                 .Execute(() =>
                 {
                     if (fieldValue == null) _datastoreService.ClearPermissions(null);
@@ -405,7 +441,7 @@ namespace Gravitybox.Datastore.Common.Queryable
         /// <summary />
         public virtual void ClearUserPermissions(int userId)
         {
-            RetryHelper.DefaultRetryPolicy(5)
+            RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
                 .Execute(() =>
                 {
                     _datastoreService.ClearUserPermissions(userId);
@@ -415,7 +451,7 @@ namespace Gravitybox.Datastore.Common.Queryable
         /// <summary />
         public virtual void DeletePermissions(IEnumerable<PermissionItem> list)
         {
-            RetryHelper.DefaultRetryPolicy(5)
+            RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
                 .Execute(() => {
                     _datastoreService.DeletePermissions(list);
                 });
@@ -425,7 +461,7 @@ namespace Gravitybox.Datastore.Common.Queryable
         public virtual bool ResetDimensionValue(long dvidx, string value)
         {
             var retval = false;
-            RetryHelper.DefaultRetryPolicy(5)
+            RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
                 .Execute(() => {
                     retval = _datastoreService.ResetDimensionValue(dvidx, value);
                 });
@@ -436,7 +472,7 @@ namespace Gravitybox.Datastore.Common.Queryable
         public virtual bool DeleteDimensionValue(long dvidx)
         {
             var retval = false;
-            RetryHelper.DefaultRetryPolicy(5)
+            RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
                 .Execute(() => {
                     retval = _datastoreService.DeleteDimensionValue(dvidx);
                 });
@@ -447,7 +483,7 @@ namespace Gravitybox.Datastore.Common.Queryable
         public virtual int GetTimestamp()
         {
             var retval = 0;
-            RetryHelper.DefaultRetryPolicy(5)
+            RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
                 .Execute(() =>
                 {
                     retval = _datastoreService.GetTimestamp();

@@ -111,12 +111,6 @@ namespace Gravitybox.Datastore.EFDAL
 		IQueryable<Gravitybox.Datastore.EFDAL.Entity.LockStat> LockStat { get ; }
 
 		/// <summary />
-		IQueryable<Gravitybox.Datastore.EFDAL.Entity.LockValue> LockValue { get ; }
-
-		/// <summary />
-		IQueryable<Gravitybox.Datastore.EFDAL.Entity.Machine> Machine { get ; }
-
-		/// <summary />
 		IQueryable<Gravitybox.Datastore.EFDAL.Entity.Repository> Repository { get ; }
 
 		/// <summary />
@@ -133,6 +127,9 @@ namespace Gravitybox.Datastore.EFDAL
 
 		/// <summary />
 		IQueryable<Gravitybox.Datastore.EFDAL.Entity.ServerStat> ServerStat { get ; }
+
+		/// <summary />
+		IQueryable<Gravitybox.Datastore.EFDAL.Entity.ServiceInstance> ServiceInstance { get ; }
 
 		/// <summary />
 		Gravitybox.Datastore.EFDAL.IBusinessObject AddItem(Gravitybox.Datastore.EFDAL.IBusinessObject entity);

@@ -64,23 +64,6 @@ CREATE TABLE [dbo].[Housekeeping] (
 
 GO
 
---CREATE TABLE [Lock]
-if not exists(select * from sysobjects where name = 'Lock' and xtype = 'U')
-CREATE TABLE [dbo].[Lock] (
-	[LockId] [Int] IDENTITY (1, 1) NOT NULL ,
-	[MachineId] [Int] NOT NULL ,
-	[LockTime] [DateTime] NOT NULL ,
-	[IsRead] [Bit] NOT NULL ,
-	[Intention] [Bit] NOT NULL ,
-	[RepositoryId] [Int] NOT NULL ,
-	CONSTRAINT [PK_LOCK] PRIMARY KEY CLUSTERED
-	(
-		[LockId]
-	)
-)
-
-GO
-
 --CREATE TABLE [LockStat]
 if not exists(select * from sysobjects where name = 'LockStat' and xtype = 'U')
 CREATE TABLE [dbo].[LockStat] (
@@ -97,20 +80,6 @@ CREATE TABLE [dbo].[LockStat] (
 	CONSTRAINT [PK_LOCKSTAT] PRIMARY KEY CLUSTERED
 	(
 		[LockStatId]
-	)
-)
-
-GO
-
---CREATE TABLE [Machine]
-if not exists(select * from sysobjects where name = 'Machine' and xtype = 'U')
-CREATE TABLE [dbo].[Machine] (
-	[MachineId] [Int] IDENTITY (1, 1) NOT NULL ,
-	[Name] [NVarChar] (100) NOT NULL ,
-	[LastCommunication] [DateTime] NOT NULL CONSTRAINT [DF__MACHINE_LASTCOMMUNICATION] DEFAULT (sysdatetime()),
-	CONSTRAINT [PK_MACHINE] PRIMARY KEY CLUSTERED
-	(
-		[MachineId]
 	)
 )
 
@@ -237,6 +206,21 @@ CREATE TABLE [dbo].[ServerStat] (
 	CONSTRAINT [PK_SERVERSTAT] PRIMARY KEY CLUSTERED
 	(
 		[ServerStatId]
+	)
+)
+
+GO
+
+--CREATE TABLE [ServiceInstance]
+if not exists(select * from sysobjects where name = 'ServiceInstance' and xtype = 'U')
+CREATE TABLE [dbo].[ServiceInstance] (
+	[RowId] [Int] NOT NULL CONSTRAINT [DF__SERVICEINSTANCE_ROWID] DEFAULT (1),
+	[LastCommunication] [DateTime2] (2) NOT NULL ,
+	[FirstCommunication] [DateTime2] (2) NOT NULL ,
+	[InstanceId] [UniqueIdentifier] NOT NULL ,
+	CONSTRAINT [PK_SERVICEINSTANCE] PRIMARY KEY CLUSTERED
+	(
+		[RowId]
 	)
 )
 

@@ -5,8 +5,10 @@ using System.Data.SqlClient;
 using System.Linq;
 using System.Text;
 using Gravitybox.Datastore.Common;
+using Gravitybox.Datastore.EFDAL;
+using Gravitybox.Datastore.EFDAL.Entity;
 
-namespace Gravitybox.Datastore.Server.Interfaces
+namespace Gravitybox.Datastore.Server.Core
 {
     public static class ConfigHelper
     {
@@ -14,6 +16,7 @@ namespace Gravitybox.Datastore.Server.Interfaces
         private static Dictionary<string, string> _settings = new Dictionary<string, string>();
         private static readonly object _syncObject = new object();
         public static string _connectionString = string.Empty;
+        private static System.Timers.Timer _timerHeartBeat = null;
 
         public static string ConnectionString
         {
@@ -48,7 +51,7 @@ namespace Gravitybox.Datastore.Server.Interfaces
             {
                 lock (_syncObject)
                 {
-                    var v = GetSettings(ConnectionString);
+                    var v = GetSettings();
                     if (v != null)
                         _settings = v;
                 }
@@ -63,28 +66,13 @@ namespace Gravitybox.Datastore.Server.Interfaces
 
         #region Sql
 
-        private static Dictionary<string, string> GetSettings(string connectionString)
+        private static Dictionary<string, string> GetSettings()
         {
             try
             {
-                using (var connection = new SqlConnection(connectionString))
+                using (var context = new DatastoreEntities(ConnectionString))
                 {
-                    connection.Open();
-                    using (var command = connection.CreateCommand())
-                    {
-                        command.CommandText = "select * from [ConfigurationSetting]";
-                        command.CommandType = CommandType.Text;
-                        var adapter = new SqlDataAdapter(command);
-                        var ds = new DataSet();
-                        adapter.Fill(ds, "Q");
-
-                        var retval = new Dictionary<string, string>();
-                        foreach (DataRow r in ds.Tables[0].Rows)
-                        {
-                            retval.Add(r["Name"].ToString().ToLower(), (string)r["Value"]);
-                        }
-                        return retval;
-                    }
+                    return context.ConfigurationSetting.ToList().ToDictionary(x => x.Name.ToLower(), x => x.Value);
                 }
             }
             catch (Exception ex)
@@ -152,6 +140,8 @@ namespace Gravitybox.Datastore.Server.Interfaces
             }
         }
 
+        #region GetValue
+
         private static string GetValue(string name)
         {
             return GetValue(name, string.Empty);
@@ -188,6 +178,17 @@ namespace Gravitybox.Datastore.Server.Interfaces
             return defaultValue;
         }
 
+        private static Guid GetValue(string name, Guid defaultValue)
+        {
+            if (Guid.TryParse(GetValue(name, string.Empty), out Guid g))
+                return g;
+            return defaultValue;
+        }
+
+        #endregion
+
+        #region SetValue
+
         private static void SetValue(string name, string value)
         {
             SaveSetting(ConnectionString, name, value);
@@ -208,26 +209,16 @@ namespace Gravitybox.Datastore.Server.Interfaces
             SetValue(name, value.ToString("yyyy-MM-dd HH:mm:ss").ToLower());
         }
 
+        private static void SetValue(string name, Guid value)
+        {
+            SetValue(name, value.ToString());
+        }
+
+        #endregion
+
         #endregion
 
         #region Properties
-
-        public static string PublicKey
-        {
-            get { return GetValue("PublicKey", string.Empty); }
-            set { SetValue("PublicKey", value); }
-        }
-
-        public static string PrivateKey
-        {
-            get { return GetValue("PrivateKey", string.Empty); }
-            set { SetValue("PrivateKey", value); }
-        }
-
-        public static KeyPair MasterKeys
-        {
-            get { return new KeyPair { PublicKey = ConfigHelper.PublicKey, PrivateKey = ConfigHelper.PrivateKey }; }
-        }
 
         public static bool AllowCaching
         {
@@ -297,9 +288,9 @@ namespace Gravitybox.Datastore.Server.Interfaces
         {
             get
             {
-                return ConfigHelper.SqlVersion == Gravitybox.Datastore.Server.Interfaces.ConfigHelper.ServerVersionConstants.SQL2014 ||
-                    ConfigHelper.SqlVersion == Gravitybox.Datastore.Server.Interfaces.ConfigHelper.ServerVersionConstants.SQL2012 ||
-                    ConfigHelper.SqlVersion == Gravitybox.Datastore.Server.Interfaces.ConfigHelper.ServerVersionConstants.SQLOther;
+                return ConfigHelper.SqlVersion == ConfigHelper.ServerVersionConstants.SQL2014 ||
+                    ConfigHelper.SqlVersion == ConfigHelper.ServerVersionConstants.SQL2012 ||
+                    ConfigHelper.SqlVersion == ConfigHelper.ServerVersionConstants.SQLOther;
             }
         }
 
@@ -353,9 +344,161 @@ namespace Gravitybox.Datastore.Server.Interfaces
 
         public static bool AllowQueryCacheClearing => GetValue("AllowQueryCacheClearing", true);
 
-        public static bool MemOpt => GetValue("MemOpt", false);
+        //public static bool MemOpt => GetValue("MemOpt", false);
+        public static bool MemOpt => false;
 
         #endregion
+
+        public static Guid CurrentMaster { get; private set; }
+
+        private static double _serverTimeSkew = 0;
+        public static void StartUp()
+        {
+            try
+            {
+                using (var context = new DatastoreEntities())
+                {
+                    var item = context.ServiceInstance.FirstOrDefault();
+                    if (item == null)
+                        PromoteMaster();
+                    else if (DateTime.UtcNow.AddSeconds(-_serverTimeSkew).Subtract(item.LastCommunication).TotalSeconds > 10)
+                        PromoteMaster();
+                }
+
+                //Get the lastest master instance
+                using (var context = new DatastoreEntities())
+                {
+                    var item = context.ServiceInstance.FirstOrDefault();
+                    if (item != null)
+                        CurrentMaster = item.InstanceId;
+                }
+
+                //Subtract My Time from database time
+                //If (+) then db server is behind me, if (-) db server is ahead
+                //Save the difference and (-) from all queries to normalize all service servers to db server
+                _serverTimeSkew = DateTime.UtcNow.Subtract(GetDatabaseTime()).TotalSeconds;
+
+                //This will send the heartbeat to the DB
+                _timerHeartBeat = new System.Timers.Timer(5000);
+                _timerHeartBeat.Elapsed += TimerHeartBeatElapsed;
+                _timerHeartBeat.Start();
+            }
+            catch (Exception ex)
+            {
+                LoggerCQ.LogError(ex);
+                throw;
+            }
+        }
+
+        public static bool PromoteMaster()
+        {
+            var tryCount = 0;
+            do
+            {
+                try
+                {
+                    using (var context = new DatastoreEntities())
+                    {
+                        var item = context.ServiceInstance.FirstOrDefault();
+                        if (item == null)
+                        {
+                            //There is no item in the table so create one
+                            context.AddItem(new ServiceInstance
+                            {
+                                FirstCommunication = DateTime.UtcNow.AddSeconds(-_serverTimeSkew),
+                                LastCommunication = DateTime.UtcNow.AddSeconds(-_serverTimeSkew),
+                                InstanceId = RepositoryManager.InstanceId,
+                            });
+                            context.SaveChanges();
+                            return true;
+                        }
+                        else if (item.InstanceId == RepositoryManager.InstanceId)
+                        {
+                            //Nothing to do. This service is already the master
+                            return true;
+                        }
+                        else
+                        {
+                            //The instance was successfully change to this service instance
+                            item.InstanceId = RepositoryManager.InstanceId;
+                            item.FirstCommunication = DateTime.UtcNow.AddSeconds(-_serverTimeSkew);
+                            item.LastCommunication = DateTime.UtcNow.AddSeconds(-_serverTimeSkew);
+                            context.SaveChanges();
+                            return true;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    //If the record could not be created OR not updated try again
+                    tryCount++;
+                }
+            } while (tryCount < 3);
+            return false;
+        }
+
+        private static DateTime GetDatabaseTime()
+        {
+            try
+            {
+                using (var connection = new SqlConnection(ConnectionString))
+                {
+                    connection.Open();
+                    using (var command = connection.CreateCommand())
+                    {
+                        command.Connection = connection;
+                        command.CommandText = "select GETUTCDATE() as [Time]";
+                        command.CommandType = CommandType.Text;
+                        var da = new SqlDataAdapter { SelectCommand = command };
+                        var ds = new DataSet();
+                        da.Fill(ds);
+                        if (ds.Tables.Count == 1 && ds.Tables[0].Rows.Count == 1)
+                            return (DateTime)ds.Tables[0].Rows[0][0];
+                    }
+                }
+                return DateTime.MinValue;
+            }
+            catch (Exception ex)
+            {
+                LoggerCQ.LogError(ex);
+                return DateTime.MinValue;
+            }
+        }
+
+        private static void TimerHeartBeatElapsed(object sender, System.Timers.ElapsedEventArgs e)
+        {
+            //Send the heart beat to the DB to coordinate all data store instances
+            try
+            {
+                _timerHeartBeat.Stop();
+                using (var context = new DatastoreEntities())
+                {
+                    var item = context.ServiceInstance.FirstOrDefault();
+                    if (item != null && item.InstanceId == RepositoryManager.InstanceId)
+                    {
+                        item.LastCommunication = DateTime.UtcNow.AddSeconds(-_serverTimeSkew);
+                        context.SaveChanges();
+                        CurrentMaster = item.InstanceId;
+                    }
+                    else if (item != null)
+                    {
+                        CurrentMaster = item.InstanceId;
+                    }
+                    else
+                    {
+                        CurrentMaster = Guid.Empty;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggerCQ.LogError(ex);
+            }
+            finally
+            {
+                _timerHeartBeat.Start();
+            }
+        }
 
     }
 }

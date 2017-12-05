@@ -70,26 +70,6 @@ namespace Gravitybox.Datastore.EFDAL
 
 	#endregion
 
-	#region LockValueInclude
-
-	/// <summary>
-	/// This is a helper object for creating LINQ definitions for context includes on the LockValue collection.
-	/// </summary>
-	[Serializable]
-	[Table(Name = "Lock")]
-	[System.CodeDom.Compiler.GeneratedCode("nHydrateModelGenerator", "6.0.0")]
-	public partial class LockValueInclude : Gravitybox.Datastore.EFDAL.IContextInclude
-	{
-		/// <summary>
-		/// This is a mapping of the relationship with the Machine entity.
-		/// </summary>
-		[Association(ThisKey = "MachineId", OtherKey = "MachineId")]
-		public Gravitybox.Datastore.EFDAL.MachineInclude Machine { get; private set; }
-
-	}
-
-	#endregion
-
 	#region LockStatInclude
 
 	/// <summary>
@@ -100,26 +80,6 @@ namespace Gravitybox.Datastore.EFDAL
 	[System.CodeDom.Compiler.GeneratedCode("nHydrateModelGenerator", "6.0.0")]
 	public partial class LockStatInclude : Gravitybox.Datastore.EFDAL.IContextInclude
 	{
-	}
-
-	#endregion
-
-	#region MachineInclude
-
-	/// <summary>
-	/// This is a helper object for creating LINQ definitions for context includes on the Machine collection.
-	/// </summary>
-	[Serializable]
-	[Table(Name = "Machine")]
-	[System.CodeDom.Compiler.GeneratedCode("nHydrateModelGenerator", "6.0.0")]
-	public partial class MachineInclude : Gravitybox.Datastore.EFDAL.IContextInclude
-	{
-		/// <summary>
-		/// This is a mapping of the relationship with the LockValue entity.
-		/// </summary>
-		[Association(ThisKey = "MachineId", OtherKey = "MachineId")]
-		public Gravitybox.Datastore.EFDAL.LockValueInclude LockValueList { get; private set; }
-
 	}
 
 	#endregion
@@ -228,6 +188,20 @@ namespace Gravitybox.Datastore.EFDAL
 		[Association(ThisKey = "ServerId", OtherKey = "ServerId")]
 		public Gravitybox.Datastore.EFDAL.ServerInclude Server { get; private set; }
 
+	}
+
+	#endregion
+
+	#region ServiceInstanceInclude
+
+	/// <summary>
+	/// This is a helper object for creating LINQ definitions for context includes on the ServiceInstance collection.
+	/// </summary>
+	[Serializable]
+	[Table(Name = "ServiceInstance")]
+	[System.CodeDom.Compiler.GeneratedCode("nHydrateModelGenerator", "6.0.0")]
+	public partial class ServiceInstanceInclude : Gravitybox.Datastore.EFDAL.IContextInclude
+	{
 	}
 
 	#endregion

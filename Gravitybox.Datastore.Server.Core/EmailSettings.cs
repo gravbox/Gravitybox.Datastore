@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Gravitybox.Datastore.Server.Interfaces
+namespace Gravitybox.Datastore.Server.Core
 {
     public class EmailSettings
     {

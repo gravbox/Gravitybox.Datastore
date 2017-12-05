@@ -9,7 +9,7 @@ using Gravitybox.Datastore.Common;
 using System.Xml.Serialization;
 using System.Xml;
 
-namespace Gravitybox.Datastore.Server.Interfaces
+namespace Gravitybox.Datastore.Server.Core
 {
     public static class ServerUtilities
     {

@@ -17,9 +17,33 @@ namespace Gravitybox.Datastore.Configuration
         [STAThread]
         private static void Main(string[] args)
         {
+            //Application.EnableVisualStyles();
+            //Application.SetCompatibleTextRenderingDefault(false);
+            //Application.Run(new MainForm());
+
             /*
-            FEATURES: Create database
-                /createdatabase /connectionstring:"server=.;Integrated Security=SSPI;" /dbname:"Datastore" /datapath:"c:\database" /logpath:"c:\database" /growth:50
+            FEATURES:
+                Create database
+                /createdatabase /connectionstring:"server=.\SQL2014;Integrated Security=SSPI;" /dbname:"HPDatastoreLTest" /datapath:"e:\database" /logpath:"e:\database" /growth:50
+                /createdatabase /connectionstring:"server=.;Integrated Security=SSPI;" /dbname:"HPDatastore" /datapath:"c:\path" /logpath:"c:\logpath" /growth:100 /memopt
+                /createdatabase /connectionstring:"server=.;Integrated Security=SSPI;" /dbname:"HPDatastore" /datapath:"C:\Databases" /logpath:"C:\Databases" /growth:50
+                /createdatabase /connectionstring:"server=.;Integrated Security=SSPI;" /dbname:"HPDatastore" /datapath:"D:\Database" /logpath:"D:\Database" /growth:50
+                /createdatabase /connectionstring:"server=.;Integrated Security=SSPI;" /dbname:"HPDatastore" /datapath:"F:\datastoreDB\data" /logpath:"F:\datastoreDB\log" /growth:100
+                /createdatabase /connectionstring:"server=16.113.65.71\SQL2014;user id=sa;password=zxzxasas;" /dbname:"HPDatastore" /datapath:"Z:\Database" /logpath:"Z:\Database" /growth:100 /memopt
+                /createdatabase /connectionstring:"server=.\SQL2014;Integrated Security=SSPI;" /dbname:"HPDatastore" /datapath:"D:\Database" /logpath:"D:\Database" /growth:20
+                /createdatabase /connectionstring:"server=.\SQL2014;user id=sa;password=zxzxasas;" /dbname:"HPDatastoreZ" /datapath:"E:\Database" /logpath:"E:\Database" /growth:100
+                /createdatabase /connectionstring:"server=16.113.65.71;user id=sa;password=Spi!pass007^;" /dbname:"HPDatastore2" /datapath:"F:\Database" /logpath:"F:\Database" /growth:100
+                /updatedatabase /connectionstring:"server=.\SQL2014;initial catalog=AAAA;Integrated Security=SSPI;"
+                /createdatabase /connectionstring:"server=.\SQL2014;Integrated Security=SSPI;" /dbname:"TestDatastore8" /datapath:"F:\Database" /logpath:"F:\Database" /growth:50
+
+            Get filegroups
+                /getfilegroups /connectionstring:"server=.;Integrated Security=SSPI;
+                /getfilegroups /connectionstring:"server=.\SQL2014;Integrated Security=SSPI;
+
+            Add filegroup
+               /createfilegroup /connectionstring:"server=.;Integrated Security=SSPI;" /growth:100
+               /createfilegroup /connectionstring:"server=.\SQL2014;Integrated Security=SSPI;" /growth:20 /datapath:"D:\Database"
+               /createfilegroup /connectionstring:"server=16.113.65.71\SQL2014;user id=sa;password=zxzxasas" /growth:100 /datapath:"Z:\Database" /dbname:"HPDatastore"
             */
 
             foreach (var x in args)
@@ -33,7 +57,7 @@ namespace Gravitybox.Datastore.Configuration
                 var connectionString = GetParamValue(args, "connectionstring");
                 var masterConnectionString = connectionString;
                 var databaseName = GetParamValue(args, "dbname");
-                if (string.IsNullOrEmpty(databaseName)) databaseName = "Datastore";
+                if (string.IsNullOrEmpty(databaseName)) databaseName = "HPDatastore";
                 var datapath = GetParamValue(args, "datapath");
                 var logpath = GetParamValue(args, "logpath");
                 var growth = GetParamValue(args, "growth", 50);
@@ -64,7 +88,7 @@ namespace Gravitybox.Datastore.Configuration
             if (args.Any(x => x == "/getfilegroups"))
             {
                 var connectionString = GetParamValue(args, "connectionstring");
-                var b = new SqlConnectionStringBuilder(connectionString) { InitialCatalog = "Datastore" };
+                var b = new SqlConnectionStringBuilder(connectionString) { InitialCatalog = "HPDatastore" };
                 connectionString = b.ToString();
                 var l = DataHelper.GetFileGroups(connectionString);
                 Console.WriteLine(@"FILEGROUPS (" + l.Count + @"):");
@@ -77,7 +101,7 @@ namespace Gravitybox.Datastore.Configuration
             {
                 var connectionString = GetParamValue(args, "connectionstring");
                 var databaseName = GetParamValue(args, "dbname");
-                if (string.IsNullOrEmpty(databaseName)) databaseName = "Datastore";
+                if (string.IsNullOrEmpty(databaseName)) databaseName = "HPDatastore";
                 var growth = GetParamValue(args, "growth", 50);
                 var datapath = GetParamValue(args, "datapath");
 
@@ -107,9 +131,9 @@ namespace Gravitybox.Datastore.Configuration
                 {
                     sb.AppendLine("if not exists(select * From sys.filegroups where name = 'MemCache')");
                     sb.AppendLine("BEGIN");
-                    sb.AppendLine($"ALTER DATABASE [{databaseName}] ADD FILEGROUP MemCache CONTAINS MEMORY_OPTIMIZED_DATA");
-                    sb.AppendLine($"ALTER DATABASE [{databaseName}] ADD FILE (name='MemCache', filename='@datapath\\mem_{GetHash(databaseName)} ') TO FILEGROUP MemCache");
-                    sb.AppendLine($"ALTER DATABASE [{databaseName}] SET MEMORY_OPTIMIZED_ELEVATE_TO_SNAPSHOT=ON");
+                    sb.AppendLine("ALTER DATABASE [" + databaseName + "] ADD FILEGROUP MemCache CONTAINS MEMORY_OPTIMIZED_DATA");
+                    sb.AppendLine("ALTER DATABASE [" + databaseName + "] ADD FILE (name='MemCache', filename='@datapath\\mem_" + GetHash(databaseName) + "') TO FILEGROUP MemCache");
+                    sb.AppendLine("ALTER DATABASE [" + databaseName + "] SET MEMORY_OPTIMIZED_ELEVATE_TO_SNAPSHOT=ON");
                     sb.AppendLine("if exists (select * from [ConfigurationSetting] where Name = 'MemOpt')");
                     sb.AppendLine("update [ConfigurationSetting] set Value = 'true' where Name = 'MemOpt'");
                     sb.AppendLine("else");

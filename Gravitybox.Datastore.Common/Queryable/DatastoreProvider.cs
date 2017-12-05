@@ -551,10 +551,10 @@ namespace Gravitybox.Datastore.Common.Queryable
             {
                 var obj = Activator.CreateInstance(itemType);
 
-                var index = 0;
                 var dataStoreItem = obj as IDatastoreItem;
                 if (dataStoreItem != null)
                 {
+                    var index = 0;
                     foreach (var fieldset in results.Fieldset)
                     {
                         var value = dataItem.ItemArray[index];
@@ -569,6 +569,7 @@ namespace Gravitybox.Datastore.Common.Queryable
                                 dataStoreItem.ExtraValues = new Dictionary<string, string>();
                             dataStoreItem.ExtraValues.Add(fieldset.Name, value?.ToString());
                         }
+                        index++;
                     }
 
                     dataStoreItem.__OrdinalPosition = dataItem.__OrdinalPosition;
@@ -576,7 +577,6 @@ namespace Gravitybox.Datastore.Common.Queryable
                     dataStoreItem.__Timestamp = dataItem.__Timestamp;
                     itemList.Add(obj);
                 }
-                index++;
             }
             return itemList;
         }

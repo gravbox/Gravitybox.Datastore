@@ -5,6 +5,8 @@ using Gravitybox.Datastore.Common;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.IO;
+using System.Diagnostics;
+using System.Threading.Tasks;
 
 namespace Gravitybox.Datastore.Util.TestHarness
 {
@@ -12,7 +14,7 @@ namespace Gravitybox.Datastore.Util.TestHarness
     {
         private static readonly Guid repoID = new Guid("00000000-0000-0000-0000-17728d4a8361");
         private const string SERVER = "localhost";
-        private const int PORT = 1974;
+        private const int PORT = 1973;
 
         static void Main(string[] args)
         {
@@ -40,7 +42,9 @@ namespace Gravitybox.Datastore.Util.TestHarness
                 //HitHard();
                 //Test12();
                 //Test44();
-                TestSchema();
+                //TestSchema();
+                //TestAlive();
+                TestFailover();
             }
             catch (Exception ex)
             {
@@ -49,6 +53,20 @@ namespace Gravitybox.Datastore.Util.TestHarness
 
             Console.WriteLine("Press <ENTER> to end...");
             Console.ReadLine();
+        }
+
+        private static void TestAlive()
+        {
+            var timer = Stopwatch.StartNew();
+            Parallel.For(0, 1000, new ParallelOptions { MaxDegreeOfParallelism = 20 }, (ii) =>
+               {
+                   using (var repo = new DatastoreRepository<MyItem>(repoID, SERVER, PORT))
+                   {
+                       repo.IsServerAlive();
+                   }
+               });
+            timer.Stop();
+            Console.WriteLine($"Elapsed={timer.ElapsedMilliseconds}");
         }
 
         private static void DuplicateFilters()
@@ -211,6 +229,37 @@ namespace Gravitybox.Datastore.Util.TestHarness
             }
         }
 
+        private static void TestFailover()
+        {
+            var ii = 0;
+            //FailoverConfiguration.Servers.Add(new ServerConfig { Server = "localhost", Port = 1973 });
+            //FailoverConfiguration.Servers.Add(new ServerConfig { Server = "127.0.0.1", Port = 1974 });
+            FailoverConfiguration.Servers.Add(new ServerConfig { Server = "10.13.31.13", Port = 1973 });
+            FailoverConfiguration.Servers.Add(new ServerConfig { Server = "127.0.0.1", Port = 1973 });
+
+            FailoverConfiguration.RetryOnFailCount = 0;
+            do
+            {
+                try
+                {
+                    using (var repo = new DatastoreRepository<MyItem>(repoID, "@config", PORT))
+                    {
+                        var r6 = repo.Query.Results();
+                        Console.WriteLine($"{DateTime.Now.ToString("HH:mm:ss")} Query Success");
+                    }
+                }
+                catch (Common.Exceptions.FailoverException ex)
+                {
+                    //Do Nothing - so it will try again
+                    Console.WriteLine($"{DateTime.Now.ToString("HH:mm:ss")} Failed");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"{DateTime.Now.ToString("HH:mm:ss")} {ex.Message}");
+                }
+            } while (ii == 0);
+        }
+
         private static void Test44()
         {
             try
@@ -233,107 +282,6 @@ namespace Gravitybox.Datastore.Util.TestHarness
                         }
 
                     }
-                }
-                return;
-
-
-
-                using (var repo = new DatastoreRepository<MyItem>(repoID, SERVER, PORT))
-                {
-                    var r6 = repo.Query
-                        .WhereUrl("?d=1800000")
-                        .RecordsPerPage(2)
-                        .PageOffset(3)
-                        .GroupBy(x => x.Field1)
-                        .Select(x => new
-                        {
-                            XX = x.Key,
-                            MaxId = x.Max(z => z.ID),
-                            MinQ = x.Min(z => z.ID),
-                            C = x.Count(),
-                        })
-                        //.OrderBy(x => x.MaxId)
-                        .Items()
-                        ;
-
-                    var r7 = repo.Query
-                        .WhereUrl("?d=1800000")
-                        .RecordsPerPage(5)
-                        .PageOffset(2)
-                        .OrderByDescending(x => x.ID)
-                        .Select(x => new
-                        {
-                            MaxId = x.ID,
-                            X = x.Field1,
-                        })
-                        .Items()
-                        ;
-
-                    var ii = 0;
-
-                    //        foreach(var item in r6)
-                    //        {
-                    //            var q1 = item.MaxId;
-                    //            var w1 = item.MinQ;
-                    //        }
-
-                    //        #region OLD
-                    //        var r1 = repo.Query
-                    //            .WhereUrl("?d=1800000")
-                    //            .PageOffset(1)
-                    //            .RecordsPerPage(20)
-                    //            .Results();
-
-                    //        var q = r1.Items
-                    //           .GroupBy(x => x.Field1)
-                    //           .Select(x => new
-                    //           {
-                    //               x.Key,
-                    //               MaxId = x.Max(z => z.ID),
-                    //               Count = x.Count()
-                    //           })
-                    //           .ToList()
-                    //           ;
-
-                    //        //var r5 = repo.Query
-                    //        //            .WhereUrl("?d=1800000")
-                    //        //            .FieldMax(x => x.ID)
-                    //        //            .FieldMin(x => x.ID)
-                    //        //            .IncludeRecords(false)
-                    //        //            .IncludeDimensions(false)
-                    //        //            .ExcludeCount(true)
-                    //        //            .Results();
-                    //        //.Aggregate(x => x.Field1);
-                    //        //.Aggregate(x => new { x.Field1, x.ID });
-
-                    //        //var r2 = repo.Query
-                    //        //    .WhereUrl("?d=1800000")
-                    //        //    .PageOffset(2)
-                    //        //    .RecordsPerPage(20)
-                    //        //    .Select(x => new { x.CreatedDate, x.Field1, x.ID })
-                    //        //    .Items();
-
-                    //        //var r3 = repo.Query
-                    //        //    .WhereUrl("?d=1800000")
-                    //        //    .PageOffset(2)
-                    //        //    .RecordsPerPage(20)
-                    //        //    .GroupBy(x => x.Field1)
-                    //        //    .SelectIt(x => new
-                    //        //    {
-                    //        //        x.Key,
-                    //        //        MaxId = x.Max(z => z.ID),
-                    //        //        Count = x.Count()
-                    //        //    })
-                    //        //    .Items()
-                    //        //    //.Items(x => x.Field1,
-                    //        //    //z => new
-                    //        //    //{
-                    //        //    //    z.Field1,
-                    //        //    //    MaxId = z.ID,
-                    //        //    //})
-                    //        //    ;
-                    //        #endregion
-
                 }
             }
             catch (Exception ex)

@@ -908,7 +908,6 @@ namespace Gravitybox.Datastore.EFDAL
 
 		private static int Execute(IContext context, List<PreCacheItem> list)
 		{
-			if (list == null) return 0;
 			try
 			{
 				var count = 0;
@@ -917,7 +916,6 @@ namespace Gravitybox.Datastore.EFDAL
 					if (cacheItem.Optimizer == null) cacheItem.Optimizer = new QueryOptimizer();
 					var affected = 0;
 					var connection = (SqlConnection)(context.ObjectContext.Connection as EntityConnection).StoreConnection;
-					if (connection != null)
 					{
 						if (connection.State == System.Data.ConnectionState.Closed)
 							connection.Open();

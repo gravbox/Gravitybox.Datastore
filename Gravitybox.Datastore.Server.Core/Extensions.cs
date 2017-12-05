@@ -5,7 +5,7 @@ using System.Text;
 using Gravitybox.Datastore.Common;
 using System.Collections;
 
-namespace Gravitybox.Datastore.Server.Interfaces
+namespace Gravitybox.Datastore.Server.Core
 {
     public static class Extensions
     {

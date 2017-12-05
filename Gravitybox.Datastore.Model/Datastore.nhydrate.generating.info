@@ -1,4 +1,4 @@
-<configuration GeneratedVersion="60" ModelerVersion="6.0.0.205">
+<configuration GeneratedVersion="62" ModelerVersion="6.0.0.205">
   <excludeList>
     <item>nHydrate.Generator.Datasite.DatasiteProjectGenerator</item>
     <item>nHydrate.Generator.EFDAL.EFDALProjectGenerator</item>

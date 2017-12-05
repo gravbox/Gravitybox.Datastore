@@ -105,14 +105,6 @@
     <Compile Include="Entity\LockStat.Generated.cs">
       <DependentUpon>LockStat.cs</DependentUpon>
     </Compile>
-    <Compile Include="Entity\LockValue.cs" />
-    <Compile Include="Entity\LockValue.Generated.cs">
-      <DependentUpon>LockValue.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Entity\Machine.cs" />
-    <Compile Include="Entity\Machine.Generated.cs">
-      <DependentUpon>Machine.cs</DependentUpon>
-    </Compile>
     <Compile Include="Entity\Repository.cs" />
     <Compile Include="Entity\Repository.Generated.cs">
       <DependentUpon>Repository.cs</DependentUpon>
@@ -136,6 +128,10 @@
     <Compile Include="Entity\ServerStat.cs" />
     <Compile Include="Entity\ServerStat.Generated.cs">
       <DependentUpon>ServerStat.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Entity\ServiceInstance.cs" />
+    <Compile Include="Entity\ServiceInstance.Generated.cs">
+      <DependentUpon>ServiceInstance.cs</DependentUpon>
     </Compile>
     <Compile Include="Globals.cs" />
     <Compile Include="Globals.Generated.cs">

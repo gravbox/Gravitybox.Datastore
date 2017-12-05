@@ -204,66 +204,6 @@ namespace Gravitybox.Datastore.EFDAL
 
 	#endregion
 
-	#region LockValueQuery
-
-	/// <summary>
-	/// This is a helper object for running LINQ queries on the LockValue collection.
-	/// </summary>
-	[Serializable]
-	[Table(Name = "Lock")]
-	[System.CodeDom.Compiler.GeneratedCode("nHydrateModelGenerator", "6.0.0")]
-	public partial class LockValueQuery : IBusinessObjectLINQQuery
-	{
-		#region Properties
-		/// <summary>
-		/// (Maps to the 'Lock.Intention' database field)
-		/// </summary>
-		[Column(Name = "Intention", DbType = "Bit", CanBeNull = false, IsPrimaryKey = false)]
-		[System.Diagnostics.DebuggerNonUserCode()]
-		public virtual bool Intention { get; set; }
-		/// <summary>
-		/// (Maps to the 'Lock.IsRead' database field)
-		/// </summary>
-		[Column(Name = "IsRead", DbType = "Bit", CanBeNull = false, IsPrimaryKey = false)]
-		[System.Diagnostics.DebuggerNonUserCode()]
-		public virtual bool IsRead { get; set; }
-		/// <summary>
-		/// (Maps to the 'Lock.LockId' database field)
-		/// </summary>
-		[Column(Name = "LockId", DbType = "Int", CanBeNull = false, IsPrimaryKey = true)]
-		[System.Diagnostics.DebuggerNonUserCode()]
-		public virtual int LockId { get; set; }
-		/// <summary>
-		/// (Maps to the 'Lock.LockTime' database field)
-		/// </summary>
-		[Column(Name = "LockTime", DbType = "DateTime", CanBeNull = false, IsPrimaryKey = false)]
-		[System.Diagnostics.DebuggerNonUserCode()]
-		public virtual DateTime LockTime { get; set; }
-		/// <summary>
-		/// (Maps to the 'Lock.MachineId' database field)
-		/// </summary>
-		[Column(Name = "MachineId", DbType = "Int", CanBeNull = false, IsPrimaryKey = false)]
-		[System.Diagnostics.DebuggerNonUserCode()]
-		public virtual int MachineId { get; set; }
-		/// <summary>
-		/// (Maps to the 'Lock.RepositoryId' database field)
-		/// </summary>
-		[Column(Name = "RepositoryId", DbType = "Int", CanBeNull = false, IsPrimaryKey = false)]
-		[System.Diagnostics.DebuggerNonUserCode()]
-		public virtual int RepositoryId { get; set; }
-		/// <summary>
-		/// This is a mapping of the relationship with the Machine entity.
-		/// </summary>
-		[Association(ThisKey = "MachineId", OtherKey = "MachineId")]
-		public Gravitybox.Datastore.EFDAL.MachineQuery Machine { get; private set; }
-
-
-		#endregion
-
-	}
-
-	#endregion
-
 	#region LockStatQuery
 
 	/// <summary>
@@ -335,42 +275,6 @@ namespace Gravitybox.Datastore.EFDAL
 		[Column(Name = "WaitingWriteCount", DbType = "Int", CanBeNull = false, IsPrimaryKey = false)]
 		[System.Diagnostics.DebuggerNonUserCode()]
 		public virtual int WaitingWriteCount { get; set; }
-
-		#endregion
-
-	}
-
-	#endregion
-
-	#region MachineQuery
-
-	/// <summary>
-	/// This is a helper object for running LINQ queries on the Machine collection.
-	/// </summary>
-	[Serializable]
-	[Table(Name = "Machine")]
-	[System.CodeDom.Compiler.GeneratedCode("nHydrateModelGenerator", "6.0.0")]
-	public partial class MachineQuery : IBusinessObjectLINQQuery
-	{
-		#region Properties
-		/// <summary>
-		/// (Maps to the 'Machine.LastCommunication' database field)
-		/// </summary>
-		[Column(Name = "LastCommunication", DbType = "DateTime", CanBeNull = false, IsPrimaryKey = false)]
-		[System.Diagnostics.DebuggerNonUserCode()]
-		public virtual DateTime LastCommunication { get; set; }
-		/// <summary>
-		/// (Maps to the 'Machine.MachineId' database field)
-		/// </summary>
-		[Column(Name = "MachineId", DbType = "Int", CanBeNull = false, IsPrimaryKey = true)]
-		[System.Diagnostics.DebuggerNonUserCode()]
-		public virtual int MachineId { get; set; }
-		/// <summary>
-		/// (Maps to the 'Machine.Name' database field)
-		/// </summary>
-		[Column(Name = "Name", DbType = "NVarChar (100)", CanBeNull = false, IsPrimaryKey = false)]
-		[System.Diagnostics.DebuggerNonUserCode()]
-		public virtual string Name { get; set; }
 
 		#endregion
 
@@ -854,6 +758,49 @@ namespace Gravitybox.Datastore.EFDAL
 		[Association(ThisKey = "ServerId", OtherKey = "ServerId")]
 		public Gravitybox.Datastore.EFDAL.ServerQuery Server { get; private set; }
 
+
+		#endregion
+
+	}
+
+	#endregion
+
+	#region ServiceInstanceQuery
+
+	/// <summary>
+	/// This is a helper object for running LINQ queries on the ServiceInstance collection.
+	/// </summary>
+	[Serializable]
+	[Table(Name = "ServiceInstance")]
+	[System.CodeDom.Compiler.GeneratedCode("nHydrateModelGenerator", "6.0.0")]
+	public partial class ServiceInstanceQuery : IBusinessObjectLINQQuery
+	{
+		#region Properties
+		/// <summary>
+		/// (Maps to the 'ServiceInstance.FirstCommunication' database field)
+		/// </summary>
+		[Column(Name = "FirstCommunication", DbType = "DateTime2 (2)", CanBeNull = false, IsPrimaryKey = false)]
+		[System.Diagnostics.DebuggerNonUserCode()]
+		public virtual DateTime FirstCommunication { get; set; }
+		/// <summary>
+		/// (Maps to the 'ServiceInstance.InstanceId' database field)
+		/// </summary>
+		[Column(Name = "InstanceId", DbType = "UniqueIdentifier", CanBeNull = false, IsPrimaryKey = false)]
+		[System.Diagnostics.DebuggerNonUserCode()]
+		public virtual System.Guid InstanceId { get; set; }
+		/// <summary>
+		/// (Maps to the 'ServiceInstance.LastCommunication' database field)
+		/// </summary>
+		[Column(Name = "LastCommunication", DbType = "DateTime2 (2)", CanBeNull = false, IsPrimaryKey = false)]
+		[System.Diagnostics.DebuggerNonUserCode()]
+		public virtual DateTime LastCommunication { get; set; }
+		/// <summary>
+		/// There is only one record and it is always RowId = 1
+		/// (Maps to the 'ServiceInstance.RowId' database field)
+		/// </summary>
+		[Column(Name = "RowId", DbType = "Int", CanBeNull = false, IsPrimaryKey = true)]
+		[System.Diagnostics.DebuggerNonUserCode()]
+		public virtual int RowId { get; set; }
 
 		#endregion
 

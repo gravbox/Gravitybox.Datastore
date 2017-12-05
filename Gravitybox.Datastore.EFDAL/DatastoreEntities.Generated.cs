@@ -50,14 +50,6 @@ namespace Gravitybox.Datastore.EFDAL
 		/// </summary>
 		LockStat,
 		/// <summary>
-		/// A mapping for the the LockValue entity
-		/// </summary>
-		LockValue,
-		/// <summary>
-		/// A mapping for the the Machine entity
-		/// </summary>
-		Machine,
-		/// <summary>
 		/// A mapping for the the Repository entity
 		/// </summary>
 		Repository,
@@ -81,6 +73,10 @@ namespace Gravitybox.Datastore.EFDAL
 		/// A mapping for the the ServerStat entity
 		/// </summary>
 		ServerStat,
+		/// <summary>
+		/// A mapping for the the ServiceInstance entity
+		/// </summary>
+		ServiceInstance,
 	}
 
 	#endregion
@@ -120,7 +116,7 @@ namespace Gravitybox.Datastore.EFDAL
 		private static Dictionary<string, SequentialIdGenerator> _sequentialIdGeneratorCache = new Dictionary<string, SequentialIdGenerator>();
 		private static object _seqCacheLock = new object();
 
-		private const string _version = "2.1.0.0.60";
+		private const string _version = "2.1.0.0.62";
 		private const string _modelKey = "c4808261-57ef-4c4b-9c5c-b199c70e73ae";
 
 		/// <summary />
@@ -288,15 +284,14 @@ namespace Gravitybox.Datastore.EFDAL
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate>().ToTable("CacheInvalidate", "dbo");
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.ConfigurationSetting>().ToTable("ConfigurationSetting", "dbo");
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.Housekeeping>().ToTable("Housekeeping", "dbo");
-			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.LockValue>().ToTable("Lock", "dbo");
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.LockStat>().ToTable("LockStat", "dbo");
-			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.Machine>().ToTable("Machine", "dbo");
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.Repository>().ToTable("Repository", "dbo");
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.RepositoryActionType>().ToTable("RepositoryActionType", "dbo");
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.RepositoryLog>().ToTable("RepositoryLog", "dbo");
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.RepositoryStat>().ToTable("RepositoryStat", "dbo");
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.Server>().ToTable("Server", "dbo");
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.ServerStat>().ToTable("ServerStat", "dbo");
+			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.ServiceInstance>().ToTable("ServiceInstance", "dbo");
 			#endregion
 
 			#region Setup Fields
@@ -324,14 +319,6 @@ namespace Gravitybox.Datastore.EFDAL
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.Housekeeping>().Property(d => d.Type).IsRequired();
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.Housekeeping>().Property(d => d.Timestamp).IsConcurrencyToken(true);
 
-			//Field setup for LockValue entity
-			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.LockValue>().Property(d => d.Intention).IsRequired();
-			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.LockValue>().Property(d => d.IsRead).IsRequired();
-			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.LockValue>().Property(d => d.LockId).IsRequired().HasDatabaseGeneratedOption(System.ComponentModel.DataAnnotations.Schema.DatabaseGeneratedOption.Identity);
-			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.LockValue>().Property(d => d.LockTime).IsRequired();
-			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.LockValue>().Property(d => d.MachineId).IsRequired();
-			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.LockValue>().Property(d => d.RepositoryId).IsRequired();
-
 			//Field setup for LockStat entity
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.LockStat>().Property(d => d.CurrentReadCount).IsRequired();
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.LockStat>().Property(d => d.DateStamp).IsRequired();
@@ -343,11 +330,6 @@ namespace Gravitybox.Datastore.EFDAL
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.LockStat>().Property(d => d.TraceInfo).IsOptional().HasMaxLength(50).HasColumnType("VARCHAR");
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.LockStat>().Property(d => d.WaitingReadCount).IsRequired();
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.LockStat>().Property(d => d.WaitingWriteCount).IsRequired();
-
-			//Field setup for Machine entity
-			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.Machine>().Property(d => d.LastCommunication).IsRequired();
-			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.Machine>().Property(d => d.MachineId).IsRequired().HasDatabaseGeneratedOption(System.ComponentModel.DataAnnotations.Schema.DatabaseGeneratedOption.Identity);
-			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.Machine>().Property(d => d.Name).IsRequired().HasMaxLength(100);
 
 			//Field setup for Repository entity
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.Repository>().Property(d => d.Changestamp).IsRequired();
@@ -411,6 +393,12 @@ namespace Gravitybox.Datastore.EFDAL
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.ServerStat>().Property(d => d.ServerId).IsRequired();
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.ServerStat>().Property(d => d.ServerStatId).IsRequired().HasDatabaseGeneratedOption(System.ComponentModel.DataAnnotations.Schema.DatabaseGeneratedOption.Identity);
 
+			//Field setup for ServiceInstance entity
+			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.ServiceInstance>().Property(d => d.FirstCommunication).IsRequired();
+			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.ServiceInstance>().Property(d => d.InstanceId).IsRequired();
+			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.ServiceInstance>().Property(d => d.LastCommunication).IsRequired();
+			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.ServiceInstance>().Property(d => d.RowId).IsRequired().HasDatabaseGeneratedOption(System.ComponentModel.DataAnnotations.Schema.DatabaseGeneratedOption.None);
+
 			#endregion
 
 			#region Ignore Enum Properties
@@ -421,13 +409,6 @@ namespace Gravitybox.Datastore.EFDAL
 			#endregion
 
 			#region Relations
-
-			//Relation Machine -> LockValue
-			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.LockValue>()
-							 .HasRequired(a => a.Machine)
-							 .WithMany(b => b.LockValueList)
-							 .HasForeignKey(u => new { u.MachineId })
-							 .WillCascadeOnDelete(false);
 
 			//Relation RepositoryActionType -> RepositoryStat
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.RepositoryStat>()
@@ -456,15 +437,14 @@ namespace Gravitybox.Datastore.EFDAL
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate>().HasKey(x => new { x.RowId });
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.ConfigurationSetting>().HasKey(x => new { x.ID });
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.Housekeeping>().HasKey(x => new { x.ID });
-			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.LockValue>().HasKey(x => new { x.LockId });
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.LockStat>().HasKey(x => new { x.LockStatId });
-			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.Machine>().HasKey(x => new { x.MachineId });
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.Repository>().HasKey(x => new { x.RepositoryId });
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.RepositoryActionType>().HasKey(x => new { x.RepositoryActionTypeId });
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.RepositoryLog>().HasKey(x => new { x.RepositoryLogId });
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.RepositoryStat>().HasKey(x => new { x.RepositoryStatId });
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.Server>().HasKey(x => new { x.ServerId });
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.ServerStat>().HasKey(x => new { x.ServerStatId });
+			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.ServiceInstance>().HasKey(x => new { x.RowId });
 
 			#endregion
 
@@ -526,16 +506,13 @@ namespace Gravitybox.Datastore.EFDAL
 				if (entity != null)
 				{
 					var audit = entity as IAuditableSet;
-					if (audit != null && entity.IsModifyAuditImplemented && entity.ModifiedBy != this.ContextStartup.Modifer)
+					if (entity.IsModifyAuditImplemented && entity.ModifiedBy != this.ContextStartup.Modifer)
 					{
 						if (audit != null) audit.ResetCreatedBy(this.ContextStartup.Modifer);
 						if (audit != null) audit.ResetModifiedBy(this.ContextStartup.Modifer);
 					}
-					if (audit != null)
-					{
-						audit.CreatedDate = markedTime;
-						audit.ModifiedDate = markedTime;
-					}
+					audit.CreatedDate = markedTime;
+					audit.ModifiedDate = markedTime;
 				}
 			}
 			this.OnBeforeSaveAddedEntity(new EventArguments.EntityListEventArgs { List = addedList });
@@ -620,19 +597,9 @@ namespace Gravitybox.Datastore.EFDAL
 		public virtual DbSet<Gravitybox.Datastore.EFDAL.Entity.Housekeeping> Housekeeping { get; set; }
 
 		/// <summary>
-		/// Entity set for LockValue
-		/// </summary>
-		public virtual DbSet<Gravitybox.Datastore.EFDAL.Entity.LockValue> LockValue { get; set; }
-
-		/// <summary>
 		/// Entity set for LockStat
 		/// </summary>
 		public virtual DbSet<Gravitybox.Datastore.EFDAL.Entity.LockStat> LockStat { get; set; }
-
-		/// <summary>
-		/// Entity set for Machine
-		/// </summary>
-		public virtual DbSet<Gravitybox.Datastore.EFDAL.Entity.Machine> Machine { get; set; }
 
 		/// <summary>
 		/// Entity set for Repository
@@ -663,6 +630,11 @@ namespace Gravitybox.Datastore.EFDAL
 		/// Entity set for ServerStat
 		/// </summary>
 		public virtual DbSet<Gravitybox.Datastore.EFDAL.Entity.ServerStat> ServerStat { get; set; }
+
+		/// <summary>
+		/// Entity set for ServiceInstance
+		/// </summary>
+		public virtual DbSet<Gravitybox.Datastore.EFDAL.Entity.ServiceInstance> ServiceInstance { get; set; }
 
 		#endregion
 
@@ -744,35 +716,38 @@ namespace Gravitybox.Datastore.EFDAL
 		/// </summary>
 		public string GetDBVersion(string connectionString = null)
 		{
+			var conn = new System.Data.SqlClient.SqlConnection();
 			try
 			{
-				using (var conn = new System.Data.SqlClient.SqlConnection())
-				{
-					if (string.IsNullOrEmpty(connectionString))
-						connectionString = this.ConnectionString;
-					conn.ConnectionString = connectionString;
-					conn.Open();
+				if (string.IsNullOrEmpty(connectionString))
+					connectionString = this.ConnectionString;
+				conn.ConnectionString = connectionString;
+				conn.Open();
 
-					var da = new SqlDataAdapter("select * from sys.tables where name = '__nhydrateschema'", conn);
-					var ds = new DataSet();
+				var da = new SqlDataAdapter("select * from sys.tables where name = '__nhydrateschema'", conn);
+				var ds = new DataSet();
+				da.Fill(ds);
+				if (ds.Tables[0].Rows.Count > 0)
+				{
+					da = new SqlDataAdapter("SELECT * FROM [__nhydrateschema] where [ModelKey] = '" + this.ModelKey + "'", conn);
+					ds = new DataSet();
 					da.Fill(ds);
-					if (ds.Tables[0].Rows.Count > 0)
+					var t = ds.Tables[0];
+					if (t.Rows.Count > 0)
 					{
-						da = new SqlDataAdapter("SELECT * FROM [__nhydrateschema] where [ModelKey] = '" + this.ModelKey + "'", conn);
-						ds = new DataSet();
-						da.Fill(ds);
-						var t = ds.Tables[0];
-						if (t.Rows.Count > 0)
-						{
-							return (string) t.Rows[0]["dbVersion"];
-						}
+						return (string) t.Rows[0]["dbVersion"];
 					}
-					return string.Empty;
 				}
+				return string.Empty;
 			}
 			catch (Exception)
 			{
 				return string.Empty;
+			}
+			finally
+			{
+				if (conn != null)
+					conn.Close();
 			}
 		}
 
@@ -812,14 +787,6 @@ namespace Gravitybox.Datastore.EFDAL
 			{
 				this.LockStat.Add((Gravitybox.Datastore.EFDAL.Entity.LockStat)entity);
 			}
-			else if (entity is Gravitybox.Datastore.EFDAL.Entity.LockValue)
-			{
-				this.LockValue.Add((Gravitybox.Datastore.EFDAL.Entity.LockValue)entity);
-			}
-			else if (entity is Gravitybox.Datastore.EFDAL.Entity.Machine)
-			{
-				this.Machine.Add((Gravitybox.Datastore.EFDAL.Entity.Machine)entity);
-			}
 			else if (entity is Gravitybox.Datastore.EFDAL.Entity.Repository)
 			{
 				this.Repository.Add((Gravitybox.Datastore.EFDAL.Entity.Repository)entity);
@@ -839,6 +806,10 @@ namespace Gravitybox.Datastore.EFDAL
 			else if (entity is Gravitybox.Datastore.EFDAL.Entity.ServerStat)
 			{
 				this.ServerStat.Add((Gravitybox.Datastore.EFDAL.Entity.ServerStat)entity);
+			}
+			else if (entity is Gravitybox.Datastore.EFDAL.Entity.ServiceInstance)
+			{
+				this.ServiceInstance.Add((Gravitybox.Datastore.EFDAL.Entity.ServiceInstance)entity);
 			}
 			return entity;
 		}
@@ -948,18 +919,6 @@ namespace Gravitybox.Datastore.EFDAL
 		}
 
 		/// <summary />
-		IQueryable<Gravitybox.Datastore.EFDAL.Entity.LockValue> Gravitybox.Datastore.EFDAL.IDatastoreEntities.LockValue
-		{
-			get { return this.LockValue.AsQueryable(); }
-		}
-
-		/// <summary />
-		IQueryable<Gravitybox.Datastore.EFDAL.Entity.Machine> Gravitybox.Datastore.EFDAL.IDatastoreEntities.Machine
-		{
-			get { return this.Machine.AsQueryable(); }
-		}
-
-		/// <summary />
 		IQueryable<Gravitybox.Datastore.EFDAL.Entity.Repository> Gravitybox.Datastore.EFDAL.IDatastoreEntities.Repository
 		{
 			get { return this.Repository.AsQueryable(); }
@@ -993,6 +952,12 @@ namespace Gravitybox.Datastore.EFDAL
 		IQueryable<Gravitybox.Datastore.EFDAL.Entity.ServerStat> Gravitybox.Datastore.EFDAL.IDatastoreEntities.ServerStat
 		{
 			get { return this.ServerStat.AsQueryable(); }
+		}
+
+		/// <summary />
+		IQueryable<Gravitybox.Datastore.EFDAL.Entity.ServiceInstance> Gravitybox.Datastore.EFDAL.IDatastoreEntities.ServiceInstance
+		{
+			get { return this.ServiceInstance.AsQueryable(); }
 		}
 
 		/// <summary />
@@ -1030,14 +995,13 @@ namespace Gravitybox.Datastore.EFDAL
 			if (field is Gravitybox.Datastore.EFDAL.Entity.ConfigurationSetting.FieldNameConstants) return Gravitybox.Datastore.EFDAL.EntityMappingConstants.ConfigurationSetting;
 			if (field is Gravitybox.Datastore.EFDAL.Entity.Housekeeping.FieldNameConstants) return Gravitybox.Datastore.EFDAL.EntityMappingConstants.Housekeeping;
 			if (field is Gravitybox.Datastore.EFDAL.Entity.LockStat.FieldNameConstants) return Gravitybox.Datastore.EFDAL.EntityMappingConstants.LockStat;
-			if (field is Gravitybox.Datastore.EFDAL.Entity.LockValue.FieldNameConstants) return Gravitybox.Datastore.EFDAL.EntityMappingConstants.LockValue;
-			if (field is Gravitybox.Datastore.EFDAL.Entity.Machine.FieldNameConstants) return Gravitybox.Datastore.EFDAL.EntityMappingConstants.Machine;
 			if (field is Gravitybox.Datastore.EFDAL.Entity.Repository.FieldNameConstants) return Gravitybox.Datastore.EFDAL.EntityMappingConstants.Repository;
 			if (field is Gravitybox.Datastore.EFDAL.Entity.RepositoryActionType.FieldNameConstants) return Gravitybox.Datastore.EFDAL.EntityMappingConstants.RepositoryActionType;
 			if (field is Gravitybox.Datastore.EFDAL.Entity.RepositoryLog.FieldNameConstants) return Gravitybox.Datastore.EFDAL.EntityMappingConstants.RepositoryLog;
 			if (field is Gravitybox.Datastore.EFDAL.Entity.RepositoryStat.FieldNameConstants) return Gravitybox.Datastore.EFDAL.EntityMappingConstants.RepositoryStat;
 			if (field is Gravitybox.Datastore.EFDAL.Entity.Server.FieldNameConstants) return Gravitybox.Datastore.EFDAL.EntityMappingConstants.Server;
 			if (field is Gravitybox.Datastore.EFDAL.Entity.ServerStat.FieldNameConstants) return Gravitybox.Datastore.EFDAL.EntityMappingConstants.ServerStat;
+			if (field is Gravitybox.Datastore.EFDAL.Entity.ServiceInstance.FieldNameConstants) return Gravitybox.Datastore.EFDAL.EntityMappingConstants.ServiceInstance;
 			throw new Exception("Unknown field type!");
 		}
 
@@ -1057,14 +1021,13 @@ namespace Gravitybox.Datastore.EFDAL
 				case Gravitybox.Datastore.EFDAL.EntityMappingConstants.ConfigurationSetting: return new Gravitybox.Datastore.EFDAL.Entity.Metadata.ConfigurationSettingMetadata();
 				case Gravitybox.Datastore.EFDAL.EntityMappingConstants.Housekeeping: return new Gravitybox.Datastore.EFDAL.Entity.Metadata.HousekeepingMetadata();
 				case Gravitybox.Datastore.EFDAL.EntityMappingConstants.LockStat: return new Gravitybox.Datastore.EFDAL.Entity.Metadata.LockStatMetadata();
-				case Gravitybox.Datastore.EFDAL.EntityMappingConstants.LockValue: return new Gravitybox.Datastore.EFDAL.Entity.Metadata.LockValueMetadata();
-				case Gravitybox.Datastore.EFDAL.EntityMappingConstants.Machine: return new Gravitybox.Datastore.EFDAL.Entity.Metadata.MachineMetadata();
 				case Gravitybox.Datastore.EFDAL.EntityMappingConstants.Repository: return new Gravitybox.Datastore.EFDAL.Entity.Metadata.RepositoryMetadata();
 				case Gravitybox.Datastore.EFDAL.EntityMappingConstants.RepositoryActionType: return new Gravitybox.Datastore.EFDAL.Entity.Metadata.RepositoryActionTypeMetadata();
 				case Gravitybox.Datastore.EFDAL.EntityMappingConstants.RepositoryLog: return new Gravitybox.Datastore.EFDAL.Entity.Metadata.RepositoryLogMetadata();
 				case Gravitybox.Datastore.EFDAL.EntityMappingConstants.RepositoryStat: return new Gravitybox.Datastore.EFDAL.Entity.Metadata.RepositoryStatMetadata();
 				case Gravitybox.Datastore.EFDAL.EntityMappingConstants.Server: return new Gravitybox.Datastore.EFDAL.Entity.Metadata.ServerMetadata();
 				case Gravitybox.Datastore.EFDAL.EntityMappingConstants.ServerStat: return new Gravitybox.Datastore.EFDAL.Entity.Metadata.ServerStatMetadata();
+				case Gravitybox.Datastore.EFDAL.EntityMappingConstants.ServiceInstance: return new Gravitybox.Datastore.EFDAL.Entity.Metadata.ServiceInstanceMetadata();
 			}
 			throw new Exception("Entity not found!");
 		}

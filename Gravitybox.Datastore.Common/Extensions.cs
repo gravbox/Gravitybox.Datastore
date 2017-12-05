@@ -611,6 +611,7 @@ namespace Gravitybox.Datastore.Common
         {
             try
             {
+                if (data == null || !data.Any()) return default(T);
                 var formatter = new BinaryFormatter();
                 formatter.TypeFormat = System.Runtime.Serialization.Formatters.FormatterTypeStyle.TypesWhenNeeded;
                 using (var stream = new MemoryStream(data.UnzipBytes()))

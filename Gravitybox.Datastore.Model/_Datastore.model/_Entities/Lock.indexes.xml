@@ -1,9 +1,0 @@
-<?xml version="1.0"?>
-<configuration type="entity.indexes" id="52148550-f7b6-4bfc-ae6b-b692d194ffe3">
-		<index id="bb4905e1-2eca-4323-b96d-2e678aa0a949" clustered="1" importedname="" indextype="0" isunique="1">
-				<summary><![CDATA[]]></summary>
-				<indexcolumnset>
-						<column id="68a99ebf-5593-4de4-8924-b76aed439441" ascending="1" fieldid="10f7a82e-49cb-44d8-8184-b0af8d2b183e" sortorder="1" />
-				</indexcolumnset>
-		</index>
-</configuration>

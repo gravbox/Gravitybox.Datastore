@@ -1,12 +1,10 @@
 using Gravitybox.Datastore.Common;
 using Gravitybox.Datastore.EFDAL.Entity;
-using Gravitybox.Datastore.Server.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace Gravitybox.Datastore.Server.Core.Housekeeping
 {

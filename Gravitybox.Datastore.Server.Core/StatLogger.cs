@@ -6,7 +6,6 @@ using System.Linq;
 using Gravitybox.Datastore.Common;
 using Gravitybox.Datastore.EFDAL;
 using Gravitybox.Datastore.EFDAL.Entity;
-using Gravitybox.Datastore.Server.Interfaces;
 
 namespace Gravitybox.Datastore.Server.Core
 {
@@ -18,7 +17,7 @@ namespace Gravitybox.Datastore.Server.Core
         private static Dictionary<Guid, List<RepositorySummmaryStats>> _statCache = new Dictionary<Guid, List<RepositorySummmaryStats>>();
         private static System.Timers.Timer _timer = null;
 
-        public const string PERFMON_CATEGORY = "Datastore";
+        public const string PERFMON_CATEGORY = "HP Datastore";
         public const string COUNTER_MEMUSAGE = "Memory usage";
         public const string COUNTER_LOADDELTA = "Repositories loads/interval";
         public const string COUNTER_UNLOADDELTA = "Repositories unloads/interval";

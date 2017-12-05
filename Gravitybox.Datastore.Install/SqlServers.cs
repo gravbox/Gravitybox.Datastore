@@ -781,20 +781,17 @@ namespace Gravitybox.Datastore.Install
                 {
                     conn.ConnectionString = connectionString;
                     conn.Open();
-                    using (var cmdGetExtProp = new SqlCommand())
+                    SqlCommand cmdGetExtProp = new SqlCommand();
+                    cmdGetExtProp.CommandText = String.Format("SELECT value FROM ::fn_listextendedproperty({0}, {1}, {2}, {3}, {4}, {5}, {6})", new object[] { property, userName, userValue, tableName, tableValue, columnName, columnValue });
+                    cmdGetExtProp.CommandType = System.Data.CommandType.Text;
+                    cmdGetExtProp.Connection = conn;
+                    System.Data.SqlClient.SqlDataReader externalReader = null;
+                    externalReader = cmdGetExtProp.ExecuteReader();
+                    if (externalReader.Read())
                     {
-                        cmdGetExtProp.CommandText = String.Format("SELECT value FROM ::fn_listextendedproperty({0}, {1}, {2}, {3}, {4}, {5}, {6})", new object[] { property, userName, userValue, tableName, tableValue, columnName, columnValue });
-                        cmdGetExtProp.CommandType = System.Data.CommandType.Text;
-                        cmdGetExtProp.Connection = conn;
-                        using (var externalReader = cmdGetExtProp.ExecuteReader())
+                        if (externalReader[0] != System.DBNull.Value)
                         {
-                            if (externalReader.Read())
-                            {
-                                if (externalReader[0] != System.DBNull.Value)
-                                {
-                                    returnVal = externalReader.GetString(0);
-                                }
-                            }
+                            returnVal = externalReader.GetString(0);
                         }
                     }
                 }
@@ -856,18 +853,14 @@ namespace Gravitybox.Datastore.Install
                     {
                         conn.ConnectionString = connectionString;
                         conn.Open();
-                        using (var command = new SqlCommand())
+                        SqlCommand command = new SqlCommand();
+                        command.CommandText = String.Format("SELECT value FROM ::fn_listextendedproperty({0}, {1}, {2}, {3}, {4}, {5}, {6})", new object[] { property, userName, userValue, tableName, tableValue, columnName, columnValue });
+                        command.CommandType = System.Data.CommandType.Text;
+                        command.Connection = conn;
+                        var externalReader = command.ExecuteReader();
+                        if (externalReader.Read())
                         {
-                            command.CommandText = String.Format("SELECT value FROM ::fn_listextendedproperty({0}, {1}, {2}, {3}, {4}, {5}, {6})", new object[] { property, userName, userValue, tableName, tableValue, columnName, columnValue });
-                            command.CommandType = System.Data.CommandType.Text;
-                            command.Connection = conn;
-                            using (var externalReader = command.ExecuteReader())
-                            {
-                                if (externalReader.Read())
-                                {
-                                    retval = true;
-                                }
-                            }
+                            retval = true;
                         }
                     }
                 }

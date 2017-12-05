@@ -112,5 +112,17 @@ namespace Gravitybox.Datastore.Common
         /// <summary />
         [OperationContract]
         void ClearUserPermissions(Guid repositoryId, int userId);
+
+        /// <summary />
+        [OperationContract]
+        bool IsServerAlive();
+
+        /// <summary />
+        [OperationContract]
+        bool IsServerMaster();
+
+        /// <summary />
+        [OperationContract]
+        bool ResetMaster();
     }
 }

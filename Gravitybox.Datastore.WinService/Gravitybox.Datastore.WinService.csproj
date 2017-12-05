@@ -192,10 +192,6 @@
       <Project>{d21202b7-97d4-46d6-a5fa-3edb4f6addb2}</Project>
       <Name>Gravitybox.Datastore.Server.Core</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Gravitybox.Datastore.Server.Interfaces\Gravitybox.Datastore.Server.Interfaces.csproj">
-      <Project>{22c2f327-06fc-4c0e-8a72-3224d55459aa}</Project>
-      <Name>Gravitybox.Datastore.Server.Interfaces</Name>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

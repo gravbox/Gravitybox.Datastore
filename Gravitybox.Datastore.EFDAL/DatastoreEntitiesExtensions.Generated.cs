@@ -66,46 +66,6 @@ namespace Gravitybox.Datastore.EFDAL
 		/// </summary>
 		/// <param name="item">Related object to return in query results</param>
 		/// <param name="query">The LINQ expresssion that maps an include path</param>
-		public static System.Data.Entity.Infrastructure.DbQuery<Gravitybox.Datastore.EFDAL.Entity.LockValue> Include(this System.Data.Entity.Infrastructure.DbQuery<Gravitybox.Datastore.EFDAL.Entity.LockValue> item, Expression<Func<Gravitybox.Datastore.EFDAL.LockValueInclude, Gravitybox.Datastore.EFDAL.IContextInclude>> query)
-		{
-			return GetInclude<Gravitybox.Datastore.EFDAL.Entity.LockValue, Gravitybox.Datastore.EFDAL.LockValueInclude>(item, query);
-		}
-
-		/// <summary>
-		/// Specifies the related objects to include in the query results.
-		/// </summary>
-		/// <param name="item">Related object to return in query results</param>
-		/// <param name="query">The LINQ expresssion that maps an include path</param>
-		public static IQueryable<Gravitybox.Datastore.EFDAL.Entity.LockValue> Include(this IQueryable<Gravitybox.Datastore.EFDAL.Entity.LockValue> item, Expression<Func<Gravitybox.Datastore.EFDAL.LockValueInclude, Gravitybox.Datastore.EFDAL.IContextInclude>> query)
-		{
-			return GetInclude<Gravitybox.Datastore.EFDAL.Entity.LockValue, Gravitybox.Datastore.EFDAL.LockValueInclude>(item, query);
-		}
-
-		/// <summary>
-		/// Specifies the related objects to include in the query results.
-		/// </summary>
-		/// <param name="item">Related object to return in query results</param>
-		/// <param name="query">The LINQ expresssion that maps an include path</param>
-		public static System.Data.Entity.Infrastructure.DbQuery<Gravitybox.Datastore.EFDAL.Entity.Machine> Include(this System.Data.Entity.Infrastructure.DbQuery<Gravitybox.Datastore.EFDAL.Entity.Machine> item, Expression<Func<Gravitybox.Datastore.EFDAL.MachineInclude, Gravitybox.Datastore.EFDAL.IContextInclude>> query)
-		{
-			return GetInclude<Gravitybox.Datastore.EFDAL.Entity.Machine, Gravitybox.Datastore.EFDAL.MachineInclude>(item, query);
-		}
-
-		/// <summary>
-		/// Specifies the related objects to include in the query results.
-		/// </summary>
-		/// <param name="item">Related object to return in query results</param>
-		/// <param name="query">The LINQ expresssion that maps an include path</param>
-		public static IQueryable<Gravitybox.Datastore.EFDAL.Entity.Machine> Include(this IQueryable<Gravitybox.Datastore.EFDAL.Entity.Machine> item, Expression<Func<Gravitybox.Datastore.EFDAL.MachineInclude, Gravitybox.Datastore.EFDAL.IContextInclude>> query)
-		{
-			return GetInclude<Gravitybox.Datastore.EFDAL.Entity.Machine, Gravitybox.Datastore.EFDAL.MachineInclude>(item, query);
-		}
-
-		/// <summary>
-		/// Specifies the related objects to include in the query results.
-		/// </summary>
-		/// <param name="item">Related object to return in query results</param>
-		/// <param name="query">The LINQ expresssion that maps an include path</param>
 		public static System.Data.Entity.Infrastructure.DbQuery<Gravitybox.Datastore.EFDAL.Entity.RepositoryStat> Include(this System.Data.Entity.Infrastructure.DbQuery<Gravitybox.Datastore.EFDAL.Entity.RepositoryStat> item, Expression<Func<Gravitybox.Datastore.EFDAL.RepositoryStatInclude, Gravitybox.Datastore.EFDAL.IContextInclude>> query)
 		{
 			return GetInclude<Gravitybox.Datastore.EFDAL.Entity.RepositoryStat, Gravitybox.Datastore.EFDAL.RepositoryStatInclude>(item, query);
@@ -180,10 +140,6 @@ namespace Gravitybox.Datastore.EFDAL
 				return Gravitybox.Datastore.EFDAL.Entity.Housekeeping.GetFieldType((Gravitybox.Datastore.EFDAL.Entity.Housekeeping.FieldNameConstants)field);
 			if (field is Gravitybox.Datastore.EFDAL.Entity.LockStat.FieldNameConstants)
 				return Gravitybox.Datastore.EFDAL.Entity.LockStat.GetFieldType((Gravitybox.Datastore.EFDAL.Entity.LockStat.FieldNameConstants)field);
-			if (field is Gravitybox.Datastore.EFDAL.Entity.LockValue.FieldNameConstants)
-				return Gravitybox.Datastore.EFDAL.Entity.LockValue.GetFieldType((Gravitybox.Datastore.EFDAL.Entity.LockValue.FieldNameConstants)field);
-			if (field is Gravitybox.Datastore.EFDAL.Entity.Machine.FieldNameConstants)
-				return Gravitybox.Datastore.EFDAL.Entity.Machine.GetFieldType((Gravitybox.Datastore.EFDAL.Entity.Machine.FieldNameConstants)field);
 			if (field is Gravitybox.Datastore.EFDAL.Entity.Repository.FieldNameConstants)
 				return Gravitybox.Datastore.EFDAL.Entity.Repository.GetFieldType((Gravitybox.Datastore.EFDAL.Entity.Repository.FieldNameConstants)field);
 			if (field is Gravitybox.Datastore.EFDAL.Entity.RepositoryActionType.FieldNameConstants)
@@ -196,6 +152,8 @@ namespace Gravitybox.Datastore.EFDAL
 				return Gravitybox.Datastore.EFDAL.Entity.Server.GetFieldType((Gravitybox.Datastore.EFDAL.Entity.Server.FieldNameConstants)field);
 			if (field is Gravitybox.Datastore.EFDAL.Entity.ServerStat.FieldNameConstants)
 				return Gravitybox.Datastore.EFDAL.Entity.ServerStat.GetFieldType((Gravitybox.Datastore.EFDAL.Entity.ServerStat.FieldNameConstants)field);
+			if (field is Gravitybox.Datastore.EFDAL.Entity.ServiceInstance.FieldNameConstants)
+				return Gravitybox.Datastore.EFDAL.Entity.ServiceInstance.GetFieldType((Gravitybox.Datastore.EFDAL.Entity.ServiceInstance.FieldNameConstants)field);
 			throw new Exception("Unknown field type!");
 		}
 
@@ -233,14 +191,13 @@ namespace Gravitybox.Datastore.EFDAL
 				case EntityMappingConstants.ConfigurationSetting: return typeof(Gravitybox.Datastore.EFDAL.Entity.ConfigurationSetting);
 				case EntityMappingConstants.Housekeeping: return typeof(Gravitybox.Datastore.EFDAL.Entity.Housekeeping);
 				case EntityMappingConstants.LockStat: return typeof(Gravitybox.Datastore.EFDAL.Entity.LockStat);
-				case EntityMappingConstants.LockValue: return typeof(Gravitybox.Datastore.EFDAL.Entity.LockValue);
-				case EntityMappingConstants.Machine: return typeof(Gravitybox.Datastore.EFDAL.Entity.Machine);
 				case EntityMappingConstants.Repository: return typeof(Gravitybox.Datastore.EFDAL.Entity.Repository);
 				case EntityMappingConstants.RepositoryActionType: return typeof(Gravitybox.Datastore.EFDAL.Entity.RepositoryActionType);
 				case EntityMappingConstants.RepositoryLog: return typeof(Gravitybox.Datastore.EFDAL.Entity.RepositoryLog);
 				case EntityMappingConstants.RepositoryStat: return typeof(Gravitybox.Datastore.EFDAL.Entity.RepositoryStat);
 				case EntityMappingConstants.Server: return typeof(Gravitybox.Datastore.EFDAL.Entity.Server);
 				case EntityMappingConstants.ServerStat: return typeof(Gravitybox.Datastore.EFDAL.Entity.ServerStat);
+				case EntityMappingConstants.ServiceInstance: return typeof(Gravitybox.Datastore.EFDAL.Entity.ServiceInstance);
 			}
 			throw new Exception("Unknown entity type!");
 		}
@@ -452,8 +409,6 @@ namespace Gravitybox.Datastore.EFDAL
 		{
 			if (optimizer == null)
 				optimizer = new QueryOptimizer();
-			if (query == null)
-				throw new Exception("Query must be set");
 
 			//There is nothing to do
 			if (query.ToString().Replace("\r", string.Empty).Split(new char[] { '\n' }).LastOrDefault().Trim() == "WHERE 1 = 0")
@@ -489,8 +444,7 @@ namespace Gravitybox.Datastore.EFDAL
 						var context = context2.GetValue(query.Provider);
 						objectContext = context as System.Data.Entity.Core.Objects.ObjectContext;
 						var qq = objectContext.InterceptionContext.DbContexts.First() as Gravitybox.Datastore.EFDAL.IDatastoreEntities;
-						if (qq != null)
-							instanceKey = qq.InstanceKey;
+						instanceKey = qq.InstanceKey;
 						if (string.IsNullOrEmpty(connectionString))
 						{
 							connectionString = Util.StripEFCS2Normal(objectContext.Connection.ConnectionString);
@@ -585,24 +539,6 @@ namespace Gravitybox.Datastore.EFDAL
 				sb.AppendLine("on [X].[LockStatId] = [Extent2].[LockStatId]");
 				sb.AppendLine("select @@ROWCOUNT");
 			}
-			else if (typeof(T) == typeof(Gravitybox.Datastore.EFDAL.Entity.LockValue))
-			{
-				sb.AppendLine("set rowcount " + optimizer.ChunkSize + ";");
-				sb.AppendLine("delete [X] from [dbo].[Lock] [X] inner join (");
-				sb.AppendLine(((IQueryable<Gravitybox.Datastore.EFDAL.Entity.LockValue>)query).Select(x => new { x.LockId }).ToString());
-				sb.AppendLine(") AS [Extent2]");
-				sb.AppendLine("on [X].[LockId] = [Extent2].[LockId]");
-				sb.AppendLine("select @@ROWCOUNT");
-			}
-			else if (typeof(T) == typeof(Gravitybox.Datastore.EFDAL.Entity.Machine))
-			{
-				sb.AppendLine("set rowcount " + optimizer.ChunkSize + ";");
-				sb.AppendLine("delete [X] from [dbo].[Machine] [X] inner join (");
-				sb.AppendLine(((IQueryable<Gravitybox.Datastore.EFDAL.Entity.Machine>)query).Select(x => new { x.MachineId }).ToString());
-				sb.AppendLine(") AS [Extent2]");
-				sb.AppendLine("on [X].[MachineId] = [Extent2].[MachineId]");
-				sb.AppendLine("select @@ROWCOUNT");
-			}
 			else if (typeof(T) == typeof(Gravitybox.Datastore.EFDAL.Entity.Repository))
 			{
 				sb.AppendLine("set rowcount " + optimizer.ChunkSize + ";");
@@ -646,6 +582,15 @@ namespace Gravitybox.Datastore.EFDAL
 				sb.AppendLine(((IQueryable<Gravitybox.Datastore.EFDAL.Entity.ServerStat>)query).Select(x => new { x.ServerStatId }).ToString());
 				sb.AppendLine(") AS [Extent2]");
 				sb.AppendLine("on [X].[ServerStatId] = [Extent2].[ServerStatId]");
+				sb.AppendLine("select @@ROWCOUNT");
+			}
+			else if (typeof(T) == typeof(Gravitybox.Datastore.EFDAL.Entity.ServiceInstance))
+			{
+				sb.AppendLine("set rowcount " + optimizer.ChunkSize + ";");
+				sb.AppendLine("delete [X] from [dbo].[ServiceInstance] [X] inner join (");
+				sb.AppendLine(((IQueryable<Gravitybox.Datastore.EFDAL.Entity.ServiceInstance>)query).Select(x => new { x.RowId }).ToString());
+				sb.AppendLine(") AS [Extent2]");
+				sb.AppendLine("on [X].[RowId] = [Extent2].[RowId]");
 				sb.AppendLine("select @@ROWCOUNT");
 			}
 			else throw new Exception("Entity type not found");
@@ -717,8 +662,6 @@ namespace Gravitybox.Datastore.EFDAL
 
 			if (optimizer == null)
 				optimizer = new QueryOptimizer();
-			if (query == null)
-				throw new Exception("Query must be set");
 
 			//There is nothing to do
 			if (query.ToString().Replace("\r", string.Empty).Split(new char[] { '\n' }).LastOrDefault().Trim() == "WHERE 1 = 0")
@@ -1006,34 +949,6 @@ namespace Gravitybox.Datastore.EFDAL
 					sb.AppendLine("select @@ROWCOUNT");
 				}
 			}
-			else if (typeof(T) == typeof(Gravitybox.Datastore.EFDAL.Entity.LockValue))
-			{
-				sb.AppendLine("set rowcount " + optimizer.ChunkSize + ";");
-				foreach (var item in mapping.Where(x => x.SqlList.Any()).ToList())
-				{
-					sb.AppendLine("UPDATE [X] SET");
-					sb.AppendLine(string.Join(", ", item.SqlList));
-					sb.AppendLine("FROM [" + item.Schema + "].[" + item.TableName + "] AS [X] INNER JOIN (");
-					sb.AppendLine(((IQueryable<Gravitybox.Datastore.EFDAL.Entity.LockValue>)query).Select(x => new { x.LockId }).ToString());
-					sb.AppendLine(") AS [Extent2]");
-					sb.AppendLine("on [X].[LockId] = [Extent2].[LockId]");
-					sb.AppendLine("select @@ROWCOUNT");
-				}
-			}
-			else if (typeof(T) == typeof(Gravitybox.Datastore.EFDAL.Entity.Machine))
-			{
-				sb.AppendLine("set rowcount " + optimizer.ChunkSize + ";");
-				foreach (var item in mapping.Where(x => x.SqlList.Any()).ToList())
-				{
-					sb.AppendLine("UPDATE [X] SET");
-					sb.AppendLine(string.Join(", ", item.SqlList));
-					sb.AppendLine("FROM [" + item.Schema + "].[" + item.TableName + "] AS [X] INNER JOIN (");
-					sb.AppendLine(((IQueryable<Gravitybox.Datastore.EFDAL.Entity.Machine>)query).Select(x => new { x.MachineId }).ToString());
-					sb.AppendLine(") AS [Extent2]");
-					sb.AppendLine("on [X].[MachineId] = [Extent2].[MachineId]");
-					sb.AppendLine("select @@ROWCOUNT");
-				}
-			}
 			else if (typeof(T) == typeof(Gravitybox.Datastore.EFDAL.Entity.Repository))
 			{
 				sb.AppendLine("set rowcount " + optimizer.ChunkSize + ";");
@@ -1101,6 +1016,20 @@ namespace Gravitybox.Datastore.EFDAL
 					sb.AppendLine(((IQueryable<Gravitybox.Datastore.EFDAL.Entity.ServerStat>)query).Select(x => new { x.ServerStatId }).ToString());
 					sb.AppendLine(") AS [Extent2]");
 					sb.AppendLine("on [X].[ServerStatId] = [Extent2].[ServerStatId]");
+					sb.AppendLine("select @@ROWCOUNT");
+				}
+			}
+			else if (typeof(T) == typeof(Gravitybox.Datastore.EFDAL.Entity.ServiceInstance))
+			{
+				sb.AppendLine("set rowcount " + optimizer.ChunkSize + ";");
+				foreach (var item in mapping.Where(x => x.SqlList.Any()).ToList())
+				{
+					sb.AppendLine("UPDATE [X] SET");
+					sb.AppendLine(string.Join(", ", item.SqlList));
+					sb.AppendLine("FROM [" + item.Schema + "].[" + item.TableName + "] AS [X] INNER JOIN (");
+					sb.AppendLine(((IQueryable<Gravitybox.Datastore.EFDAL.Entity.ServiceInstance>)query).Select(x => new { x.RowId }).ToString());
+					sb.AppendLine(") AS [Extent2]");
+					sb.AppendLine("on [X].[RowId] = [Extent2].[RowId]");
 					sb.AppendLine("select @@ROWCOUNT");
 				}
 			}

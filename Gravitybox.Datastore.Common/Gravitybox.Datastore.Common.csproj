@@ -61,12 +61,15 @@
     <Compile Include="ByteSize.cs" />
     <Compile Include="Cache.cs" />
     <Compile Include="DataFieldUpdate.cs" />
+    <Compile Include="Exceptions\NotMasterInstanceException.cs" />
+    <Compile Include="Exceptions\FailoverException.cs" />
     <Compile Include="FieldSortTimestamp.cs" />
     <Compile Include="FieldFilterTimestamp.cs" />
     <Compile Include="LockInfoItem.cs" />
     <Compile Include="ObjectCloner.cs" />
     <Compile Include="Queryable\DatastoreSliceable.cs" />
     <Compile Include="Queryable\DatastoreGroupable.cs" />
+    <Compile Include="Queryable\FailoverConfiguration.cs" />
     <Compile Include="Queryable\FieldGrouping.cs" />
     <Compile Include="Queryable\IDatastoreRepository.cs" />
     <Compile Include="Queryable\MemberExpressionVisitor.cs" />

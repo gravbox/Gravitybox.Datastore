@@ -66,9 +66,13 @@
       <Link>Properties\AssemblyInfoGlobal.cs</Link>
     </Compile>
     <Compile Include="ConcurrentHashSet.cs" />
+    <Compile Include="ConfigHelper.cs" />
     <Compile Include="Constants.cs" />
     <Compile Include="DataManager.cs" />
     <Compile Include="DimensionCache.cs" />
+    <Compile Include="EmailDomain.cs" />
+    <Compile Include="EmailSettings.cs" />
+    <Compile Include="Extensions.cs" />
     <Compile Include="Housekeeping\HkClearRepositoryLog.cs" />
     <Compile Include="Housekeeping\HousekeepingMonitor.cs" />
     <Compile Include="Housekeeping\IHousekeepingTask.cs" />
@@ -90,6 +94,8 @@
     <Compile Include="QueryLogManager.cs" />
     <Compile Include="QueryThreaded.cs" />
     <Compile Include="RepositoryManager.cs" />
+    <Compile Include="RetryHelper.cs" />
+    <Compile Include="ServerUtilities.cs" />
     <Compile Include="SqlHelper.cs" />
     <Compile Include="LockLogger.cs" />
     <Compile Include="StatLogger.cs" />
@@ -102,10 +108,6 @@
     <ProjectReference Include="..\Gravitybox.Datastore.Common\Gravitybox.Datastore.Common.csproj">
       <Project>{0fd1eab9-5fc3-480a-bd54-6c88c8f5de41}</Project>
       <Name>Gravitybox.Datastore.Common</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Gravitybox.Datastore.Server.Interfaces\Gravitybox.Datastore.Server.Interfaces.csproj">
-      <Project>{22c2f327-06fc-4c0e-8a72-3224d55459aa}</Project>
-      <Name>Gravitybox.Datastore.Server.Interfaces</Name>
     </ProjectReference>
     <ProjectReference Include="..\Gravitybox.Datastore.EFDAL\Gravitybox.Datastore.EFDAL.csproj">
       <Project>{b3cb7678-00f7-429d-84fe-c9d3c090bb2f}</Project>

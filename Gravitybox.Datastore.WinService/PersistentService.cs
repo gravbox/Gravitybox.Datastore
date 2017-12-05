@@ -4,10 +4,10 @@ using System.ServiceProcess;
 using System.ServiceModel;
 using System.ServiceModel.Description;
 using System.Configuration;
-using Gravitybox.Datastore.Server.Interfaces;
 using Gravitybox.Datastore.Common;
 using Gravitybox.Datastore.Install;
 using System.Data.SqlClient;
+using Gravitybox.Datastore.Server.Core;
 
 namespace Gravitybox.Datastore.WinService
 {
@@ -159,13 +159,6 @@ namespace Gravitybox.Datastore.WinService
                 primaryHost.AddServiceEndpoint(typeof(Gravitybox.Datastore.Common.ISystemCore), netTcpBinding, string.Empty);
                 primaryHost.Open();
 
-                if (string.IsNullOrEmpty(ConfigHelper.PublicKey))
-                {
-                    var keys = SecurityHelper.GenerateSymmetricKeys();
-                    ConfigHelper.PrivateKey = keys.PrivateKey;
-                    ConfigHelper.PublicKey = keys.PublicKey;
-                }
-
                 //Create Core Listener
                 var primaryEndpoint = new EndpointAddress(primaryHost.BaseAddresses.First().AbsoluteUri);
                 var primaryClient = new ChannelFactory<Gravitybox.Datastore.Common.ISystemCore>(netTcpBinding, primaryEndpoint);
@@ -176,6 +169,9 @@ namespace Gravitybox.Datastore.WinService
                 LoadEngine(service);
 
                 LoggerCQ.LogInfo("Service started complete");
+
+                //Initialize instances for fail over
+                ConfigHelper.StartUp();
 
             }
             catch (Exception ex)
@@ -207,7 +203,10 @@ namespace Gravitybox.Datastore.WinService
                         MaxDepth = int.MaxValue,
                         MaxNameTableCharCount = int.MaxValue,
                         MaxStringContentLength = int.MaxValue,
-                    }
+                    },
+                    OpenTimeout = new TimeSpan(0, 0, 10),
+                    ReceiveTimeout = new TimeSpan(0, 0, 120),
+                    CloseTimeout = new TimeSpan(0, 0, 120),
                 };
                 myBinding.Security.Mode = SecurityMode.None;
                 var endpoint = host.AddServiceEndpoint(typeof(Gravitybox.Datastore.Common.IDataModel), myBinding, host.BaseAddresses.First().AbsoluteUri);

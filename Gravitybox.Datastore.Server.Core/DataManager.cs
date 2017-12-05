@@ -1,6 +1,5 @@
 using Gravitybox.Datastore.Common;
 using Gravitybox.Datastore.EFDAL;
-using Gravitybox.Datastore.Server.Interfaces;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;

@@ -184,15 +184,14 @@ namespace Gravitybox.Datastore.EFDAL
 			else if (parentTable == "CacheInvalidate") realTable = Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.GetTableFromFieldNameSqlMapping(field);
 			else if (parentTable == "ConfigurationSetting") realTable = Gravitybox.Datastore.EFDAL.Entity.ConfigurationSetting.GetTableFromFieldNameSqlMapping(field);
 			else if (parentTable == "Housekeeping") realTable = Gravitybox.Datastore.EFDAL.Entity.Housekeeping.GetTableFromFieldNameSqlMapping(field);
-			else if (parentTable == "Lock") realTable = Gravitybox.Datastore.EFDAL.Entity.LockValue.GetTableFromFieldNameSqlMapping(field);
 			else if (parentTable == "LockStat") realTable = Gravitybox.Datastore.EFDAL.Entity.LockStat.GetTableFromFieldNameSqlMapping(field);
-			else if (parentTable == "Machine") realTable = Gravitybox.Datastore.EFDAL.Entity.Machine.GetTableFromFieldNameSqlMapping(field);
 			else if (parentTable == "Repository") realTable = Gravitybox.Datastore.EFDAL.Entity.Repository.GetTableFromFieldNameSqlMapping(field);
 			else if (parentTable == "RepositoryActionType") realTable = Gravitybox.Datastore.EFDAL.Entity.RepositoryActionType.GetTableFromFieldNameSqlMapping(field);
 			else if (parentTable == "RepositoryLog") realTable = Gravitybox.Datastore.EFDAL.Entity.RepositoryLog.GetTableFromFieldNameSqlMapping(field);
 			else if (parentTable == "RepositoryStat") realTable = Gravitybox.Datastore.EFDAL.Entity.RepositoryStat.GetTableFromFieldNameSqlMapping(field);
 			else if (parentTable == "Server") realTable = Gravitybox.Datastore.EFDAL.Entity.Server.GetTableFromFieldNameSqlMapping(field);
 			else if (parentTable == "ServerStat") realTable = Gravitybox.Datastore.EFDAL.Entity.ServerStat.GetTableFromFieldNameSqlMapping(field);
+			else if (parentTable == "ServiceInstance") realTable = Gravitybox.Datastore.EFDAL.Entity.ServiceInstance.GetTableFromFieldNameSqlMapping(field);
 			LinqSQLFromClause sqlFromClause = this.GetByTable(realTable);
 			return sqlFromClause.TableName;
 		}
@@ -501,15 +500,7 @@ namespace Gravitybox.Datastore.EFDAL
 					{
 						childTables.Add(fromClause);
 					}
-					if (fromClause.TableName == "Lock")
-					{
-						childTables.Add(fromClause);
-					}
 					if (fromClause.TableName == "LockStat")
-					{
-						childTables.Add(fromClause);
-					}
-					if (fromClause.TableName == "Machine")
 					{
 						childTables.Add(fromClause);
 					}
@@ -537,6 +528,10 @@ namespace Gravitybox.Datastore.EFDAL
 					{
 						childTables.Add(fromClause);
 					}
+					if (fromClause.TableName == "ServiceInstance")
+					{
+						childTables.Add(fromClause);
+					}
 				}
 				if (_type == ObjectTypeConstants.View)
 				{
@@ -559,15 +554,14 @@ namespace Gravitybox.Datastore.EFDAL
 					else if (clause.TableName == "CacheInvalidate") realTable = Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.GetTableFromFieldAliasSqlMapping(field.Alias);
 					else if (clause.TableName == "ConfigurationSetting") realTable = Gravitybox.Datastore.EFDAL.Entity.ConfigurationSetting.GetTableFromFieldAliasSqlMapping(field.Alias);
 					else if (clause.TableName == "Housekeeping") realTable = Gravitybox.Datastore.EFDAL.Entity.Housekeeping.GetTableFromFieldAliasSqlMapping(field.Alias);
-					else if (clause.TableName == "Lock") realTable = Gravitybox.Datastore.EFDAL.Entity.LockValue.GetTableFromFieldAliasSqlMapping(field.Alias);
 					else if (clause.TableName == "LockStat") realTable = Gravitybox.Datastore.EFDAL.Entity.LockStat.GetTableFromFieldAliasSqlMapping(field.Alias);
-					else if (clause.TableName == "Machine") realTable = Gravitybox.Datastore.EFDAL.Entity.Machine.GetTableFromFieldAliasSqlMapping(field.Alias);
 					else if (clause.TableName == "Repository") realTable = Gravitybox.Datastore.EFDAL.Entity.Repository.GetTableFromFieldAliasSqlMapping(field.Alias);
 					else if (clause.TableName == "RepositoryActionType") realTable = Gravitybox.Datastore.EFDAL.Entity.RepositoryActionType.GetTableFromFieldAliasSqlMapping(field.Alias);
 					else if (clause.TableName == "RepositoryLog") realTable = Gravitybox.Datastore.EFDAL.Entity.RepositoryLog.GetTableFromFieldAliasSqlMapping(field.Alias);
 					else if (clause.TableName == "RepositoryStat") realTable = Gravitybox.Datastore.EFDAL.Entity.RepositoryStat.GetTableFromFieldAliasSqlMapping(field.Alias);
 					else if (clause.TableName == "Server") realTable = Gravitybox.Datastore.EFDAL.Entity.Server.GetTableFromFieldAliasSqlMapping(field.Alias);
 					else if (clause.TableName == "ServerStat") realTable = Gravitybox.Datastore.EFDAL.Entity.ServerStat.GetTableFromFieldAliasSqlMapping(field.Alias);
+					else if (clause.TableName == "ServiceInstance") realTable = Gravitybox.Datastore.EFDAL.Entity.ServiceInstance.GetTableFromFieldAliasSqlMapping(field.Alias);
 				}
 				var sqlFromClause = _fromLinkList.GetByTable(realTable);
 				field.Table = sqlFromClause.Alias;
@@ -597,15 +591,14 @@ namespace Gravitybox.Datastore.EFDAL
 					case "CacheInvalidate": return Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.GetRemappedLinqSql(whereClause, tableInfo.Alias, fromLinkList);
 					case "ConfigurationSetting": return Gravitybox.Datastore.EFDAL.Entity.ConfigurationSetting.GetRemappedLinqSql(whereClause, tableInfo.Alias, fromLinkList);
 					case "Housekeeping": return Gravitybox.Datastore.EFDAL.Entity.Housekeeping.GetRemappedLinqSql(whereClause, tableInfo.Alias, fromLinkList);
-					case "Lock": return Gravitybox.Datastore.EFDAL.Entity.LockValue.GetRemappedLinqSql(whereClause, tableInfo.Alias, fromLinkList);
 					case "LockStat": return Gravitybox.Datastore.EFDAL.Entity.LockStat.GetRemappedLinqSql(whereClause, tableInfo.Alias, fromLinkList);
-					case "Machine": return Gravitybox.Datastore.EFDAL.Entity.Machine.GetRemappedLinqSql(whereClause, tableInfo.Alias, fromLinkList);
 					case "Repository": return Gravitybox.Datastore.EFDAL.Entity.Repository.GetRemappedLinqSql(whereClause, tableInfo.Alias, fromLinkList);
 					case "RepositoryActionType": return Gravitybox.Datastore.EFDAL.Entity.RepositoryActionType.GetRemappedLinqSql(whereClause, tableInfo.Alias, fromLinkList);
 					case "RepositoryLog": return Gravitybox.Datastore.EFDAL.Entity.RepositoryLog.GetRemappedLinqSql(whereClause, tableInfo.Alias, fromLinkList);
 					case "RepositoryStat": return Gravitybox.Datastore.EFDAL.Entity.RepositoryStat.GetRemappedLinqSql(whereClause, tableInfo.Alias, fromLinkList);
 					case "Server": return Gravitybox.Datastore.EFDAL.Entity.Server.GetRemappedLinqSql(whereClause, tableInfo.Alias, fromLinkList);
 					case "ServerStat": return Gravitybox.Datastore.EFDAL.Entity.ServerStat.GetRemappedLinqSql(whereClause, tableInfo.Alias, fromLinkList);
+					case "ServiceInstance": return Gravitybox.Datastore.EFDAL.Entity.ServiceInstance.GetRemappedLinqSql(whereClause, tableInfo.Alias, fromLinkList);
 				}
 			}
 			if (type == ObjectTypeConstants.View)
@@ -689,15 +682,14 @@ namespace Gravitybox.Datastore.EFDAL
 						case "CacheInvalidate": alias = Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.GetFieldAliasFromFieldNameSqlMapping(field); break;
 						case "ConfigurationSetting": alias = Gravitybox.Datastore.EFDAL.Entity.ConfigurationSetting.GetFieldAliasFromFieldNameSqlMapping(field); break;
 						case "Housekeeping": alias = Gravitybox.Datastore.EFDAL.Entity.Housekeeping.GetFieldAliasFromFieldNameSqlMapping(field); break;
-						case "Lock": alias = Gravitybox.Datastore.EFDAL.Entity.LockValue.GetFieldAliasFromFieldNameSqlMapping(field); break;
 						case "LockStat": alias = Gravitybox.Datastore.EFDAL.Entity.LockStat.GetFieldAliasFromFieldNameSqlMapping(field); break;
-						case "Machine": alias = Gravitybox.Datastore.EFDAL.Entity.Machine.GetFieldAliasFromFieldNameSqlMapping(field); break;
 						case "Repository": alias = Gravitybox.Datastore.EFDAL.Entity.Repository.GetFieldAliasFromFieldNameSqlMapping(field); break;
 						case "RepositoryActionType": alias = Gravitybox.Datastore.EFDAL.Entity.RepositoryActionType.GetFieldAliasFromFieldNameSqlMapping(field); break;
 						case "RepositoryLog": alias = Gravitybox.Datastore.EFDAL.Entity.RepositoryLog.GetFieldAliasFromFieldNameSqlMapping(field); break;
 						case "RepositoryStat": alias = Gravitybox.Datastore.EFDAL.Entity.RepositoryStat.GetFieldAliasFromFieldNameSqlMapping(field); break;
 						case "Server": alias = Gravitybox.Datastore.EFDAL.Entity.Server.GetFieldAliasFromFieldNameSqlMapping(field); break;
 						case "ServerStat": alias = Gravitybox.Datastore.EFDAL.Entity.ServerStat.GetFieldAliasFromFieldNameSqlMapping(field); break;
+						case "ServiceInstance": alias = Gravitybox.Datastore.EFDAL.Entity.ServiceInstance.GetFieldAliasFromFieldNameSqlMapping(field); break;
 					}
 				}
 

@@ -1,6 +1,8 @@
 <root>
   <tables>
     <table>Useraccount</table>
+    <table>Lockvalue</table>
+    <table>Machine</table>
   </tables>
   <views />
   <storedprocedures />

@@ -155,6 +155,24 @@ namespace Gravitybox.Datastore.Common.Queryable
             }
         }
 
+        /// <summary />
+        public virtual bool IsServerAlive()
+        {
+            return DataModelService.IsServerAlive();
+        }
+
+        /// <summary />
+        public virtual bool IsServerMaster()
+        {
+            return DataModelService.IsServerMaster();
+        }
+
+        /// <summary />
+        public virtual bool ResetMaster()
+        {
+            return DataModelService.ResetMaster();
+        }
+
         internal virtual Guid QueryAsync(DataQuery query)
         {
             ValidateService();

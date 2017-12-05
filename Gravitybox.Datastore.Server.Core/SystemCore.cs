@@ -2,16 +2,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Gravitybox.Datastore.Server.Interfaces;
 using System.IO;
 using Gravitybox.Datastore.Common;
 using System.ServiceModel;
 using System.Runtime.Serialization;
-using System.ServiceModel.Description;
-using System.Security.Permissions;
-using System.Security;
 using System.Diagnostics;
-using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using Gravitybox.Datastore.EFDAL;
 using Gravitybox.Datastore.EFDAL.Entity;
@@ -527,7 +522,7 @@ namespace Gravitybox.Datastore.Server.Core
                     CounterDatas.Add(cRepositoryDeleteDelta);
 
                     //Add all counters
-                    System.Diagnostics.PerformanceCounterCategory.Create(StatLogger.PERFMON_CATEGORY, "Metrics for the Datastore faceted navigation engine",
+                    System.Diagnostics.PerformanceCounterCategory.Create(StatLogger.PERFMON_CATEGORY, "Metrics for the HP Datastore faceted navigation engine",
                         PerformanceCounterCategoryType.SingleInstance, CounterDatas);
                 }
                 _allowCounters = true;

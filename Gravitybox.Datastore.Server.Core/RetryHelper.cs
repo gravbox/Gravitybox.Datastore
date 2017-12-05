@@ -1,7 +1,7 @@
 using System;
 using Polly;
 
-namespace Gravitybox.Datastore.Server.Interfaces
+namespace Gravitybox.Datastore.Server.Core
 {
     /// <summary>
     /// A mechanism to perform some action N times when encountering an error

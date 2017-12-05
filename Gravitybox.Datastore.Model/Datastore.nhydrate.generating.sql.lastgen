@@ -55,6 +55,9 @@
 								<c key="d8c75767-d0a1-4431-a830-1b2091ade646" name="Failure" dataFieldSortOrder="3" isIndexed="1" id="806810184" type="2" allowNull="0">
 										<pt key="617eb474-1224-42f5-9bf0-549042892c0f" ref="1781545979" refType="1" />
 								</c>
+								<c key="07aa86d2-96b0-4968-8365-59c1fc117194" name="FirstCommunication" dataFieldSortOrder="4" length="2" id="671437787" type="33" allowNull="0">
+										<pt key="bec25185-9308-472e-b8e9-35354ee36797" ref="104381028" refType="1" />
+								</c>
 								<c key="958f0a29-c933-4588-ac18-ce3b244de385" primaryKey="1" name="ID" dataFieldSortOrder="1" default="newid" isIndexed="1" isUnique="1" id="1723882113" type="14" allowNull="0">
 										<pt key="c4b64d28-387e-410b-bac4-2356afc6856c" ref="1918180592" refType="1" />
 								</c>
@@ -64,8 +67,8 @@
 								<c key="cd57cdc2-10ae-4996-9e89-34db748aae03" primaryKey="1" identity="1" name="ID" dataFieldSortOrder="1" isIndexed="1" isUnique="1" id="1516274961" type="8" allowNull="0">
 										<pt key="a47ce1a5-2ec2-4833-9435-129cb61be8af" ref="706019903" refType="1" />
 								</c>
-								<c key="89465c6f-5cf3-4da8-ab67-aa96c0e90fff" name="Intention" dataFieldSortOrder="5" id="627214573" type="2" allowNull="0">
-										<pt key="52148550-f7b6-4bfc-ae6b-b692d194ffe3" ref="748923824" refType="1" />
+								<c key="8c222bb9-8d1f-46dc-b066-e68f80a1a894" name="InstanceId" dataFieldSortOrder="5" id="739685590" type="14" allowNull="0">
+										<pt key="bec25185-9308-472e-b8e9-35354ee36797" ref="104381028" refType="1" />
 								</c>
 								<c key="28892856-b57d-4087-bc1a-35e78f32d223" name="IPAddress" dataFieldSortOrder="2" id="919340656" type="22" allowNull="0">
 										<pt key="af302cbc-51e3-4aad-9ad9-7f2009313ce0" ref="476818358" refType="1" />
@@ -76,9 +79,6 @@
 								<c key="4ccd287e-ab70-48d8-9fa5-17db62654a12" name="IsInitialized" description="Determines if the item has been fully created" dataFieldSortOrder="9" default="1" isIndexed="1" id="1448751278" type="2" allowNull="0">
 										<pt key="5b0293c0-a352-41ee-9688-cb9ea27b3823" ref="168493840" refType="1" />
 								</c>
-								<c key="f307512d-716f-4eb5-8ee3-0da45c1746d6" name="IsRead" dataFieldSortOrder="4" id="1057243633" type="2" allowNull="0">
-										<pt key="52148550-f7b6-4bfc-ae6b-b692d194ffe3" ref="748923824" refType="1" />
-								</c>
 								<c key="df28872e-aff0-4ee5-9d8a-5896b005bc18" name="IsWriteLockHeld" dataFieldSortOrder="8" id="1982190992" type="2" allowNull="0">
 										<pt key="617eb474-1224-42f5-9bf0-549042892c0f" ref="1781545979" refType="1" />
 								</c>
@@ -88,29 +88,17 @@
 								<c key="ffcc98c5-98f7-4d3d-969b-beb420ee0260" name="ItemCount" dataFieldSortOrder="6" id="1722105844" type="8" allowNull="0">
 										<pt key="65c859b0-9d8a-4bc1-95cb-97868b167853" ref="1097915898" refType="1" />
 								</c>
-								<c key="c72341fa-5605-4284-bf89-d2661b1fd6b1" name="LastCommunication" dataFieldSortOrder="3" default="getdate" id="202196441" type="4" allowNull="0">
-										<pt key="87cc1b77-1282-4c39-9c02-d535d11ac0be" ref="165410080" refType="1" />
-								</c>
-								<c key="10f7a82e-49cb-44d8-8184-b0af8d2b183e" primaryKey="1" identity="1" name="LockId" dataFieldSortOrder="1" isIndexed="1" isUnique="1" id="1001621914" type="8" allowNull="0">
-										<pt key="52148550-f7b6-4bfc-ae6b-b692d194ffe3" ref="748923824" refType="1" />
+								<c key="9dc3ca03-863b-47ca-b16f-6957e11eb3ee" name="LastCommunication" dataFieldSortOrder="3" length="2" id="128598532" type="33" allowNull="0">
+										<pt key="bec25185-9308-472e-b8e9-35354ee36797" ref="104381028" refType="1" />
 								</c>
 								<c key="5f6e6947-7919-4157-898b-fce177c8b15d" primaryKey="1" identity="1" name="LockStatId" dataFieldSortOrder="1" isIndexed="1" isUnique="1" id="1889498453" type="8" allowNull="0">
 										<pt key="617eb474-1224-42f5-9bf0-549042892c0f" ref="1781545979" refType="1" />
-								</c>
-								<c key="285700a9-3853-4b9a-a530-447f1aa06c34" name="LockTime" dataFieldSortOrder="3" id="1521243728" type="4" allowNull="0">
-										<pt key="52148550-f7b6-4bfc-ae6b-b692d194ffe3" ref="748923824" refType="1" />
 								</c>
 								<c key="3a195a70-3e2f-45a7-8404-4558c39f6a4b" name="LockTime" dataFieldSortOrder="7" default="0" id="871556324" type="8" allowNull="0">
 										<pt key="af302cbc-51e3-4aad-9ad9-7f2009313ce0" ref="476818358" refType="1" />
 								</c>
 								<c key="f30aa61f-a1da-40b3-9dcd-8b8da018112a" name="LockTime" dataFieldSortOrder="7" default="0" id="23774607" type="8" allowNull="0">
 										<pt key="65c859b0-9d8a-4bc1-95cb-97868b167853" ref="1097915898" refType="1" />
-								</c>
-								<c key="0c8d61be-cb22-4ad4-a9c0-20493b3eae92" name="MachineId" dataFieldSortOrder="2" id="16694036" type="8" allowNull="0">
-										<pt key="52148550-f7b6-4bfc-ae6b-b692d194ffe3" ref="748923824" refType="1" />
-								</c>
-								<c key="47d88723-2259-4329-8166-870f7b339ebd" primaryKey="1" identity="1" name="MachineId" dataFieldSortOrder="1" isIndexed="1" isUnique="1" id="1332202607" type="8" allowNull="0">
-										<pt key="87cc1b77-1282-4c39-9c02-d535d11ac0be" ref="165410080" refType="1" />
 								</c>
 								<c key="7c1d7f45-3723-412f-953e-1f974a63549f" name="MemoryUsageAvailable" dataFieldSortOrder="3" id="358237382" type="0" allowNull="0">
 										<pt key="9fe58257-9f30-46fb-8e06-dc7681dd72de" ref="1285279716" refType="1" />
@@ -123,9 +111,6 @@
 								</c>
 								<c key="1329a975-a63c-4ac8-aa01-00e9e7705338" name="Name" dataFieldSortOrder="2" id="241444321" type="12" allowNull="0">
 										<pt key="831ebe6d-76be-45d5-a873-80ffdfc111dc" ref="1614399143" refType="1" />
-								</c>
-								<c key="2e9722fb-e129-48d6-b1e9-d100b76d43fc" name="Name" dataFieldSortOrder="2" length="100" id="185473126" type="12" allowNull="0">
-										<pt key="87cc1b77-1282-4c39-9c02-d535d11ac0be" ref="165410080" refType="1" />
 								</c>
 								<c key="059a83b1-e54a-4dad-afde-9e2ce04fdf6e" name="Name" dataFieldSortOrder="5" id="1512270237" type="12" allowNull="0">
 										<pt key="5b0293c0-a352-41ee-9688-cb9ea27b3823" ref="168493840" refType="1" />
@@ -166,9 +151,6 @@
 								<c key="0f787c33-1573-40d8-80ba-cc1d29441b45" name="RepositoryId" dataFieldSortOrder="2" isIndexed="1" id="186080095" type="8" allowNull="0">
 										<pt key="0def976b-da96-4b15-80d0-980f9701addd" ref="1193161485" refType="1" />
 								</c>
-								<c key="20a43272-a894-44e1-ac7b-a506081a0431" name="RepositoryId" dataFieldSortOrder="6" id="1899326858" type="8" allowNull="0">
-										<pt key="52148550-f7b6-4bfc-ae6b-b692d194ffe3" ref="748923824" refType="1" />
-								</c>
 								<c key="8e601f2b-8998-4e35-b7a0-ad86e47c5601" primaryKey="1" identity="1" name="RepositoryId" dataFieldSortOrder="1" isIndexed="1" isUnique="1" id="104468358" type="8" allowNull="0">
 										<pt key="5b0293c0-a352-41ee-9688-cb9ea27b3823" ref="168493840" refType="1" />
 								</c>
@@ -195,6 +177,9 @@
 								</c>
 								<c key="e5ac5ce9-675f-4fac-ae7b-025402b8c86a" primaryKey="1" identity="1" name="RowId" dataFieldSortOrder="1" isIndexed="1" isUnique="1" id="533837904" type="0" allowNull="0">
 										<pt key="0def976b-da96-4b15-80d0-980f9701addd" ref="1193161485" refType="1" />
+								</c>
+								<c key="7a341017-38a5-4d45-bb6c-e5deb98f7357" primaryKey="1" name="RowId" description="There is only one record and it is always RowId = 1" dataFieldSortOrder="1" default="1" isIndexed="1" isUnique="1" id="2025010755" type="8" allowNull="0">
+										<pt key="bec25185-9308-472e-b8e9-35354ee36797" ref="104381028" refType="1" />
 								</c>
 								<c key="9cf993a1-b1e1-4f0c-b1ed-b2534c95d641" primaryKey="1" identity="1" name="ServerId" dataFieldSortOrder="1" isIndexed="1" isUnique="1" id="1054024029" type="8" allowNull="0">
 										<pt key="32b513f0-3ede-416d-92d7-5a202cc89fce" ref="225803044" refType="1" />
@@ -244,16 +229,6 @@
 						<customretrieveruleparameters key="00000000-0000-0000-0000-000000000000" />
 						<functionparameters key="00000000-0000-0000-0000-000000000000" />
 						<relations key="00000000-0000-0000-0000-000000000000">
-								<r key="6f0dbcd9-a7d7-4f8d-870f-97ff21cec743" enforce="1" id="1877199499">
-										<crl>
-												<cr>
-														<pt key="47d88723-2259-4329-8166-870f7b339ebd" ref="1332202607" refType="0" />
-														<ct key="0c8d61be-cb22-4ad4-a9c0-20493b3eae92" ref="16694036" refType="0" />
-												</cr>
-										</crl>
-										<ct key="52148550-f7b6-4bfc-ae6b-b692d194ffe3" ref="748923824" refType="1" />
-										<pt key="87cc1b77-1282-4c39-9c02-d535d11ac0be" ref="165410080" refType="1" />
-								</r>
 								<r key="3a0b5ce3-b742-47c6-aefc-309445f1cd8b" enforce="1" id="1399944847">
 										<crl>
 												<cr>
@@ -355,26 +330,6 @@
 												<parameters key="00000000-0000-0000-0000-000000000000" />
 										</security>
 								</t>
-								<t key="52148550-f7b6-4bfc-ae6b-b692d194ffe3" name="Lock" codeFacade="LockValue" modifiedAudit="0" createAudit="0" timestamp="0" id="748923824">
-										<til>
-												<ti key="bb4905e1-2eca-4323-b96d-2e678aa0a949" isUnique="1" primaryKey="1" clustered="1" description="" importedName="" id="779709431">
-														<ticl>
-																<tic ascending="1" fieldID="10f7a82e-49cb-44d8-8184-b0af8d2b183e" id="1" />
-														</ticl>
-												</ti>
-										</til>
-										<c key="00000000-0000-0000-0000-000000000000">
-												<f key="10f7a82e-49cb-44d8-8184-b0af8d2b183e" ref="1001621914" refType="0" />
-												<f key="0c8d61be-cb22-4ad4-a9c0-20493b3eae92" ref="16694036" refType="0" />
-												<f key="285700a9-3853-4b9a-a530-447f1aa06c34" ref="1521243728" refType="0" />
-												<f key="f307512d-716f-4eb5-8ee3-0da45c1746d6" ref="1057243633" refType="0" />
-												<f key="89465c6f-5cf3-4da8-ab67-aa96c0e90fff" ref="627214573" refType="0" />
-												<f key="20a43272-a894-44e1-ac7b-a506081a0431" ref="1899326858" refType="0" />
-										</c>
-										<security key="00000000-0000-0000-0000-000000000000" sql="">
-												<parameters key="00000000-0000-0000-0000-000000000000" />
-										</security>
-								</t>
 								<t key="617eb474-1224-42f5-9bf0-549042892c0f" name="LockStat" dbschema="" modifiedAudit="0" createAudit="0" timestamp="0" id="1781545979">
 										<til>
 												<ti key="39e5c950-d32b-4aaf-a4ed-10a55577acfd" isUnique="1" primaryKey="1" clustered="1" description="" importedName="" id="201108489">
@@ -399,26 +354,6 @@
 												<f key="df28872e-aff0-4ee5-9d8a-5896b005bc18" ref="1982190992" refType="0" />
 												<f key="a010b58a-aa16-4455-9103-7c92406e868b" ref="528728905" refType="0" />
 												<f key="c97449b4-f302-4a6b-80df-7e37997fed7b" ref="648093489" refType="0" />
-										</c>
-										<security key="00000000-0000-0000-0000-000000000000" sql="">
-												<parameters key="00000000-0000-0000-0000-000000000000" />
-										</security>
-								</t>
-								<t key="87cc1b77-1282-4c39-9c02-d535d11ac0be" name="Machine" modifiedAudit="0" createAudit="0" timestamp="0" id="165410080">
-										<r key="00000000-0000-0000-0000-000000000000">
-												<f key="6f0dbcd9-a7d7-4f8d-870f-97ff21cec743" ref="1877199499" refType="2" />
-										</r>
-										<til>
-												<ti key="61ed47ab-59b6-4ab0-bf39-359bd6830865" isUnique="1" primaryKey="1" clustered="1" description="" importedName="" id="1235885778">
-														<ticl>
-																<tic ascending="1" fieldID="47d88723-2259-4329-8166-870f7b339ebd" id="1" />
-														</ticl>
-												</ti>
-										</til>
-										<c key="00000000-0000-0000-0000-000000000000">
-												<f key="47d88723-2259-4329-8166-870f7b339ebd" ref="1332202607" refType="0" />
-												<f key="2e9722fb-e129-48d6-b1e9-d100b76d43fc" ref="185473126" refType="0" />
-												<f key="c72341fa-5605-4284-bf89-d2661b1fd6b1" ref="202196441" refType="0" />
 										</c>
 										<security key="00000000-0000-0000-0000-000000000000" sql="">
 												<parameters key="00000000-0000-0000-0000-000000000000" />
@@ -707,6 +642,24 @@
 												<parameters key="00000000-0000-0000-0000-000000000000" />
 										</security>
 								</t>
+								<t key="bec25185-9308-472e-b8e9-35354ee36797" name="ServiceInstance" dbschema="" modifiedAudit="0" createAudit="0" timestamp="0" id="104381028">
+										<til>
+												<ti key="753825de-dbb4-405b-8565-302e1cb0fd98" isUnique="1" primaryKey="1" clustered="1" description="" importedName="" id="1817161897">
+														<ticl>
+																<tic ascending="1" fieldID="7a341017-38a5-4d45-bb6c-e5deb98f7357" id="1" />
+														</ticl>
+												</ti>
+										</til>
+										<c key="00000000-0000-0000-0000-000000000000">
+												<f key="7a341017-38a5-4d45-bb6c-e5deb98f7357" ref="2025010755" refType="0" />
+												<f key="9dc3ca03-863b-47ca-b16f-6957e11eb3ee" ref="128598532" refType="0" />
+												<f key="07aa86d2-96b0-4968-8365-59c1fc117194" ref="671437787" refType="0" />
+												<f key="8c222bb9-8d1f-46dc-b066-e68f80a1a894" ref="739685590" refType="0" />
+										</c>
+										<security key="00000000-0000-0000-0000-000000000000" sql="">
+												<parameters key="00000000-0000-0000-0000-000000000000" />
+										</security>
+								</t>
 						</tables>
 						<functions key="00000000-0000-0000-0000-000000000000" />
 						<customviews key="00000000-0000-0000-0000-000000000000" />
@@ -714,7 +667,7 @@
 						<customstoredprocedures key="00000000-0000-0000-0000-000000000000" />
 				</database>
 				<versionHistoryList>
-						<version createdDate="2017-11-29 14:35:31" version="2.1.0.0" />
+						<version createdDate="2017-12-04 14:06:23" version="2.1.0.0" />
 				</versionHistoryList>
 		</ModelRoot>
 </modelRoot>

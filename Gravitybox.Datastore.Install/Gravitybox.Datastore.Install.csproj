@@ -126,6 +126,9 @@
     <EmbeddedResource Include="5_Programmability\Views\Model\Views.sql" />
     <EmbeddedResource Include="5_Programmability\Stored Procedures\Internal\StoredProcedures.sql" />
     <EmbeddedResource Include="5_Programmability\Stored Procedures\Model\StoredProcedures.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\0002_0001_0000_0000_0060_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\0002_0001_0000_0000_0061_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\0002_0001_0000_0000_0062_UpgradeScript.sql" />
     <Content Include="2_Upgrade Scripts\ReadMe.txt" />
     <EmbeddedResource Include="3_GeneratedTablesAndData\1_CreateSchema.sql" />
     <EmbeddedResource Include="3_GeneratedTablesAndData\2_CreateData.sql" />
@@ -141,9 +144,11 @@
     <Content Include="5_Programmability\Stored Procedures\User Defined\ReadMe.txt" />
     <Content Include="5_Programmability\Views\User Defined\ReadMe.txt" />
     <Content Include="6_UserDefinedFinalize\Always\ReadMe.txt" />
+    <None Include="6_UserDefinedFinalize\create-db.sql" />
     <Content Include="6_UserDefinedFinalize\NewDatabase\ReadMe.txt" />
     <EmbeddedResource Include="6_UserDefinedFinalize\NewDatabase\script.sql" />
     <Content Include="6_UserDefinedFinalize\ReadMe.txt" />
+    <None Include="6_UserDefinedFinalize\conversion.sql" />
     <Content Include="6_UserDefinedFinalize\UnVersioned\ReadMe.txt" />
     <EmbeddedResource Include="6_UserDefinedFinalize\UnVersioned\script.sql" />
     <Content Include="6_UserDefinedFinalize\Versioned\ReadMe.txt" />

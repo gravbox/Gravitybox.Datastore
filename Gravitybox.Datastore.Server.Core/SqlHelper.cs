@@ -10,12 +10,8 @@ using System.Text;
 using System.Threading;
 using Gravitybox.Datastore.Common;
 using Gravitybox.Datastore.EFDAL;
-using Gravitybox.Datastore.EFDAL.Entity;
-using Gravitybox.Datastore.Server.Interfaces;
-using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using Gravitybox.Datastore.Server.Core.QueryBuilders;
-using System.Runtime.CompilerServices;
 
 namespace Gravitybox.Datastore.Server.Core
 {
@@ -67,11 +63,20 @@ namespace Gravitybox.Datastore.Server.Core
             _queryCache = queryCache;
         }
 
-        #endregion
+        internal static void Reset()
+        {
+            _lastUpdatedList = new System.Collections.Concurrent.ConcurrentDictionary<Guid, DateTime>();
+            _updateDataSchemaCache = new Cache<string, RepositorySchema>(new TimeSpan(0, 30, 0), 4391);
+            _childTableRefresh = new System.Collections.Concurrent.ConcurrentDictionary<Guid, DateTime>();
+            _permissionCount = new System.Collections.Concurrent.ConcurrentDictionary<Guid, int>();
+            _queryCache = new QueryCache();
+        }
 
-        #region Timer_Elapsed
+    #endregion
 
-        private static void _timerUpdateChildTables_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
+    #region Timer_Elapsed
+
+    private static void _timerUpdateChildTables_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
             try
             {
@@ -4051,7 +4056,7 @@ namespace Gravitybox.Datastore.Server.Core
 
         #region SqlVersion
 
-        public static Gravitybox.Datastore.Server.Interfaces.ConfigHelper.ServerVersionConstants GetSqlVersion(string connectionString)
+        public static ConfigHelper.ServerVersionConstants GetSqlVersion(string connectionString)
         {
             try
             {
@@ -4065,15 +4070,15 @@ namespace Gravitybox.Datastore.Server.Core
 
                 var major = int.Parse(v.Split('.').First());
                 if (major == 12)
-                    return Gravitybox.Datastore.Server.Interfaces.ConfigHelper.ServerVersionConstants.SQL2014;
+                    return ConfigHelper.ServerVersionConstants.SQL2014;
                 else if (major == 11)
-                    return Gravitybox.Datastore.Server.Interfaces.ConfigHelper.ServerVersionConstants.SQL2012;
+                    return ConfigHelper.ServerVersionConstants.SQL2012;
                 else if (major == 10)
-                    return Gravitybox.Datastore.Server.Interfaces.ConfigHelper.ServerVersionConstants.SQL2008;
+                    return ConfigHelper.ServerVersionConstants.SQL2008;
                 else if (major < 10)
-                    return Gravitybox.Datastore.Server.Interfaces.ConfigHelper.ServerVersionConstants.SQLInvalid;
+                    return ConfigHelper.ServerVersionConstants.SQLInvalid;
                 else
-                    return Gravitybox.Datastore.Server.Interfaces.ConfigHelper.ServerVersionConstants.SQLOther; //Newer version
+                    return ConfigHelper.ServerVersionConstants.SQLOther; //Newer version
             }
             catch (Exception ex)
             {

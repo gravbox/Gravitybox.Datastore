@@ -7,7 +7,7 @@ using System.Text;
 using Gravitybox.Datastore.Common;
 using System.IO;
 
-namespace Gravitybox.Datastore.Server.Interfaces
+namespace Gravitybox.Datastore.Server.Core
 {
     public class EmailDomain
     {

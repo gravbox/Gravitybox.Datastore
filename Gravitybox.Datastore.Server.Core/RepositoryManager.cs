@@ -2,11 +2,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.Serialization;
 using System.ServiceModel;
 using System.Text;
 using Gravitybox.Datastore.Common;
-using Gravitybox.Datastore.Server.Interfaces;
 using System.IO;
 using System.Threading.Tasks;
 using System.Diagnostics;
@@ -14,6 +12,7 @@ using Gravitybox.Datastore.EFDAL;
 using System.Collections.Concurrent;
 using Gravitybox.Datastore.Server.Core.Housekeeping;
 using Gravitybox.Datastore.Common.Queryable;
+using Gravitybox.Datastore.Common.Exceptions;
 
 namespace Gravitybox.Datastore.Server.Core
 {
@@ -42,6 +41,9 @@ namespace Gravitybox.Datastore.Server.Core
         private static TableStatsMaintenace _statsMaintenance = new TableStatsMaintenace();
         private static HousekeepingMonitor _housekeepingMonitor = new HousekeepingMonitor();
         private const byte RSeedPermissions = 187;
+
+        //every start is a new instance. this is used to keep track of failover
+        internal static Guid InstanceId { get; private set; } = Guid.NewGuid();
 
         public RepositoryManager(ISystemCore system)
         {
@@ -75,6 +77,9 @@ namespace Gravitybox.Datastore.Server.Core
 
         public static void SetRepositoryChangeStamp(Guid id)
         {
+            if (RepositoryManager.InstanceId != ConfigHelper.CurrentMaster)
+                throw new NotMasterInstanceException();
+
             try
             {
                 using (var l4 = new AcquireWriterLock(RepositoryChangeStampID, "RepositoryChangeStamp"))
@@ -93,6 +98,9 @@ namespace Gravitybox.Datastore.Server.Core
 
         public static int GetRepositoryChangeStamp(DatastoreEntities context, int id)
         {
+            if (RepositoryManager.InstanceId != ConfigHelper.CurrentMaster)
+                throw new NotMasterInstanceException();
+
             try
             {
                 using (var q = new AcquireWriterLock(DimensionCacheID, "DimensionCache"))
@@ -111,6 +119,9 @@ namespace Gravitybox.Datastore.Server.Core
 
         public static void SetDimensionChanged(int id)
         {
+            if (RepositoryManager.InstanceId != ConfigHelper.CurrentMaster)
+                throw new NotMasterInstanceException();
+
             try
             {
                 using (var q = new AcquireWriterLock(DimensionCacheID, "DimensionCache"))
@@ -129,6 +140,9 @@ namespace Gravitybox.Datastore.Server.Core
 
         public static int GetDimensionChanged(DatastoreEntities context, int id)
         {
+            if (RepositoryManager.InstanceId != ConfigHelper.CurrentMaster)
+                throw new NotMasterInstanceException();
+
             try
             {
                 using (var q = new AcquireWriterLock(DimensionCacheID, "DimensionCache"))
@@ -147,6 +161,9 @@ namespace Gravitybox.Datastore.Server.Core
 
         public void RemoveRepository(Guid repositoryId)
         {
+            if (!IsServerMaster())
+                throw new NotMasterInstanceException();
+
             try
             {
                 var timer = Stopwatch.StartNew();
@@ -203,6 +220,9 @@ namespace Gravitybox.Datastore.Server.Core
 
         public void AddRepository(RepositorySchema schema)
         {
+            if (!IsServerMaster())
+                throw new NotMasterInstanceException();
+
             try
             {
                 var timer = Stopwatch.StartNew();
@@ -280,6 +300,9 @@ namespace Gravitybox.Datastore.Server.Core
 
         public ActionDiagnostics DeleteItems(RepositorySchema schema, IEnumerable<DataItem> list)
         {
+            if (!IsServerMaster())
+                throw new NotMasterInstanceException();
+
             if (schema == null) throw new Exception("Schema was not specified.");
             var retval = new ActionDiagnostics { RepositoryId = schema.ID, IsSuccess = false };
             var errorList = new List<string>();
@@ -361,6 +384,9 @@ namespace Gravitybox.Datastore.Server.Core
 
         public ActionDiagnostics DeleteData(RepositorySchema schema, DataQuery query)
         {
+            if (!IsServerMaster())
+                throw new NotMasterInstanceException();
+
             var retval = new ActionDiagnostics { RepositoryId = schema.ID, IsSuccess = false };
             var errorList = new List<string>();
             var timer = Stopwatch.StartNew();
@@ -451,6 +477,9 @@ namespace Gravitybox.Datastore.Server.Core
 
         public ActionDiagnostics Clear(Guid repositoryId)
         {
+            if (!IsServerMaster())
+                throw new NotMasterInstanceException();
+
             var retval = new ActionDiagnostics { RepositoryId = repositoryId, IsSuccess = false };
             var errorList = new List<string>();
             var timer = Stopwatch.StartNew();
@@ -458,7 +487,7 @@ namespace Gravitybox.Datastore.Server.Core
             {
                 if (!RepositoryExists(repositoryId))
                 {
-                    LoggerCQ.LogWarning("Repository not found: " + repositoryId);
+                    LoggerCQ.LogWarning($"Repository not found: {repositoryId}");
                     //errorList.Add("The repository has not been initialized! ID: " + repositoryId);
                     throw new Gravitybox.Datastore.Common.Exceptions.RepositoryNotInitializedException(repositoryId);
                 }
@@ -506,6 +535,9 @@ namespace Gravitybox.Datastore.Server.Core
 
         internal DataQueryResults Query(Guid repositoryId, DataQuery query, bool isInternal = false)
         {
+            if (!IsServerMaster())
+                throw new NotMasterInstanceException();
+
             DataQueryResults retval = null;
             if (query == null) return null;
             var queryString = query.ToString();
@@ -540,7 +572,7 @@ namespace Gravitybox.Datastore.Server.Core
                 var schema = GetSchema(repositoryId);
                 if (schema == null)
                 {
-                    LoggerCQ.LogWarning("Repository not found: " + repositoryId);
+                    LoggerCQ.LogWarning($"Repository not found: {repositoryId}");
                     //retval.ErrorList = new string[] { "The repository has not been initialized! ID: " + repositoryId };
                     throw new Gravitybox.Datastore.Common.Exceptions.RepositoryNotInitializedException(repositoryId);
                 }
@@ -790,6 +822,9 @@ namespace Gravitybox.Datastore.Server.Core
 
         public int GetLastTimestamp(Guid repositoryId, DataQuery query)
         {
+            if (!IsServerMaster())
+                throw new NotMasterInstanceException();
+
             try
             {
                 var timer = Stopwatch.StartNew();
@@ -800,7 +835,7 @@ namespace Gravitybox.Datastore.Server.Core
                 var schema = GetSchema(repositoryId);
                 if (schema == null)
                 {
-                    LoggerCQ.LogWarning("Repository not found: " + repositoryId);
+                    LoggerCQ.LogWarning($"Repository not found: {repositoryId}");
                     //retval.ErrorList = new string[] { "The repository has not been initialized! ID: " + repositoryId };
                     throw new Gravitybox.Datastore.Common.Exceptions.RepositoryNotInitializedException(repositoryId);
                 }
@@ -833,6 +868,9 @@ namespace Gravitybox.Datastore.Server.Core
 
         public int GetTimestamp()
         {
+            if (!IsServerMaster())
+                throw new NotMasterInstanceException();
+
             return Utilities.CurrentTimestamp;
         }
 
@@ -847,7 +885,7 @@ namespace Gravitybox.Datastore.Server.Core
             {
                 if (!RepositoryExists(repositoryId))
                 {
-                    LoggerCQ.LogWarning("Repository not found: " + repositoryId);
+                    LoggerCQ.LogWarning($"Repository not found: {repositoryId}");
                     //throw new Exception("The repository has not been initialized! ID: " + repositoryId);
                     throw new Gravitybox.Datastore.Common.Exceptions.RepositoryNotInitializedException(repositoryId);
                 }
@@ -873,6 +911,9 @@ namespace Gravitybox.Datastore.Server.Core
         /// <returns></returns>
         public long GetItemCount(Guid repositoryId)
         {
+            if (!IsServerMaster())
+                throw new NotMasterInstanceException();
+
             try
             {
                 using (var context = new DatastoreEntities(ConfigHelper.ConnectionString))
@@ -1092,6 +1133,9 @@ namespace Gravitybox.Datastore.Server.Core
 
         public bool IsValidFormat(Guid repositoryId, DataItem item)
         {
+            if (!IsServerMaster())
+                throw new NotMasterInstanceException();
+
             try
             {
                 if (!RepositoryExists(repositoryId))
@@ -1248,6 +1292,9 @@ namespace Gravitybox.Datastore.Server.Core
 
         public ActionDiagnostics UpdateData(RepositorySchema schema, IEnumerable<DataItem> list)
         {
+            if (!IsServerMaster())
+                throw new NotMasterInstanceException();
+
             var retval = new ActionDiagnostics { RepositoryId = schema.ID, IsSuccess = false };
             if (list == null)
             {
@@ -1339,6 +1386,9 @@ namespace Gravitybox.Datastore.Server.Core
         private System.Collections.Concurrent.ConcurrentQueue<UpdateDataWhereCacheItem> _updateDataWhereQueue = new System.Collections.Concurrent.ConcurrentQueue<UpdateDataWhereCacheItem>();
         public void UpdateDataWhereAsync(RepositorySchema schema, DataQuery query, IEnumerable<DataFieldUpdate> list)
         {
+            if (!IsServerMaster())
+                throw new NotMasterInstanceException();
+
             try
             {
                 _updateDataWhereQueue.Enqueue(new UpdateDataWhereCacheItem
@@ -1387,6 +1437,9 @@ namespace Gravitybox.Datastore.Server.Core
 
         public ActionDiagnostics UpdateDataWhere(RepositorySchema schema, DataQuery query, IEnumerable<DataFieldUpdate> list)
         {
+            if (!IsServerMaster())
+                throw new NotMasterInstanceException();
+
             var retval = new ActionDiagnostics { RepositoryId = schema.ID, IsSuccess = false };
             var errorList = new List<string>();
             try
@@ -1463,6 +1516,9 @@ namespace Gravitybox.Datastore.Server.Core
 
         public ActionDiagnostics UpdateSchema(RepositorySchema newSchema)
         {
+            if (!IsServerMaster())
+                throw new NotMasterInstanceException();
+
             return UpdateSchema(newSchema, false);
         }
 
@@ -1717,6 +1773,9 @@ namespace Gravitybox.Datastore.Server.Core
 
         public Guid QueryAsync(Guid repositoryId, DataQuery query)
         {
+            if (!IsServerMaster())
+                throw new NotMasterInstanceException();
+
             try
             {
                 //TODO: Verify Credentials
@@ -1727,7 +1786,7 @@ namespace Gravitybox.Datastore.Server.Core
                 var schema = GetSchema(repositoryId);
                 if (schema == null)
                 {
-                    LoggerCQ.LogWarning("Repository not found: " + repositoryId);
+                    LoggerCQ.LogWarning($"Repository not found: {repositoryId}");
                     throw new Gravitybox.Datastore.Common.Exceptions.RepositoryNotInitializedException(repositoryId);
                 }
                 else
@@ -1748,6 +1807,9 @@ namespace Gravitybox.Datastore.Server.Core
 
         public bool QueryAsyncReady(Guid key)
         {
+            if (!IsServerMaster())
+                throw new NotMasterInstanceException();
+
             try
             {
                 //TODO: Verify Credentials
@@ -1770,6 +1832,9 @@ namespace Gravitybox.Datastore.Server.Core
 
         public byte[] QueryAsyncDownload(Guid key, long chunk)
         {
+            if (!IsServerMaster())
+                throw new NotMasterInstanceException();
+
             try
             {
                 //TODO: Verify Credentials
@@ -1845,6 +1910,9 @@ namespace Gravitybox.Datastore.Server.Core
 
         public int GetDataVersion(Guid repositoryId)
         {
+            if (!IsServerMaster())
+                throw new NotMasterInstanceException();
+
             try
             {
                 //TODO: Verify Credentials
@@ -1853,7 +1921,7 @@ namespace Gravitybox.Datastore.Server.Core
                 var schema = GetSchema(repositoryId);
                 if (schema == null)
                 {
-                    LoggerCQ.LogWarning("Repository not found: " + repositoryId);
+                    LoggerCQ.LogWarning($"Repository not found: {repositoryId}");
                     //retval.ErrorList = new string[] { "The repository has not been initialized! ID: " + repositoryId };
                     throw new Gravitybox.Datastore.Common.Exceptions.RepositoryNotInitializedException(repositoryId);
                 }
@@ -1874,6 +1942,9 @@ namespace Gravitybox.Datastore.Server.Core
 
         public bool ResetDimensionValue(Guid repositoryId, long dvidx, string value)
         {
+            if (!IsServerMaster())
+                throw new NotMasterInstanceException();
+
             try
             {
                 //TODO: Verify Credentials
@@ -1882,7 +1953,7 @@ namespace Gravitybox.Datastore.Server.Core
                 var schema = GetSchema(repositoryId);
                 if (schema == null)
                 {
-                    LoggerCQ.LogWarning("Repository not found: " + repositoryId);
+                    LoggerCQ.LogWarning($"Repository not found: {repositoryId}");
                     //retval.ErrorList = new string[] { "The repository has not been initialized! ID: " + repositoryId };
                     throw new Gravitybox.Datastore.Common.Exceptions.RepositoryNotInitializedException(repositoryId);
                 }
@@ -1907,6 +1978,9 @@ namespace Gravitybox.Datastore.Server.Core
 
         public bool DeleteDimensionValue(Guid repositoryId, long dvidx)
         {
+            if (!IsServerMaster())
+                throw new NotMasterInstanceException();
+
             try
             {
                 //TODO: Verify Credentials
@@ -1915,7 +1989,7 @@ namespace Gravitybox.Datastore.Server.Core
                 var schema = GetSchema(repositoryId);
                 if (schema == null)
                 {
-                    LoggerCQ.LogWarning("Repository not found: " + repositoryId);
+                    LoggerCQ.LogWarning($"Repository not found: {repositoryId}");
                     //retval.ErrorList = new string[] { "The repository has not been initialized! ID: " + repositoryId };
                     throw new Gravitybox.Datastore.Common.Exceptions.RepositoryNotInitializedException(repositoryId);
                 }
@@ -1962,7 +2036,9 @@ namespace Gravitybox.Datastore.Server.Core
 
         public SummarySliceValue CalculateSlice(Guid repositoryId, SummarySlice slice)
         {
-            
+            if (!IsServerMaster())
+                throw new NotMasterInstanceException();
+
             var retval = new SummarySliceValue();
             try
             {
@@ -1979,7 +2055,7 @@ namespace Gravitybox.Datastore.Server.Core
                 var schema = GetSchema(repositoryId);
                 if (schema == null)
                 {
-                    LoggerCQ.LogWarning("Repository not found: " + repositoryId);
+                    LoggerCQ.LogWarning($"Repository not found: {repositoryId}");
                     //retval.ErrorList = new string[] { "The repository has not been initialized! ID: " + repositoryId };
                     throw new Gravitybox.Datastore.Common.Exceptions.RepositoryNotInitializedException(repositoryId);
                 }
@@ -2030,6 +2106,9 @@ namespace Gravitybox.Datastore.Server.Core
 
         public void AddPermission(Guid repositoryId, IEnumerable<PermissionItem> list)
         {
+            if (!IsServerMaster())
+                throw new NotMasterInstanceException();
+
             if (list == null) return;
             if (list.Count() == 0) return;
             try
@@ -2083,6 +2162,9 @@ namespace Gravitybox.Datastore.Server.Core
 
         public void DeletePermission(Guid repositoryId, IEnumerable<PermissionItem> list)
         {
+            if (!IsServerMaster())
+                throw new NotMasterInstanceException();
+
             try
             {
                 //TODO: Verify Credentials
@@ -2091,7 +2173,7 @@ namespace Gravitybox.Datastore.Server.Core
                 var schema = GetSchema(repositoryId);
                 if (schema == null)
                 {
-                    LoggerCQ.LogWarning("Repository not found: " + repositoryId);
+                    LoggerCQ.LogWarning($"Repository not found: {repositoryId}");
                     //retval.ErrorList = new string[] { "The repository has not been initialized! ID: " + repositoryId };
                     throw new Gravitybox.Datastore.Common.Exceptions.RepositoryNotInitializedException(repositoryId);
                 }
@@ -2118,6 +2200,9 @@ namespace Gravitybox.Datastore.Server.Core
 
         public void ClearPermissions(Guid repositoryId, string fieldValue)
         {
+            if (!IsServerMaster())
+                throw new NotMasterInstanceException();
+
             try
             {
                 //TODO: Verify Credentials
@@ -2127,7 +2212,7 @@ namespace Gravitybox.Datastore.Server.Core
                 var schema = GetSchema(repositoryId);
                 if (schema == null)
                 {
-                    LoggerCQ.LogWarning("Repository not found: " + repositoryId);
+                    LoggerCQ.LogWarning($"Repository not found: {repositoryId}");
                     //retval.ErrorList = new string[] { "The repository has not been initialized! ID: " + repositoryId };
                     throw new Gravitybox.Datastore.Common.Exceptions.RepositoryNotInitializedException(repositoryId);
                 }
@@ -2163,6 +2248,9 @@ namespace Gravitybox.Datastore.Server.Core
 
         public void ClearUserPermissions(Guid repositoryId, int userId)
         {
+            if (!IsServerMaster())
+                throw new NotMasterInstanceException();
+
             try
             {
                 //TODO: Verify Credentials
@@ -2172,7 +2260,7 @@ namespace Gravitybox.Datastore.Server.Core
                 var schema = GetSchema(repositoryId);
                 if (schema == null)
                 {
-                    LoggerCQ.LogWarning("Repository not found: " + repositoryId);
+                    LoggerCQ.LogWarning($"Repository not found: {repositoryId}");
                     //retval.ErrorList = new string[] { "The repository has not been initialized! ID: " + repositoryId };
                     throw new Gravitybox.Datastore.Common.Exceptions.RepositoryNotInitializedException(repositoryId);
                 }
@@ -2204,6 +2292,55 @@ namespace Gravitybox.Datastore.Server.Core
                 LoggerCQ.LogError(ex, $"RepositoryId={repositoryId}");
                 //retval.ErrorList = new string[] { ex.ToString() };
             }
+        }
+
+        /// <summary>
+        /// Just returns a true if the service is running
+        /// </summary>
+        /// <remarks>The return is the instance value of this service</remarks>
+        public bool IsServerAlive()
+        {
+            return true;
+        }
+
+        /// <summary>
+        /// Just returns a true if the service is running
+        /// </summary>
+        /// <remarks>The return is the instance value of this service</remarks>
+        public bool IsServerMaster()
+        {
+            return InstanceId == ConfigHelper.CurrentMaster;
+        }
+
+        /// <summary>
+        /// This will clear all cache objects and the service will be reset to the initial loaded state
+        /// </summary>
+        public bool ResetMaster()
+        {
+            if (IsServerMaster())
+            {
+                //Do Nothing
+            }
+            else
+            {
+                //Try to promote to master
+                if (!ConfigHelper.PromoteMaster())
+                    return false;
+            }
+
+            _dimensionCache = new DimensionCache();
+            _queryCache = new QueryCache();
+            _dimensionChangeStampCache = new Dictionary<int, int>();
+            _repositoryChangeStampCache = new Dictionary<Guid, int>();
+            _schemaCache = new Dictionary<Guid, RepositoryCacheItem>();
+            _schemaVersionCache = new Dictionary<Guid, long>();
+            _schemaParentCache = new ConcurrentDictionary<int, int?>();
+            _repositoryExistCache = new ConcurrentHashSet<Guid>();
+            _statsMaintenance = new TableStatsMaintenace();
+            _housekeepingMonitor = new HousekeepingMonitor();
+            SqlHelper.Reset();
+            LoggerCQ.LogInfo("System Reset");
+            return true;
         }
 
         internal static List<Guid> GetChildRepositories(Guid repositoryId)

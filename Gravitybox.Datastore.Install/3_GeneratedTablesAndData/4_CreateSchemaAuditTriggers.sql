@@ -47,17 +47,6 @@ if exists(select * from sysobjects where name = '__TR_Housekeeping__DELETE' AND 
 DROP TRIGGER [dbo].[__TR_Housekeeping__DELETE]
 GO
 
---DROP ANY AUDIT TRIGGERS FOR [dbo].[Lock]
-if exists(select * from sysobjects where name = '__TR_Lock__INSERT' AND xtype = 'TR')
-DROP TRIGGER [dbo].[__TR_Lock__INSERT]
-GO
-if exists(select * from sysobjects where name = '__TR_Lock__UPDATE' AND xtype = 'TR')
-DROP TRIGGER [dbo].[__TR_Lock__UPDATE]
-GO
-if exists(select * from sysobjects where name = '__TR_Lock__DELETE' AND xtype = 'TR')
-DROP TRIGGER [dbo].[__TR_Lock__DELETE]
-GO
-
 --DROP ANY AUDIT TRIGGERS FOR [dbo].[LockStat]
 if exists(select * from sysobjects where name = '__TR_LockStat__INSERT' AND xtype = 'TR')
 DROP TRIGGER [dbo].[__TR_LockStat__INSERT]
@@ -67,17 +56,6 @@ DROP TRIGGER [dbo].[__TR_LockStat__UPDATE]
 GO
 if exists(select * from sysobjects where name = '__TR_LockStat__DELETE' AND xtype = 'TR')
 DROP TRIGGER [dbo].[__TR_LockStat__DELETE]
-GO
-
---DROP ANY AUDIT TRIGGERS FOR [dbo].[Machine]
-if exists(select * from sysobjects where name = '__TR_Machine__INSERT' AND xtype = 'TR')
-DROP TRIGGER [dbo].[__TR_Machine__INSERT]
-GO
-if exists(select * from sysobjects where name = '__TR_Machine__UPDATE' AND xtype = 'TR')
-DROP TRIGGER [dbo].[__TR_Machine__UPDATE]
-GO
-if exists(select * from sysobjects where name = '__TR_Machine__DELETE' AND xtype = 'TR')
-DROP TRIGGER [dbo].[__TR_Machine__DELETE]
 GO
 
 --DROP ANY AUDIT TRIGGERS FOR [dbo].[Repository]
@@ -144,6 +122,17 @@ DROP TRIGGER [dbo].[__TR_ServerStat__UPDATE]
 GO
 if exists(select * from sysobjects where name = '__TR_ServerStat__DELETE' AND xtype = 'TR')
 DROP TRIGGER [dbo].[__TR_ServerStat__DELETE]
+GO
+
+--DROP ANY AUDIT TRIGGERS FOR [dbo].[ServiceInstance]
+if exists(select * from sysobjects where name = '__TR_ServiceInstance__INSERT' AND xtype = 'TR')
+DROP TRIGGER [dbo].[__TR_ServiceInstance__INSERT]
+GO
+if exists(select * from sysobjects where name = '__TR_ServiceInstance__UPDATE' AND xtype = 'TR')
+DROP TRIGGER [dbo].[__TR_ServiceInstance__UPDATE]
+GO
+if exists(select * from sysobjects where name = '__TR_ServiceInstance__DELETE' AND xtype = 'TR')
+DROP TRIGGER [dbo].[__TR_ServiceInstance__DELETE]
 GO
 
 --##SECTION END [AUDIT TRIGGERS]

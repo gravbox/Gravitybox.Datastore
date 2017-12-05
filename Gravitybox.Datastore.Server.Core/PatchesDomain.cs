@@ -7,7 +7,6 @@ using Gravitybox.Datastore.Common;
 using Gravitybox.Datastore.EFDAL;
 using System.Data;
 using System.Diagnostics;
-using Gravitybox.Datastore.Server.Interfaces;
 using Gravitybox.Datastore.EFDAL.Entity;
 
 namespace Gravitybox.Datastore.Server.Core

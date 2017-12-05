@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using Gravitybox.Datastore.Common;
-using Gravitybox.Datastore.Server.Interfaces;
 
 namespace Gravitybox.Datastore.Server.Core
 {

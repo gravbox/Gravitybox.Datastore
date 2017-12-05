@@ -3,17 +3,6 @@
 
 --##SECTION BEGIN [RELATIONS]
 
---FOREIGN KEY RELATIONSHIP [Machine] -> [Lock] ([Machine].[MachineId] -> [Lock].[MachineId])
-if not exists(select * from sysobjects where name = 'FK__LOCK_MACHINE' and xtype = 'F')
-ALTER TABLE [dbo].[Lock] ADD 
-CONSTRAINT [FK__LOCK_MACHINE] FOREIGN KEY 
-(
-	[MachineId]
-) REFERENCES [dbo].[Machine] (
-	[MachineId]
-)
-GO
-
 --FOREIGN KEY RELATIONSHIP [RepositoryActionType] -> [RepositoryStat] ([RepositoryActionType].[RepositoryActionTypeId] -> [RepositoryStat].[RepositoryActionTypeId])
 if not exists(select * from sysobjects where name = 'FK__REPOSITORYSTAT_REPOSITORYACTIONTYPE' and xtype = 'F')
 ALTER TABLE [dbo].[RepositoryStat] ADD 
