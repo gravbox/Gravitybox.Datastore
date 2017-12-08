@@ -15,6 +15,7 @@ namespace Gravitybox.Datastore.Util.TestHarness
         private static readonly Guid repoID = new Guid("00000000-0000-0000-0000-17728d4a8361");
         private const string SERVER = "localhost";
         private const int PORT = 1973;
+        private static Random _rnd = new Random();
 
         static void Main(string[] args)
         {
@@ -238,24 +239,36 @@ namespace Gravitybox.Datastore.Util.TestHarness
             FailoverConfiguration.Servers.Add(new ServerConfig { Server = "127.0.0.1", Port = 1973 });
 
             FailoverConfiguration.RetryOnFailCount = 0;
+            var index = 0;
             do
             {
+                var timer = Stopwatch.StartNew();
                 try
                 {
-                    using (var repo = new DatastoreRepository<MyItem>(repoID, "@config", PORT))
-                    {
-                        var r6 = repo.Query.Results();
-                        Console.WriteLine($"{DateTime.Now.ToString("HH:mm:ss")} Query Success");
-                    }
+                    Parallel.For(0, 10000, new ParallelOptions { MaxDegreeOfParallelism = 30 }, (kk) =>
+                      {
+                          var timer2 = Stopwatch.StartNew();
+                          using (var repo = new DatastoreRepository<MyItem>(repoID, "@config", PORT))
+                          {
+                              Console.WriteLine($"{DateTime.Now.ToString("HH:mm:ss")} Started");
+                              var r6 = repo.Query.WhereDimensionValue(_rnd.Next(1, 20)).Results();
+                              //var r6 = repo.Query.Results();
+                              timer2.Stop();
+                              Console.WriteLine($"{DateTime.Now.ToString("HH:mm:ss")} Query Success, Count={index}, Elapsed={timer2.ElapsedMilliseconds}");
+                              index++;
+                          }
+                      });
                 }
                 catch (Common.Exceptions.FailoverException ex)
                 {
                     //Do Nothing - so it will try again
-                    Console.WriteLine($"{DateTime.Now.ToString("HH:mm:ss")} Failed");
+                    timer.Stop();
+                    Console.WriteLine($"{DateTime.Now.ToString("HH:mm:ss")} Failed, Elapsed={timer.ElapsedMilliseconds}");
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"{DateTime.Now.ToString("HH:mm:ss")} {ex.Message}");
+                    timer.Stop();
+                    Console.WriteLine($"{DateTime.Now.ToString("HH:mm:ss")}, Elapsed={timer.ElapsedMilliseconds}, Error={ex.Message}");
                 }
             } while (ii == 0);
         }

@@ -25,22 +25,39 @@ namespace Gravitybox.Datastore.Common.Queryable
     ///     patterns such that it can be used to query from a repository and group together
     ///     changes that will then be written back to the store as a unit.
     /// </summary>
-    public class DatastoreRepository<TSourceType> : DatastoreRepository, IDisposable, IDatastoreRepository, IDatastoreRepository<TSourceType> 
+    public class DatastoreRepository<TSourceType> : DatastoreRepository, IDisposable, IDatastoreRepository, IDatastoreRepository<TSourceType>
         where TSourceType : IDatastoreItem
     {
-        /// <summary />
         private DatastoreService _datastoreService;
 
         //Keep track of when this instance was created for debugging
         private DateTime _instanceCreated = DateTime.Now;
 
-        /// <summary>
-        ///  A DatastoreService instance represents a combination of the Unit Of Work and Repository
-        ///     patterns such that it can be used to query from a repository and group together
-        ///     changes that will then be written back to the store as a unit.
-        /// </summary>
-        public DatastoreRepository(Guid repositoryId, string serverName = "localhost", int port = 1973)
+        /// <summary />
+        public DatastoreRepository(Guid repositoryId)
+            : this(repositoryId, "localhost")
         {
+
+        }
+
+        /// <summary />
+        public DatastoreRepository(Guid repositoryId, string serverName)
+            : base()
+        {
+            if (string.IsNullOrEmpty(serverName))
+                throw new Exception("Server not set");
+
+            var arr = serverName.Split(':');
+            if (arr.Length > 2)
+                throw new Exception("Server not set");
+
+            var port = 1973;
+            if (arr.Length == 2)
+            {
+                port = arr[1].ToInt();
+                serverName = arr[0];
+            }
+
             //If configured for failover then grab the current server
             if (serverName == "@config")
             {
@@ -55,10 +72,28 @@ namespace Gravitybox.Datastore.Common.Queryable
             _datastoreService = new DatastoreService(repositoryId, serverName, port);
         }
 
+        /// <summary>
+        ///  A DatastoreService instance represents a combination of the Unit Of Work and Repository
+        ///     patterns such that it can be used to query from a repository and group together
+        ///     changes that will then be written back to the store as a unit.
+        /// </summary>
+        public DatastoreRepository(Guid repositoryId, string serverName, int port)
+            : this(repositoryId, serverName + ":" + port)
+        {
+        }
+
         /// <summary />
         ~DatastoreRepository()
         {
             Dispose(false);
+        }
+
+        /// <summary>
+        /// The current connected server
+        /// </summary>
+        public string Server
+        {
+            get { return $"{_datastoreService.ServerName}:{_datastoreService.Port}"; }
         }
 
         /// <summary />

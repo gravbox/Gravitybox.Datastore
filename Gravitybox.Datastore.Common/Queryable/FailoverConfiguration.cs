@@ -6,17 +6,51 @@ using System.Threading.Tasks;
 
 namespace Gravitybox.Datastore.Common.Queryable
 {
+    /// <summary />
     public class ServerConfig
     {
-        public string Server { get; set; }
+        private string _server = null;
+        /// <summary />
+        public string Server
+        {
+            get { return _server; }
+            set
+            {
+                if (string.IsNullOrEmpty(value))
+                {
+                    _server = null;
+                    this.Port = 1973;
+                }
+                else
+                {
+                    var arr = value.Split(':');
+                    if (arr.Length > 2)
+                        throw new Exception("Server not set");
+
+                    if (arr.Length == 2)
+                    {
+                        this.Port = arr[1].ToInt();
+                        _server = arr[0];
+                    }
+                    else
+                    {
+                        _server = value;
+                    }
+                }
+            }
+        }
+
+        /// <summary />
         public int Port { get; set; } = 1973;
 
+        /// <summary />
         public override string ToString()
         {
             return $"{this.Server}:{this.Port}";
         }
     }
 
+    /// <summary />
     public static class FailoverConfiguration
     {
 
@@ -25,6 +59,7 @@ namespace Gravitybox.Datastore.Common.Queryable
         }
 
         private static int _RetryOnFailCount = 3;
+        /// <summary />
         public static int RetryOnFailCount
         {
             get { return _RetryOnFailCount; }
@@ -36,10 +71,12 @@ namespace Gravitybox.Datastore.Common.Queryable
             }
         }
 
+        /// <summary />
         public static List<ServerConfig> Servers { get; private set; } = new List<ServerConfig>();
 
         private static int _index = 0;
 
+        /// <summary />
         public static ServerConfig CurrentServer
         {
             get
@@ -50,10 +87,14 @@ namespace Gravitybox.Datastore.Common.Queryable
             }
         }
 
+        /// <summary />
         public static bool IsConfigured => Servers.Any();
 
         internal static bool TryFailOver()
         {
+            //If there is only one server then there is nowhere to failover so just return
+            if (Servers.Count <= 1) return false;
+
             //Check the current server to ensure it is down
             try
             {

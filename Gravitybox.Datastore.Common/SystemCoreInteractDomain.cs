@@ -1,4 +1,5 @@
 #pragma warning disable 0168
+using Gravitybox.Datastore.Common.Queryable;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,7 +16,33 @@ namespace Gravitybox.Datastore.Common
         /// <summary />
         public static ChannelFactory<ISystemCore> GetCoreFactory(string serverName)
         {
-            return GetCoreFactory(serverName, 1973);
+            if (string.IsNullOrEmpty(serverName))
+                throw new Exception("Server not set");
+
+            var arr = serverName.Split(':');
+            if (arr.Length > 2)
+                throw new Exception("Server not set");
+
+            var port = 1973;
+            if (arr.Length == 2)
+            {
+                port = arr[1].ToInt();
+                serverName = arr[0];
+            }
+
+            //If configured for failover then grab the current server
+            if (serverName == "@config")
+            {
+                if (FailoverConfiguration.CurrentServer != null)
+                {
+                    serverName = FailoverConfiguration.CurrentServer.Server;
+                    port = FailoverConfiguration.CurrentServer.Port;
+                }
+                else
+                    throw new Exception("Cannot find a configured server");
+            }
+
+            return GetCoreFactory(serverName, port);
         }
 
         /// <summary />
