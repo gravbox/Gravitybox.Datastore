@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 namespace Gravitybox.Datastore.Common
 {
     /// <summary />
-    public static class Utilities
+    internal static class Utilities
     {
         /// <summary />
         public const string ValidDbFieldChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_!@#$%^&*()-,.<> /{}+=? ";
@@ -79,12 +79,6 @@ namespace Gravitybox.Datastore.Common
             {
                 throw;
             }
-        }
-
-        /// <summary />
-        public static DateTime GetUtcFromTimestamp(int time)
-        {
-            return (new DateTime(2000, 1, 1)).AddSeconds(time);
         }
 
         /// <summary />
