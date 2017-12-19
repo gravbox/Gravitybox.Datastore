@@ -318,12 +318,6 @@ namespace Gravitybox.Datastore.Server.Core
             set { SetValue("AllowLocking", value); }
         }
 
-        public static string NotifyEmail
-        {
-            get { return GetValue("NotifyEmail", string.Empty); }
-            set { SetValue("NotifyEmail", value); }
-        }
-
         public static string AsyncCachePath
         {
             get { return GetValue("AsyncCachePath", string.Empty); }
@@ -346,6 +340,8 @@ namespace Gravitybox.Datastore.Server.Core
 
         //public static bool MemOpt => GetValue("MemOpt", false);
         public static bool MemOpt => false;
+
+        public static bool AllowCacheWithKeyword => GetValue("AllowCacheWithKeyword", false);
 
         #endregion
 

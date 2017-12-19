@@ -218,7 +218,7 @@ namespace Gravitybox.Datastore.Server.Core
 
             //Do not cache big items
             if (results.RecordList.Count > 100) return;
-            if (!string.IsNullOrEmpty(query.Keyword)) return;
+            if (!string.IsNullOrEmpty(query.Keyword) && !ConfigHelper.AllowCacheWithKeyword) return;
 
             var timer = Stopwatch.StartNew();
             var cache = RepositoryCacheManager.GetCache(id, RepositoryManager.GetSchemaParentId(repositoryId));
@@ -326,7 +326,7 @@ namespace Gravitybox.Datastore.Server.Core
                     //Do not cache big items
                     if (results.RecordList.Count > 500)
                         return;
-                    if (slice.Query != null && !string.IsNullOrEmpty(slice.Query.Keyword))
+                    if (slice.Query != null && !string.IsNullOrEmpty(slice.Query.Keyword) && !ConfigHelper.AllowCacheWithKeyword)
                         return;
 
                     queryHash = slice.GetHashCode();

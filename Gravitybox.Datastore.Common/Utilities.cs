@@ -16,14 +16,14 @@ namespace Gravitybox.Datastore.Common
     internal static class Utilities
     {
         /// <summary />
-        public const string ValidDbFieldChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_!@#$%^&*()-,.<> /{}+=? ";
+        private const string ValidDbFieldChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_!@#$%^&*()-,.<> /{}+=? ";
         /// <summary />
-        public const string ValidVariableChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_";
+        private const string ValidVariableChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_";
         //TODO: ensure does not get too big
         /// <summary />
-        public static ConcurrentDictionary<string, string> _tokenCache = new ConcurrentDictionary<string, string>();
+        private static ConcurrentDictionary<string, string> _tokenCache = new ConcurrentDictionary<string, string>();
         /// <summary />
-        public static ConcurrentDictionary<string, string> _tokenCodeCache = new ConcurrentDictionary<string, string>();
+        private static ConcurrentDictionary<string, string> _tokenCodeCache = new ConcurrentDictionary<string, string>();
 
         /// <summary />
         public static string DbTokenize(string str)
