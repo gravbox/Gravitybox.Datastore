@@ -1250,7 +1250,7 @@ namespace Gravitybox.Datastore.Server.Core
                 finally
                 {
                     timer.Stop();
-                    //LoggerCQ.LogDebug("RepositoryExists: ID=" + repositoryId + ", CacheHit=" + cacheHit + ", Value=" + theValue + ", Elapsed=" + timer.ElapsedMilliseconds);
+                    LoggerCQ.LogDebug("RepositoryExists: ID=" + repositoryId + ", Value=" + theValue + ", Elapsed=" + timer.ElapsedMilliseconds);
                 }
             } while (tryCount < MaxTry);
             throw new Exception("Cannot complete operation.");

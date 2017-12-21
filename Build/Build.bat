@@ -10,8 +10,6 @@ copy "C:\Projects\Gravitybox.Datastore\Gravitybox.Datastore.WinService\bin\Relea
 copy "C:\Projects\Gravitybox.Datastore\Gravitybox.Datastore.WinService\bin\Release\NLog.config" "C:\publish\Datastore\"
 copy "C:\Projects\Gravitybox.Datastore\Gravitybox.Datastore.WinService\bin\Release\Gravitybox.Datastore.WinService.exe.config" "C:\publish\Datastore\Gravitybox.Datastore.WinService.exe.config.source"
 
-del /q "C:\publish\Datastore\TaskService\*.vshost.*"
-
 rem ZIP THE FOLDERS
 del /q "C:\publish\gravity.datastore.zip"
 "C:\Program Files\7-Zip\7z.exe" a "C:\publish\gravity.datastore.zip" "C:\publish\Datastore\*.*"
