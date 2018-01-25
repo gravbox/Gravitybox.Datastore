@@ -370,6 +370,8 @@ namespace Gravitybox.Datastore.Common.Queryable
                 });
             if (schema == null)
                 throw new Exception("Schema is null");
+            if (schema.FieldList == null)
+                throw new Exception("Schema FieldList is null");
 
             int count = schema.FieldList.Count();
             var dataItems = new List<DataItem>();

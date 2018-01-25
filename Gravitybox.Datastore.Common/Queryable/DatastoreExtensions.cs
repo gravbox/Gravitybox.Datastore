@@ -416,8 +416,6 @@ namespace Gravitybox.Datastore.Common.Queryable
             if (source == null)
                 throw new ArgumentNullException(ERROR_SOURCE);
 
-            if (!string.IsNullOrEmpty(url))
-                url = System.Web.HttpUtility.UrlDecode(url);
             return source.Provider.CreateQuery<TSourceType>(
                 Expression.Call(
                     null,

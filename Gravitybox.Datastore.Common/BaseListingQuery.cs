@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Runtime.Serialization;
 using System.ComponentModel;
+using System.Web;
 
 namespace Gravitybox.Datastore.Common
 {
@@ -91,7 +92,7 @@ namespace Gravitybox.Datastore.Common
                             }
                             break;
                         case "srch":
-                            this.Keyword = values[1];
+                            this.Keyword = HttpUtility.UrlDecode(values[1]);
                             break;
                         case "ff":
                             {
@@ -521,7 +522,9 @@ namespace Gravitybox.Datastore.Common
 
             if (!string.IsNullOrEmpty(this.Keyword))
             {
-                retval.Append("&srch=" + this.Keyword);
+                //This is crazy but it uses "+" not % syntax like all other chars
+                //This is for consistency
+                retval.Append("&srch=" + HttpUtility.UrlEncode(this.Keyword).Replace("+", "%20"));
             }
 
             #endregion
