@@ -214,7 +214,7 @@ namespace Gravitybox.Datastore.Common.Queryable
                 _query = query;
                 _hookId = _dsService.QueryAsync(query);
             }
-            catch (Exception ex)
+            catch
             {
                 this.IsComplete = true;
                 throw;
@@ -256,7 +256,7 @@ namespace Gravitybox.Datastore.Common.Queryable
                 Extensions.UnzipFile(tempFile, _dataFile);
                 if (File.Exists(tempFile)) File.Delete(tempFile);
             }
-            catch (Exception ex)
+            catch
             {
                 _dataFile = null;
                 throw;

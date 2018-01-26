@@ -242,7 +242,7 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
                 {
                     RepositoryHealthMonitor.HealthCheck(_configuration.schema.ID);
                     DataManager.AddSkipItem(_configuration.schema.ID);
-                    LoggerCQ.LogError($"ListDimensionBuilder: ID={_configuration.schema.ID}, Error={ex.Message}");
+                    LoggerCQ.LogError(ex, $"ListDimensionBuilder: ID={_configuration.schema.ID}, Error={ex.Message}");
                 }
             });
         }

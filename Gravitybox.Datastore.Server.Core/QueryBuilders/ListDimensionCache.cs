@@ -66,8 +66,7 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
             }
             catch (Exception ex)
             {
-                LoggerCQ.LogError(ex);
-                LoggerCQ.LogWarning("ListDimensionCache housekeeping failed");
+                LoggerCQ.LogError(ex, "ListDimensionCache housekeeping failed");
             }
             finally
             {

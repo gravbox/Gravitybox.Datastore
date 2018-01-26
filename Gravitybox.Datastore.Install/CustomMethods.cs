@@ -61,10 +61,6 @@ namespace Gravitybox.Datastore.Install
                     }
                 }
             }
-            catch (Exception ex)
-            {
-                throw;
-            }
             finally
             {
                 if (newConnection != null)

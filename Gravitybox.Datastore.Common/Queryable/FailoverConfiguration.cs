@@ -105,13 +105,9 @@ namespace Gravitybox.Datastore.Common.Queryable
                         return true;
                 }
             }
-            catch (System.ServiceModel.EndpointNotFoundException ex)
+            catch (System.ServiceModel.EndpointNotFoundException)
             {
                 //Ignore for now. We will assume this server is down
-            }
-            catch (Exception ex)
-            {
-                throw;
             }
 
             //Since the current server is down, check if there is a server running marked as master
@@ -138,7 +134,7 @@ namespace Gravitybox.Datastore.Common.Queryable
                     else
                         checkValue = null; //to end loop
                 }
-                catch (System.ServiceModel.EndpointNotFoundException ex)
+                catch (System.ServiceModel.EndpointNotFoundException)
                 {
                     //There was an error connecting to the server to try to 
                     //The end point cannot be found so switch to next server
@@ -170,7 +166,7 @@ namespace Gravitybox.Datastore.Common.Queryable
                         }
                     }
                 }
-                catch (System.ServiceModel.EndpointNotFoundException ex)
+                catch (System.ServiceModel.EndpointNotFoundException)
                 {
                     //There was an error connecting to the server to try to 
                     //The end point cannot be found so switch to next server

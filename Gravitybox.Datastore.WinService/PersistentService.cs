@@ -1,13 +1,15 @@
 using System;
+using System.Configuration;
+using System.Data.SqlClient;
 using System.Linq;
-using System.ServiceProcess;
 using System.ServiceModel;
 using System.ServiceModel.Description;
-using System.Configuration;
+using System.ServiceProcess;
+using System.Threading.Tasks;
 using Gravitybox.Datastore.Common;
 using Gravitybox.Datastore.Install;
-using System.Data.SqlClient;
 using Gravitybox.Datastore.Server.Core;
+using StackExchange.Exceptional;
 
 namespace Gravitybox.Datastore.WinService
 {
@@ -45,7 +47,8 @@ namespace Gravitybox.Datastore.WinService
 
         protected override void OnStart(string[] args)
         {
-            AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
+            AppDomain.CurrentDomain.UnhandledException += domainExceptionsHandler;
+            TaskScheduler.UnobservedTaskException += taskExceptionsHandler;
             this.Start();
         }
 
@@ -54,6 +57,7 @@ namespace Gravitybox.Datastore.WinService
             //KillTimer();
             try
             {
+                ConfigHelper.ShutDown();
                 if (_core != null) _core.ShutDown();
             }
             catch (Exception ex)
@@ -150,6 +154,28 @@ namespace Gravitybox.Datastore.WinService
                 #region Primary Endpoint
 
                 var service = new Gravitybox.Datastore.Server.Core.SystemCore(ConfigurationManager.ConnectionStrings["DatastoreEntities"].ConnectionString);
+
+                #region Determine if configured port is free
+                var isPortFree = false;
+                do
+                {
+                    try
+                    {
+                        //Determine if can connect to port
+                        var p1 = new System.Net.Sockets.TcpClient("localhost", ConfigHelper.Port);
+                        //If did connect successfully then there is already something on this port
+                        isPortFree = false;
+                        LoggerCQ.LogInfo($"Port {ConfigHelper.Port} is in use...");
+                        System.Threading.Thread.Sleep(3000); //wait...
+                    }
+                    catch (Exception ex)
+                    {
+                        //If there is an error connecting then nothing is listening on that port so FREE
+                        isPortFree = true;
+                    }
+                } while (!isPortFree);
+                #endregion
+
                 var primaryAddress = new Uri("net.tcp://localhost:" + ConfigHelper.Port + "/__datastore_core");
                 var primaryHost = new ServiceHost(service, primaryAddress);
 
@@ -183,72 +209,68 @@ namespace Gravitybox.Datastore.WinService
 
         private static void LoadEngine(Gravitybox.Datastore.Server.Core.SystemCore core)
         {
-            try
+            //Load Server Object
+            var baseAddress = new Uri("net.tcp://localhost:" + ConfigHelper.Port + "/__datastore_engine");
+            var serviceInstance = core.Manager;
+            var host = new ServiceHost(serviceInstance, baseAddress);
+
+            //Initialize the service
+            var myBinding = new NetTcpBinding()
             {
-                //Load Server Object
-                var baseAddress = new Uri("net.tcp://localhost:" + ConfigHelper.Port + "/__datastore_engine");
-                var serviceInstance = core.Manager;
-                var host = new ServiceHost(serviceInstance, baseAddress);
-
-                //Initialize the service
-                var myBinding = new NetTcpBinding()
+                MaxBufferSize = int.MaxValue,
+                MaxReceivedMessageSize = int.MaxValue,
+                MaxBufferPoolSize = 0,
+                ReaderQuotas = new System.Xml.XmlDictionaryReaderQuotas()
                 {
-                    MaxBufferSize = int.MaxValue,
-                    MaxReceivedMessageSize = int.MaxValue,
-                    MaxBufferPoolSize = 0,
-                    ReaderQuotas = new System.Xml.XmlDictionaryReaderQuotas()
-                    {
-                        MaxArrayLength = int.MaxValue,
-                        MaxBytesPerRead = int.MaxValue,
-                        MaxDepth = int.MaxValue,
-                        MaxNameTableCharCount = int.MaxValue,
-                        MaxStringContentLength = int.MaxValue,
-                    },
-                    OpenTimeout = new TimeSpan(0, 0, 10),
-                    ReceiveTimeout = new TimeSpan(0, 0, 120),
-                    CloseTimeout = new TimeSpan(0, 0, 120),
-                };
-                myBinding.Security.Mode = SecurityMode.None;
-                var endpoint = host.AddServiceEndpoint(typeof(Gravitybox.Datastore.Common.IDataModel), myBinding, host.BaseAddresses.First().AbsoluteUri);
+                    MaxArrayLength = int.MaxValue,
+                    MaxBytesPerRead = int.MaxValue,
+                    MaxDepth = int.MaxValue,
+                    MaxNameTableCharCount = int.MaxValue,
+                    MaxStringContentLength = int.MaxValue,
+                },
+                OpenTimeout = new TimeSpan(0, 0, 10),
+                ReceiveTimeout = new TimeSpan(0, 0, 120),
+                CloseTimeout = new TimeSpan(0, 0, 120),
+            };
+            myBinding.Security.Mode = SecurityMode.None;
+            var endpoint = host.AddServiceEndpoint(typeof(Gravitybox.Datastore.Common.IDataModel), myBinding, host.BaseAddresses.First().AbsoluteUri);
 
-                foreach (var op in endpoint.Contract.Operations)
+            foreach (var op in endpoint.Contract.Operations)
+            {
+                var dataContractBehavior = op.Behaviors.Find<DataContractSerializerOperationBehavior>();
+                if (dataContractBehavior != null)
                 {
-                    var dataContractBehavior = op.Behaviors.Find<DataContractSerializerOperationBehavior>();
-                    if (dataContractBehavior != null)
-                    {
-                        dataContractBehavior.MaxItemsInObjectGraph = int.MaxValue;
-                    }
+                    dataContractBehavior.MaxItemsInObjectGraph = int.MaxValue;
                 }
-
-                //var behavior = host.Description.Behaviors.Find<ServiceDebugBehavior>();
-                //behavior.IncludeExceptionDetailInFaults = true;
-                var behavior = host.Description.Behaviors.FirstOrDefault(x => x is System.ServiceModel.ServiceBehaviorAttribute);
-                if (behavior != null)
-                    ((System.ServiceModel.ServiceBehaviorAttribute)behavior).IncludeExceptionDetailInFaults = true;
-
-                host.Open();
-
-            }
-            catch (Exception ex)
-            {
-                LoggerCQ.LogError(ex);
-                throw;
             }
 
+            //var behavior = host.Description.Behaviors.Find<ServiceDebugBehavior>();
+            //behavior.IncludeExceptionDetailInFaults = true;
+            var behavior = host.Description.Behaviors.FirstOrDefault(x => x is System.ServiceModel.ServiceBehaviorAttribute);
+            if (behavior != null)
+                ((System.ServiceModel.ServiceBehaviorAttribute)behavior).IncludeExceptionDetailInFaults = true;
+
+            host.Open();
         }
 
         #endregion
 
-        private void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+        private static readonly UnhandledExceptionEventHandler domainExceptionsHandler = (s, args) =>
         {
-            try
+            if (args.ExceptionObject is Exception e)
             {
-                LoggerCQ.LogError(e.ExceptionObject as Exception);
+                LoggerCQ.LogError(e);
+                ErrorStore.LogExceptionWithoutContext(e);
             }
-            catch (Exception)
+        };
+
+        private static readonly EventHandler<UnobservedTaskExceptionEventArgs> taskExceptionsHandler = (s, args) =>
+        {
+            foreach (var ex in args.Exception.InnerExceptions)
             {
-                //Do Nothing
+                ErrorStore.LogExceptionWithoutContext(ex, rollupPerServer: true);
             }
-        }
+            args.SetObserved();
+        };
     }
 }

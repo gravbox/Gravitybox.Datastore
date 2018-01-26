@@ -57,7 +57,7 @@ namespace Gravitybox.Datastore.Server.Core
             }
             catch (Exception ex)
             {
-                LoggerCQ.LogWarning("DimensionCache housekeeping failed");
+                LoggerCQ.LogWarning(ex, "DimensionCache housekeeping failed");
             }
             finally
             {

@@ -121,7 +121,7 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
                     {
                         RepositoryHealthMonitor.HealthCheck(_configuration.schema.ID);
                         DataManager.AddSkipItem(_configuration.schema.ID);
-                        LoggerCQ.LogError("NormalDimensionBuilder: ID=" + _configuration.schema.ID + ", Error=" + ex.Message);
+                        LoggerCQ.LogError(ex, "NormalDimensionBuilder: ID=" + _configuration.schema.ID + ", Error=" + ex.Message);
                     }
                 }
                 //Console.WriteLine("NormalDimensionBuilder:Execute:Complete");

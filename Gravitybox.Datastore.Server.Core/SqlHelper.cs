@@ -357,46 +357,37 @@ namespace Gravitybox.Datastore.Server.Core
 
         private static List<string> BreakSqlBlocks(string sql)
         {
-            try
+            var hv = EncryptionDomain.HashFast(sql);
+            return _blockCache.GetOrAdd(hv, key =>
             {
-                var hv = EncryptionDomain.HashFast(sql);
-                return _blockCache.GetOrAdd(hv, key =>
+                var retval = new List<string>();
+                var allLines = sql.Replace("\r\n", "\n").Replace("\r", "\n").Split('\n');
+                var sb = new StringBuilder();
+                foreach (var lineText in allLines)
                 {
-                    var retval = new List<string>();
-                    var allLines = sql.Replace("\r\n", "\n").Replace("\r", "\n").Split('\n');
-                    var sb = new StringBuilder();
-                    foreach (var lineText in allLines)
+                    if (lineText.ToUpper().Trim() == "GO")
                     {
-                        if (lineText.ToUpper().Trim() == "GO")
-                        {
-                            var s = sb.ToString();
-                            s = s.Trim();
-                            retval.Add(s);
-                            sb = new StringBuilder();
-                        }
-                        else
-                        {
-                            var s = lineText;
-                            if (s.EndsWith("\r")) s = lineText.Substring(0, lineText.Length - 1);
-                            sb.AppendLine(s);
-                        }
+                        var s = sb.ToString();
+                        s = s.Trim();
+                        retval.Add(s);
+                        sb = new StringBuilder();
                     }
+                    else
+                    {
+                        var s = lineText;
+                        if (s.EndsWith("\r")) s = lineText.Substring(0, lineText.Length - 1);
+                        sb.AppendLine(s);
+                    }
+                }
 
-                    //Last string
-                    var text = sb.ToString();
-                    if (!string.IsNullOrEmpty(text))
-                        retval.Add(text);
+                //Last string
+                var text = sb.ToString();
+                if (!string.IsNullOrEmpty(text))
+                    retval.Add(text);
 
-                    retval = retval.Where(x => x != "").ToList();
-                    return retval;
-                });
-
-            }
-            catch (Exception ex)
-            {
-                LoggerCQ.LogError(ex);
-                throw;
-            }
+                retval = retval.Where(x => x != "").ToList();
+                return retval;
+            });
         }
 
         #endregion
@@ -714,119 +705,70 @@ namespace Gravitybox.Datastore.Server.Core
         /// </summary>
         private static void CleanIndexes(string connectionString, RepositorySchema schema, List<string> indexList)
         {
-            try
+            indexList = indexList.ToList(); //Clone
+            indexList.Add("DATAGROUP_" + GetTableName(schema)); //Include the datagrouping is exists
+
+            var dataTable = GetTableName(schema);
+            var sb = new StringBuilder();
+            sb.AppendLine("select name from sys.indexes where object_id = (");
+            sb.AppendLine("select top 1 object_id from sys.objects where name = '" + dataTable + "' and type = 'U'");
+            sb.AppendLine(") and name not like 'PK%'");
+
+            var ds = GetDataset(connectionString, sb.ToString());
+            foreach (DataRow row in ds.Tables[0].Rows)
             {
-                indexList = indexList.ToList(); //Clone
-                indexList.Add("DATAGROUP_" + GetTableName(schema)); //Include the datagrouping is exists
-
-                var dataTable = GetTableName(schema);
-                var sb = new StringBuilder();
-                sb.AppendLine("select name from sys.indexes where object_id = (");
-                sb.AppendLine("select top 1 object_id from sys.objects where name = '" + dataTable + "' and type = 'U'");
-                sb.AppendLine(") and name not like 'PK%'");
-
-                var ds = GetDataset(connectionString, sb.ToString());
-                foreach (DataRow row in ds.Tables[0].Rows)
+                var name = (string)row["name"];
+                if (!indexList.Any(x => x == name))
                 {
-                    var name = (string)row["name"];
-                    if (!indexList.Any(x => x == name))
-                    {
-                        sb = new StringBuilder();
-                        sb.AppendLine("if exists(select * from sys.indexes where name = '" + name + "')");
-                        sb.AppendLine("DROP INDEX [" + name + "] ON [" + dataTable + "]");
-                        ExecuteSql(connectionString, sb.ToString());
-                    }
+                    sb = new StringBuilder();
+                    sb.AppendLine("if exists(select * from sys.indexes where name = '" + name + "')");
+                    sb.AppendLine("DROP INDEX [" + name + "] ON [" + dataTable + "]");
+                    ExecuteSql(connectionString, sb.ToString());
                 }
-            }
-            catch (Exception ex)
-            {
-                LoggerCQ.LogError(ex);
-                throw;
             }
         }
 
         internal static string GetRepositorySql(RepositorySchema schema, List<string> indexList = null)
         {
-            try
+            if (indexList == null) indexList = new List<string>();
+            var dataTable = GetTableName(schema);
+            var sb = new StringBuilder();
+
+            #region Add Indexes for fields
+
+            //All fields
+            foreach (var field in schema.FieldList)
             {
-                if (indexList == null) indexList = new List<string>();
-                var dataTable = GetTableName(schema);
-                var sb = new StringBuilder();
+                var dimension = field as DimensionDefinition;
 
-                #region Add Indexes for fields
+                var useIndex = (field.DataType != RepositorySchema.DataTypeConstants.GeoCode);
+                if (field.DataType == RepositorySchema.DataTypeConstants.String && ((field.Length <= 0) || (field.Length > 450)))
+                    useIndex = false;
 
-                //All fields
-                foreach (var field in schema.FieldList)
-                {
-                    var dimension = field as DimensionDefinition;
+                //Do not create indexes for list indexes
+                if (dimension != null && dimension.DimensionType == RepositorySchema.DimensionTypeConstants.List)
+                    useIndex = false;
 
-                    var useIndex = (field.DataType != RepositorySchema.DataTypeConstants.GeoCode);
-                    if (field.DataType == RepositorySchema.DataTypeConstants.String && ((field.Length <= 0) || (field.Length > 450)))
-                        useIndex = false;
+                //If the field has manually been marked as not indexed then skip adding index
+                if (!field.AllowIndex)
+                    useIndex = false;
 
-                    //Do not create indexes for list indexes
-                    if (dimension != null && dimension.DimensionType == RepositorySchema.DimensionTypeConstants.List)
-                        useIndex = false;
+                ////Only add indexes to all fields if specified All setting (always PK)
+                //if (schema.FieldIndexing != RepositorySchema.FieldIndexingConstants.All && schema.PrimaryKey != field)
+                //    useIndex = false;
 
-                    //If the field has manually been marked as not indexed then skip adding index
-                    if (!field.AllowIndex)
-                        useIndex = false;
-
-                    ////Only add indexes to all fields if specified All setting (always PK)
-                    //if (schema.FieldIndexing != RepositorySchema.FieldIndexingConstants.All && schema.PrimaryKey != field)
-                    //    useIndex = false;
-
-                    if (useIndex)
-                    {
-                        var indexName = GetIndexName(field, dataTable);
-                        indexList.Add(indexName);
-                        sb.AppendLine("if not exists(select * from sys.indexes where name = '" + indexName + "') and exists(select * from sys.objects where name = '" + dataTable + "' and type = 'U') and exists (select * from syscolumns c inner join sysobjects o on c.id = o.id where c.name = '" + field.TokenName + "' and o.name = '" + dataTable + "')");
-                        sb.AppendLine("BEGIN");
-
-                        var pkAttr = string.Empty;
-                        if (field.IsPrimaryKey)
-                            pkAttr = "UNIQUE ";
-
-                        sb.AppendLine("CREATE " + pkAttr + "NONCLUSTERED INDEX [" + indexName + "] ON [" + dataTable + "] ([" + field.TokenName + "] " + (field.SearchAsc ? "ASC" : "DESC") + ");");
-
-                        if (ConfigHelper.SupportsCompression)
-                            sb.AppendLine("ALTER INDEX [" + indexName + "] ON [" + dataTable + "] REBUILD WITH (DATA_COMPRESSION = PAGE);");
-
-                        sb.AppendLine("END");
-                        sb.AppendLine("GO");
-                    }
-                }
-
-                foreach (var field in schema.FieldList.Where(x => x.DataType == RepositorySchema.DataTypeConstants.GeoCode).ToList())
+                if (useIndex)
                 {
                     var indexName = GetIndexName(field, dataTable);
                     indexList.Add(indexName);
-                    sb.AppendLine("if not exists(select * from sys.indexes where name = '" + indexName + "')");
+                    sb.AppendLine("if not exists(select * from sys.indexes where name = '" + indexName + "') and exists(select * from sys.objects where name = '" + dataTable + "' and type = 'U') and exists (select * from syscolumns c inner join sysobjects o on c.id = o.id where c.name = '" + field.TokenName + "' and o.name = '" + dataTable + "')");
                     sb.AppendLine("BEGIN");
-                    sb.AppendLine("CREATE SPATIAL INDEX [" + indexName + "] ON [" + dataTable + "]");
-                    sb.AppendLine("([" + field.TokenName + "])");
-                    sb.AppendLine("USING GEOGRAPHY_GRID");
-                    sb.AppendLine("WITH (GRIDS =(LEVEL_1 = MEDIUM,LEVEL_2 = MEDIUM,LEVEL_3 = MEDIUM,LEVEL_4 = MEDIUM), CELLS_PER_OBJECT= 256)");
-                    sb.AppendLine("END");
-                    sb.AppendLine();
-                }
 
-                #endregion
+                    var pkAttr = string.Empty;
+                    if (field.IsPrimaryKey)
+                        pkAttr = "UNIQUE ";
 
-                #region Create Dimension Indexes
-                foreach (var dimension in schema.DimensionList.Where(x =>
-                    x.DimensionType != RepositorySchema.DimensionTypeConstants.List &&
-                    x.DataType != RepositorySchema.DataTypeConstants.GeoCode).ToList())
-                {
-                    var dimensionColumnName = "__d" + dimension.TokenName;
-                    var indexName = GetIndexName(dimension, dataTable, true);
-                    indexList.Add(indexName);
-                    sb.AppendLine("if not exists(select * from sys.indexes where name = '" + indexName + "') and exists(select * from sys.objects where name = '" + dataTable + "' and type = 'U') and exists (select * from syscolumns c inner join sysobjects o on c.id = o.id where c.name = '" + dimensionColumnName + "' and o.name = '" + dataTable + "')");
-                    sb.AppendLine("BEGIN");
-                    sb.AppendLine("CREATE NONCLUSTERED INDEX [" + indexName + "] ON [" + dataTable + "]");
-                    sb.AppendLine("(");
-                    sb.AppendLine("	[" + dimensionColumnName + "] ASC");
-                    sb.AppendLine(");");
+                    sb.AppendLine("CREATE " + pkAttr + "NONCLUSTERED INDEX [" + indexName + "] ON [" + dataTable + "] ([" + field.TokenName + "] " + (field.SearchAsc ? "ASC" : "DESC") + ");");
 
                     if (ConfigHelper.SupportsCompression)
                         sb.AppendLine("ALTER INDEX [" + indexName + "] ON [" + dataTable + "] REBUILD WITH (DATA_COMPRESSION = PAGE);");
@@ -834,42 +776,74 @@ namespace Gravitybox.Datastore.Server.Core
                     sb.AppendLine("END");
                     sb.AppendLine("GO");
                 }
-
-                //Create pivot column indexes
-                var pivotGroups = schema.FieldList.Select(x => x.PivotGroup).Distinct();
-                foreach (var groupName in pivotGroups)
-                {
-                    var fieldList = schema.FieldList.Where(x => x.IsPivot && x.PivotGroup == groupName)
-                        .Select(x => x.Name)
-                        .ToList();
-
-                    if (fieldList.Any())
-                    {
-                        var indexName = GetIndexPivotName(fieldList, dataTable);
-                        indexList.Add(indexName);
-                        sb.AppendLine("if not exists(select * from sys.indexes where name = '" + indexName + "') and exists(select * from sys.objects where name = '" + dataTable + "' and type = 'U')");
-                        sb.AppendLine("BEGIN");
-                        sb.AppendLine("CREATE NONCLUSTERED INDEX [" + indexName + "]");
-                        sb.AppendLine("ON [" + dataTable + "] (" + string.Join(", ", fieldList.Select(x => "[" + x + "]")) + ")");
-
-                        if (ConfigHelper.SupportsCompression)
-                            sb.AppendLine("ALTER INDEX [" + indexName + "] ON [" + dataTable + "] REBUILD WITH (DATA_COMPRESSION = PAGE);");
-
-                        sb.AppendLine("END");
-                        sb.AppendLine("GO");
-                    }
-                }
-
-                #endregion
-
-                return sb.ToString();
-
             }
-            catch (Exception ex)
+
+            foreach (var field in schema.FieldList.Where(x => x.DataType == RepositorySchema.DataTypeConstants.GeoCode).ToList())
             {
-                LoggerCQ.LogError(ex);
-                throw;
+                var indexName = GetIndexName(field, dataTable);
+                indexList.Add(indexName);
+                sb.AppendLine("if not exists(select * from sys.indexes where name = '" + indexName + "')");
+                sb.AppendLine("BEGIN");
+                sb.AppendLine("CREATE SPATIAL INDEX [" + indexName + "] ON [" + dataTable + "]");
+                sb.AppendLine("([" + field.TokenName + "])");
+                sb.AppendLine("USING GEOGRAPHY_GRID");
+                sb.AppendLine("WITH (GRIDS =(LEVEL_1 = MEDIUM,LEVEL_2 = MEDIUM,LEVEL_3 = MEDIUM,LEVEL_4 = MEDIUM), CELLS_PER_OBJECT= 256)");
+                sb.AppendLine("END");
+                sb.AppendLine();
             }
+
+            #endregion
+
+            #region Create Dimension Indexes
+            foreach (var dimension in schema.DimensionList.Where(x =>
+                x.DimensionType != RepositorySchema.DimensionTypeConstants.List &&
+                x.DataType != RepositorySchema.DataTypeConstants.GeoCode).ToList())
+            {
+                var dimensionColumnName = "__d" + dimension.TokenName;
+                var indexName = GetIndexName(dimension, dataTable, true);
+                indexList.Add(indexName);
+                sb.AppendLine("if not exists(select * from sys.indexes where name = '" + indexName + "') and exists(select * from sys.objects where name = '" + dataTable + "' and type = 'U') and exists (select * from syscolumns c inner join sysobjects o on c.id = o.id where c.name = '" + dimensionColumnName + "' and o.name = '" + dataTable + "')");
+                sb.AppendLine("BEGIN");
+                sb.AppendLine("CREATE NONCLUSTERED INDEX [" + indexName + "] ON [" + dataTable + "]");
+                sb.AppendLine("(");
+                sb.AppendLine("	[" + dimensionColumnName + "] ASC");
+                sb.AppendLine(");");
+
+                if (ConfigHelper.SupportsCompression)
+                    sb.AppendLine("ALTER INDEX [" + indexName + "] ON [" + dataTable + "] REBUILD WITH (DATA_COMPRESSION = PAGE);");
+
+                sb.AppendLine("END");
+                sb.AppendLine("GO");
+            }
+
+            //Create pivot column indexes
+            var pivotGroups = schema.FieldList.Select(x => x.PivotGroup).Distinct();
+            foreach (var groupName in pivotGroups)
+            {
+                var fieldList = schema.FieldList.Where(x => x.IsPivot && x.PivotGroup == groupName)
+                    .Select(x => x.Name)
+                    .ToList();
+
+                if (fieldList.Any())
+                {
+                    var indexName = GetIndexPivotName(fieldList, dataTable);
+                    indexList.Add(indexName);
+                    sb.AppendLine("if not exists(select * from sys.indexes where name = '" + indexName + "') and exists(select * from sys.objects where name = '" + dataTable + "' and type = 'U')");
+                    sb.AppendLine("BEGIN");
+                    sb.AppendLine("CREATE NONCLUSTERED INDEX [" + indexName + "]");
+                    sb.AppendLine("ON [" + dataTable + "] (" + string.Join(", ", fieldList.Select(x => "[" + x + "]")) + ")");
+
+                    if (ConfigHelper.SupportsCompression)
+                        sb.AppendLine("ALTER INDEX [" + indexName + "] ON [" + dataTable + "] REBUILD WITH (DATA_COMPRESSION = PAGE);");
+
+                    sb.AppendLine("END");
+                    sb.AppendLine("GO");
+                }
+            }
+
+            #endregion
+
+            return sb.ToString();
         }
 
         #endregion
@@ -1515,12 +1489,12 @@ namespace Gravitybox.Datastore.Server.Core
                     if (ex.Message.ToLower().Contains("deadlock"))
                     {
                         tryCount++;
-                        LoggerCQ.LogWarning($"UpdateData deadlock: ID={schema.ID}, Try={tryCount}");
+                        LoggerCQ.LogWarning(ex, $"UpdateData deadlock: ID={schema.ID}, Try={tryCount}");
                     }
                     else if (ex.Message.Contains("Cannot insert duplicate key row"))
                     {
                         tryCount++;
-                        LoggerCQ.LogWarning($"UpdateData insert duplicate key row: ID={schema.ID}, Try={tryCount}");
+                        LoggerCQ.LogWarning(ex, $"UpdateData insert duplicate key row: ID={schema.ID}, Try={tryCount}");
                     }
                     else
                         throw;
@@ -1809,7 +1783,7 @@ namespace Gravitybox.Datastore.Server.Core
             }
             catch (Exception ex)
             {
-                LoggerCQ.LogWarning("SyncChildTables Failed");
+                LoggerCQ.LogWarning(ex, "SyncChildTables Failed");
             }
             timer.Stop();
             LoggerCQ.LogInfo($"FillChildTables: Child={childId}, Parent={parentId}, Elapsed={timer.ElapsedMilliseconds}");
@@ -2108,7 +2082,7 @@ namespace Gravitybox.Datastore.Server.Core
                     if (ex.Message.ToLower().Contains("deadlock"))
                     {
                         tryCount++;
-                        LoggerCQ.LogWarning($"UpdateData deadlock: ID={schema.ID}, Try={tryCount}");
+                        LoggerCQ.LogWarning(ex, $"UpdateData deadlock: ID={schema.ID}, Try={tryCount}");
                     }
                     else
                         throw;
@@ -3460,93 +3434,85 @@ namespace Gravitybox.Datastore.Server.Core
 
         public static string QueryAsync(RepositorySchema schema, int repositoryId, DataQuery query, List<DimensionItem> dimensionList, List<SqlParameter> parameters, string connectionString)
         {
-            try
+            var dataTable = GetTableName(schema);
+            if (schema.ParentID != null)
+                dataTable = GetTableViewName(schema.ID);
+
+            RepositorySchema parentSchema = null;
+            if (schema.ParentID != null)
             {
-                var dataTable = GetTableName(schema);
-                if (schema.ParentID != null)
-                    dataTable = GetTableViewName(schema.ID);
+                parentSchema = RepositoryManager.GetSchema(schema.ParentID.Value);
+            }
 
-                RepositorySchema parentSchema = null;
-                if (schema.ParentID != null)
+            var orderByClause = "[Z].[" + RecordIdxField + "] ASC";
+            if (parameters == null) parameters = new List<SqlParameter>();
+
+            //if (query.FieldFilters.Select(x => x.Name).Distinct().Count() != query.FieldFilters.Count)
+            //{
+            //    throw new Exception("There are duplicate filters: RepositoryId=" + schema.ID + ", Filters=" + string.Join("|", query.FieldFilters.Select(x => x.Name).ToList()) + ", URL=" + query.ToString());
+            //}
+
+            var whereClause = GetWhereClause(schema, parentSchema, query, dimensionList, parameters);
+            var innerJoinClause = GetInnerJoinClause(schema, parentSchema, query, dimensionList, parameters);
+            var normalFields = schema.FieldList.Where(x => x.DataType != RepositorySchema.DataTypeConstants.List).ToList();
+
+            #region Order By
+
+            if (query.FieldSorts != null && query.FieldSorts.Any())
+            {
+                var usedFields = new List<string>();
+                orderByClause = string.Empty;
+                foreach (var sf in query.FieldSorts)
                 {
-                    parentSchema = RepositoryManager.GetSchema(schema.ParentID.Value);
-                }
-
-                var orderByClause = "[Z].[" + RecordIdxField + "] ASC";
-                if (parameters == null) parameters = new List<SqlParameter>();
-
-                //if (query.FieldFilters.Select(x => x.Name).Distinct().Count() != query.FieldFilters.Count)
-                //{
-                //    throw new Exception("There are duplicate filters: RepositoryId=" + schema.ID + ", Filters=" + string.Join("|", query.FieldFilters.Select(x => x.Name).ToList()) + ", URL=" + query.ToString());
-                //}
-
-                var whereClause = GetWhereClause(schema, parentSchema, query, dimensionList, parameters);
-                var innerJoinClause = GetInnerJoinClause(schema, parentSchema, query, dimensionList, parameters);
-                var normalFields = schema.FieldList.Where(x => x.DataType != RepositorySchema.DataTypeConstants.List).ToList();
-
-                #region Order By
-
-                if (query.FieldSorts != null && query.FieldSorts.Any())
-                {
-                    var usedFields = new List<string>();
-                    orderByClause = string.Empty;
-                    foreach (var sf in query.FieldSorts)
+                    //Do not allow duplicates
+                    if (!usedFields.Any(x => x == sf.Name))
                     {
-                        //Do not allow duplicates
-                        if (!usedFields.Any(x => x == sf.Name))
+                        if (schema.FieldList.Any(x => x.DataType == RepositorySchema.DataTypeConstants.List && x.Name == sf.Name))
                         {
-                            if (schema.FieldList.Any(x => x.DataType == RepositorySchema.DataTypeConstants.List && x.Name == sf.Name))
-                            {
-                                //throw new Exception("Invalid sort by '" + sf.Name + "' column");
-                            }
-                            else if (schema.FieldList.Any(x => x.Name.Match(sf.Name))) //Ensure this is a valid field
-                            {
-                                orderByClause += "[Z].[" + sf.TokenName + "] " + (sf.SortDirection == SortDirectionConstants.Desc ? "DESC" : "ASC") + ", ";
-                            }
-                            usedFields.Add(sf.Name);
+                            //throw new Exception("Invalid sort by '" + sf.Name + "' column");
                         }
+                        else if (schema.FieldList.Any(x => x.Name.Match(sf.Name))) //Ensure this is a valid field
+                        {
+                            orderByClause += "[Z].[" + sf.TokenName + "] " + (sf.SortDirection == SortDirectionConstants.Desc ? "DESC" : "ASC") + ", ";
+                        }
+                        usedFields.Add(sf.Name);
                     }
-                    orderByClause += "[Z].[" + RecordIdxField + "] ASC";
                 }
-
-                #endregion
-
-                #region Build/Execute SQL
-
-                var fieldListSql = new List<string>();
-                foreach (var field in normalFields)
-                {
-                    fieldListSql.Add("[Z].[" + field.TokenName + "]");
-                }
-                var fieldSql = string.Join(",", fieldListSql) + ", [Z].[" + RecordIdxField + "]";
-
-                var sbSql = new StringBuilder();
-
-                #region Records
-                //If supports OFFSET/FETCH then use it
-                //No paging...this is faster
-                sbSql.AppendLine("SELECT " + fieldSql);
-                sbSql.AppendLine("FROM [" + dataTable + "] Z " + NoLockText());
-                sbSql.AppendLine("WHERE " + whereClause);
-                sbSql.AppendLine("ORDER BY " + orderByClause);
-                sbSql.AppendLine();
-
-                parameters.Add(new SqlParameter { DbType = DbType.Int32, ParameterName = "@repositoryid", Value = repositoryId });
-
-                #endregion
-
-                #endregion
-
-                var sql = sbSql.ToString();
-                sql = sql.Replace(" AND " + EmptyWhereClause, string.Empty);
-                sql = sql.Replace(" WHERE " + EmptyWhereClause, string.Empty);
-                return sql;
+                orderByClause += "[Z].[" + RecordIdxField + "] ASC";
             }
-            catch (Exception ex)
+
+            #endregion
+
+            #region Build/Execute SQL
+
+            var fieldListSql = new List<string>();
+            foreach (var field in normalFields)
             {
-                LoggerCQ.LogError(ex);
-                throw;
+                fieldListSql.Add("[Z].[" + field.TokenName + "]");
             }
+            var fieldSql = string.Join(",", fieldListSql) + ", [Z].[" + RecordIdxField + "]";
+
+            var sbSql = new StringBuilder();
+
+            #region Records
+            //If supports OFFSET/FETCH then use it
+            //No paging...this is faster
+            sbSql.AppendLine("SELECT " + fieldSql);
+            sbSql.AppendLine("FROM [" + dataTable + "] Z " + NoLockText());
+            sbSql.AppendLine("WHERE " + whereClause);
+            sbSql.AppendLine("ORDER BY " + orderByClause);
+            sbSql.AppendLine();
+
+            parameters.Add(new SqlParameter { DbType = DbType.Int32, ParameterName = "@repositoryid", Value = repositoryId });
+
+            #endregion
+
+            #endregion
+
+            var sql = sbSql.ToString();
+            sql = sql.Replace(" AND " + EmptyWhereClause, string.Empty);
+            sql = sql.Replace(" WHERE " + EmptyWhereClause, string.Empty);
+            return sql;
         }
 
         #endregion
@@ -3555,23 +3521,15 @@ namespace Gravitybox.Datastore.Server.Core
 
         public static int GetLastTimestamp(RepositorySchema schema, int repositoryId, DataQuery query, List<DimensionItem> dimensionList)
         {
-            try
-            {
-                query.FieldSorts.Clear();
-                query.FieldSorts.Add(new FieldSortTimestamp() { SortDirection = SortDirectionConstants.Desc });
-                query.RecordsPerPage = 1;
-                query.PageOffset = 1;
-                var results = Query(schema, repositoryId, query, dimensionList);
-                if (results.RecordList.Any())
-                    return results.RecordList.First().__Timestamp;
-                else
-                    return 0;
-            }
-            catch (Exception ex)
-            {
-                LoggerCQ.LogError(ex);
-                throw;
-            }
+            query.FieldSorts.Clear();
+            query.FieldSorts.Add(new FieldSortTimestamp() { SortDirection = SortDirectionConstants.Desc });
+            query.RecordsPerPage = 1;
+            query.PageOffset = 1;
+            var results = Query(schema, repositoryId, query, dimensionList);
+            if (results.RecordList.Any())
+                return results.RecordList.First().__Timestamp;
+            else
+                return 0;
         }
 
         #endregion
@@ -3929,7 +3887,7 @@ namespace Gravitybox.Datastore.Server.Core
                     if (ex.Message.ToLower().Contains("deadlock"))
                     {
                         tryCount++;
-                        LoggerCQ.LogWarning("DeleteData deadlock: ID=" + schema.ID + ", ThreadId=" + System.Threading.Thread.CurrentThread.ManagedThreadId + ", Try=" + tryCount);
+                        LoggerCQ.LogWarning(ex, "DeleteData deadlock: ID=" + schema.ID + ", ThreadId=" + System.Threading.Thread.CurrentThread.ManagedThreadId + ", Try=" + tryCount);
                     }
                     else
                         throw;
@@ -3991,15 +3949,7 @@ namespace Gravitybox.Datastore.Server.Core
 
         internal static int GetChangeStamp()
         {
-            try
-            {
-                return EncryptionDomain.Hash(DateTime.Now.Ticks.ToString() + _rnd.Next(100, 999999).ToString());
-            }
-            catch (Exception ex)
-            {
-                LoggerCQ.LogError(ex);
-                throw;
-            }
+            return EncryptionDomain.Hash(DateTime.Now.Ticks.ToString() + _rnd.Next(100, 999999).ToString());
         }
 
         #endregion
@@ -4008,48 +3958,9 @@ namespace Gravitybox.Datastore.Server.Core
 
         public static List<string> GetFileGroups(string connectionString)
         {
-            try
-            {
-                var sql = "select name from sys.filegroups where (name <> 'PRIMARY') and type_desc <> 'MEMORY_OPTIMIZED_DATA_FILEGROUP'";
-                var ds = GetDataset(connectionString, sql, new List<SqlParameter>());
-                return (from DataRow dr in ds.Tables[0].Rows select (string)dr[0]).ToList();
-            }
-            catch (Exception ex)
-            {
-                LoggerCQ.LogError(ex);
-                throw;
-            }
-        }
-
-        #endregion
-
-        #region GetDiskInfo
-
-        public static List<Tuple<string, long>> GetDiskInfo(string connectionString)
-        {
-            try
-            {
-                var retval = new List<Tuple<string, long>>();
-                var builder = new SqlConnectionStringBuilder(connectionString);
-                var ds = GetDataset(connectionString, "select physical_name from sys.master_files where database_id = DB_ID('" + builder.InitialCatalog + "')");
-                if (ds.Tables.Count == 1)
-                {
-                    foreach (DataRow row in ds.Tables[0].Rows)
-                    {
-                        var path = (string)row[0];
-                        var root = Path.GetPathRoot(path).ToUpper();
-                        var di = new DriveInfo(root);
-                        if (!retval.Any(x => x.Item1 == root))
-                            retval.Add(new Tuple<string, long>(root, di.TotalFreeSpace));
-                    }
-                }
-                return retval;
-            }
-            catch (Exception ex)
-            {
-                LoggerCQ.LogError(ex);
-                throw;
-            }
+            var sql = "select name from sys.filegroups where (name <> 'PRIMARY') and type_desc <> 'MEMORY_OPTIMIZED_DATA_FILEGROUP'";
+            var ds = GetDataset(connectionString, sql, new List<SqlParameter>());
+            return (from DataRow dr in ds.Tables[0].Rows select (string)dr[0]).ToList();
         }
 
         #endregion
@@ -4058,33 +3969,25 @@ namespace Gravitybox.Datastore.Server.Core
 
         public static ConfigHelper.ServerVersionConstants GetSqlVersion(string connectionString)
         {
-            try
-            {
-                //Give small timeout
-                var c = new SqlConnectionStringBuilder(connectionString);
-                c.ConnectTimeout = 8;
-                connectionString = c.ToString();
+            //Give small timeout
+            var c = new SqlConnectionStringBuilder(connectionString);
+            c.ConnectTimeout = 8;
+            connectionString = c.ToString();
 
-                var ds = GetDataset(connectionString, "select SERVERPROPERTY ('productversion')", new List<SqlParameter>());
-                var v = ((string)ds.Tables[0].Rows[0][0] + string.Empty).Trim().ToLower();
+            var ds = GetDataset(connectionString, "select SERVERPROPERTY ('productversion')", new List<SqlParameter>());
+            var v = ((string)ds.Tables[0].Rows[0][0] + string.Empty).Trim().ToLower();
 
-                var major = int.Parse(v.Split('.').First());
-                if (major == 12)
-                    return ConfigHelper.ServerVersionConstants.SQL2014;
-                else if (major == 11)
-                    return ConfigHelper.ServerVersionConstants.SQL2012;
-                else if (major == 10)
-                    return ConfigHelper.ServerVersionConstants.SQL2008;
-                else if (major < 10)
-                    return ConfigHelper.ServerVersionConstants.SQLInvalid;
-                else
-                    return ConfigHelper.ServerVersionConstants.SQLOther; //Newer version
-            }
-            catch (Exception ex)
-            {
-                LoggerCQ.LogError(ex);
-                throw;
-            }
+            var major = int.Parse(v.Split('.').First());
+            if (major == 12)
+                return ConfigHelper.ServerVersionConstants.SQL2014;
+            else if (major == 11)
+                return ConfigHelper.ServerVersionConstants.SQL2012;
+            else if (major == 10)
+                return ConfigHelper.ServerVersionConstants.SQL2008;
+            else if (major < 10)
+                return ConfigHelper.ServerVersionConstants.SQLInvalid;
+            else
+                return ConfigHelper.ServerVersionConstants.SQLOther; //Newer version
         }
 
         #endregion
@@ -4093,22 +3996,14 @@ namespace Gravitybox.Datastore.Server.Core
 
         public static bool IsEnterpiseVersion(string connectionString)
         {
-            try
-            {
-                //Give small timeout
-                var c = new SqlConnectionStringBuilder(connectionString);
-                c.ConnectTimeout = 8;
-                connectionString = c.ToString();
+            //Give small timeout
+            var c = new SqlConnectionStringBuilder(connectionString);
+            c.ConnectTimeout = 8;
+            connectionString = c.ToString();
 
-                var ds = GetDataset(connectionString, "select SERVERPROPERTY ('edition')", new List<SqlParameter>());
-                var v = ((string)ds.Tables[0].Rows[0][0] + string.Empty).Trim().ToLower();
-                return v.Contains("enterprise") || v.Contains("developer");
-            }
-            catch (Exception ex)
-            {
-                LoggerCQ.LogError(ex);
-                throw;
-            }
+            var ds = GetDataset(connectionString, "select SERVERPROPERTY ('edition')", new List<SqlParameter>());
+            var v = ((string)ds.Tables[0].Rows[0][0] + string.Empty).Trim().ToLower();
+            return v.Contains("enterprise") || v.Contains("developer");
         }
 
         #endregion
@@ -4154,6 +4049,7 @@ namespace Gravitybox.Datastore.Server.Core
             }
             catch (Exception ex)
             {
+                LoggerCQ.LogError(ex);
                 return false;
             }
         }
@@ -4164,22 +4060,14 @@ namespace Gravitybox.Datastore.Server.Core
 
         public static bool HasFTS(string connectionString)
         {
-            try
-            {
-                //Give small timeout
-                var c = new SqlConnectionStringBuilder(connectionString);
-                c.ConnectTimeout = 8;
-                connectionString = c.ToString();
+            //Give small timeout
+            var c = new SqlConnectionStringBuilder(connectionString);
+            c.ConnectTimeout = 8;
+            connectionString = c.ToString();
 
-                var ds = GetDataset(connectionString, "SELECT FULLTEXTSERVICEPROPERTY('IsFullTextInstalled')",
-                    new List<SqlParameter>());
-                return ((int)ds.Tables[0].Rows[0][0] != 0);
-            }
-            catch (Exception ex)
-            {
-                LoggerCQ.LogError(ex);
-                throw;
-            }
+            var ds = GetDataset(connectionString, "SELECT FULLTEXTSERVICEPROPERTY('IsFullTextInstalled')",
+                new List<SqlParameter>());
+            return ((int)ds.Tables[0].Rows[0][0] != 0);
         }
 
         #endregion
@@ -4241,61 +4129,45 @@ namespace Gravitybox.Datastore.Server.Core
 
         private static string GetSqlRemoveFTS(string dataTable)
         {
-            try
-            {
-                var sb = new StringBuilder();
-                sb.AppendLine("if exists(select * from sys.fulltext_indexes where object_id = (select top 1 object_id from sys.objects where name = '" + dataTable + "'))");
-                sb.AppendLine("DROP FULLTEXT INDEX ON [" + dataTable + "];");
-                LoggerCQ.LogInfo($"DROP FTS: {dataTable}");
-                return sb.ToString();
-            }
-            catch (Exception ex)
-            {
-                LoggerCQ.LogError(ex);
-                throw;
-            }
+            var sb = new StringBuilder();
+            sb.AppendLine("if exists(select * from sys.fulltext_indexes where object_id = (select top 1 object_id from sys.objects where name = '" + dataTable + "'))");
+            sb.AppendLine("DROP FULLTEXT INDEX ON [" + dataTable + "];");
+            LoggerCQ.LogInfo($"DROP FTS: {dataTable}");
+            return sb.ToString();
         }
 
         internal static string[] GetSqlFTS(string dataTable, RepositorySchema schema)
         {
-            try
+            var retval = new List<string>();
+            retval.Add(GetSqlRemoveFTS(dataTable));
+
+            RepositorySchema realSchema = null;
+            if (schema.ParentID != null)
             {
-                var retval = new List<string>();
-                retval.Add(GetSqlRemoveFTS(dataTable));
-
-                RepositorySchema realSchema = null;
-                if (schema.ParentID != null)
-                {
-                    var parentSchema = RepositoryManager.GetSchema(schema.ParentID.Value);
-                    realSchema = schema.Subtract(parentSchema);
-                }
-                else realSchema = schema;
-
-                var sb = new StringBuilder();
-                var columns = GetFTSColumns(realSchema, false);
-                if (!string.IsNullOrEmpty(columns))
-                {
-                    //Create catalog if not exists
-                    var catalogName = "FTS_" + dataTable;
-                    sb.AppendLine("if not exists(SELECT fulltext_catalog_id, name FROM sys.fulltext_catalogs where name = '" + catalogName + "')");
-                    sb.AppendLine("CREATE FULLTEXT CATALOG [" + catalogName + "] ON FILEGROUP [PRIMARY] WITH ACCENT_SENSITIVITY = OFF;");
-                    retval.Add(sb.ToString());
-                    sb = new StringBuilder();
-
-                    //Create index in that catalog above
-                    sb.AppendLine("if exists(SELECT * from sys.objects where name = '" + dataTable + "' and type = 'U')");
-                    sb.AppendLine("CREATE FULLTEXT INDEX ON [" + dataTable + "] (" + columns + ")");
-                    sb.AppendLine("KEY INDEX [PK_" + dataTable + "]");
-                    sb.AppendLine("ON [" + catalogName + "] WITH STOPLIST = DatastoreStopList, CHANGE_TRACKING AUTO;"); //MANUAL
-                    retval.Add(sb.ToString());
-                }
-                return retval.ToArray();
+                var parentSchema = RepositoryManager.GetSchema(schema.ParentID.Value);
+                realSchema = schema.Subtract(parentSchema);
             }
-            catch (Exception ex)
+            else realSchema = schema;
+
+            var sb = new StringBuilder();
+            var columns = GetFTSColumns(realSchema, false);
+            if (!string.IsNullOrEmpty(columns))
             {
-                LoggerCQ.LogError(ex);
-                throw;
+                //Create catalog if not exists
+                var catalogName = "FTS_" + dataTable;
+                sb.AppendLine("if not exists(SELECT fulltext_catalog_id, name FROM sys.fulltext_catalogs where name = '" + catalogName + "')");
+                sb.AppendLine("CREATE FULLTEXT CATALOG [" + catalogName + "] ON FILEGROUP [PRIMARY] WITH ACCENT_SENSITIVITY = OFF;");
+                retval.Add(sb.ToString());
+                sb = new StringBuilder();
+
+                //Create index in that catalog above
+                sb.AppendLine("if exists(SELECT * from sys.objects where name = '" + dataTable + "' and type = 'U')");
+                sb.AppendLine("CREATE FULLTEXT INDEX ON [" + dataTable + "] (" + columns + ")");
+                sb.AppendLine("KEY INDEX [PK_" + dataTable + "]");
+                sb.AppendLine("ON [" + catalogName + "] WITH STOPLIST = DatastoreStopList, CHANGE_TRACKING AUTO;"); //MANUAL
+                retval.Add(sb.ToString());
             }
+            return retval.ToArray();
         }
 
         #endregion
@@ -4313,7 +4185,7 @@ namespace Gravitybox.Datastore.Server.Core
             }
             catch (Exception ex)
             {
-                LoggerCQ.LogWarning(ex.ToString());
+                LoggerCQ.LogWarning(ex);
             }
         }
 
@@ -4386,7 +4258,7 @@ namespace Gravitybox.Datastore.Server.Core
             }
             catch (Exception ex)
             {
-                LoggerCQ.LogWarning(ex.Message);
+                LoggerCQ.LogWarning(ex);
             }
             finally
             {
@@ -4583,7 +4455,7 @@ namespace Gravitybox.Datastore.Server.Core
             }
             catch (Exception ex)
             {
-                LoggerCQ.LogWarning(ex.ToString());
+                LoggerCQ.LogWarning(ex);
             }
             finally
             {
@@ -4599,31 +4471,23 @@ namespace Gravitybox.Datastore.Server.Core
 
         private static string GetFTSColumns(RepositorySchema schema, bool withPrefix, bool useSchemaAsIs = false)
         {
-            try
+            var realSchema = schema;
+            if (schema.ParentID != null && !useSchemaAsIs)
             {
-                var realSchema = schema;
-                if (schema.ParentID != null && !useSchemaAsIs)
-                {
-                    var parentSchema = RepositoryManager.GetSchema(schema.ParentID.Value);
-                    //realSchema = parentSchema.Merge(schema.Subtract(parentSchema));
-                    realSchema = schema.Subtract(parentSchema);
-                }
-
-                var l = GetPrimaryTableFields(realSchema, true)
-                    .Where(x => x.AllowTextSearch)
-                    .Select(x => x.TokenName)
-                    .Distinct()
-                    .Select(x => (withPrefix ? "Z." : string.Empty) + "[" + x.Replace("'", "''") + "]")
-                    .ToList();
-
-                var retval = string.Join(", ", l);
-                return retval;
+                var parentSchema = RepositoryManager.GetSchema(schema.ParentID.Value);
+                //realSchema = parentSchema.Merge(schema.Subtract(parentSchema));
+                realSchema = schema.Subtract(parentSchema);
             }
-            catch (Exception ex)
-            {
-                LoggerCQ.LogError(ex);
-                throw;
-            }
+
+            var l = GetPrimaryTableFields(realSchema, true)
+                .Where(x => x.AllowTextSearch)
+                .Select(x => x.TokenName)
+                .Distinct()
+                .Select(x => (withPrefix ? "Z." : string.Empty) + "[" + x.Replace("'", "''") + "]")
+                .ToList();
+
+            var retval = string.Join(", ", l);
+            return retval;
         }
 
         #endregion
@@ -4632,22 +4496,14 @@ namespace Gravitybox.Datastore.Server.Core
 
         public static void UpdateStatistics(Guid repositoryId)
         {
-            try
-            {
-                var timer = Stopwatch.StartNew();
-                var dataTable = GetTableName(repositoryId);
-                var sb = new StringBuilder();
-                sb.AppendLine($"if exists (select * from sys.objects where name = '{dataTable}' and type = 'U')");
-                sb.AppendLine($"UPDATE STATISTICS [{dataTable}]");
-                ExecuteSql(ConfigHelper.ConnectionString, sb.ToString(), null, false);
-                timer.Stop();
-                LoggerCQ.LogDebug($"UPDATE STATISTICS: ID={repositoryId}, Elapsed={timer.ElapsedMilliseconds}");
-            }
-            catch (Exception ex)
-            {
-                LoggerCQ.LogError(ex);
-                throw;
-            }
+            var timer = Stopwatch.StartNew();
+            var dataTable = GetTableName(repositoryId);
+            var sb = new StringBuilder();
+            sb.AppendLine($"if exists (select * from sys.objects where name = '{dataTable}' and type = 'U')");
+            sb.AppendLine($"UPDATE STATISTICS [{dataTable}]");
+            ExecuteSql(ConfigHelper.ConnectionString, sb.ToString(), null, false);
+            timer.Stop();
+            LoggerCQ.LogDebug($"UPDATE STATISTICS: ID={repositoryId}, Elapsed={timer.ElapsedMilliseconds}");
         }
 
         #endregion
@@ -4656,51 +4512,43 @@ namespace Gravitybox.Datastore.Server.Core
 
         public static bool UpdateDimensionValue(RepositorySchema schema, List<DimensionItem> dimensionList, long dvidx, string value)
         {
-            try
+            if (string.IsNullOrEmpty(value)) return false;
+
+            var r = dimensionList.SelectMany(x => x.RefinementList).FirstOrDefault(x => x.DVIdx == dvidx);
+            if (r == null) return false;
+            var d = dimensionList.FirstOrDefault(x => x.RefinementList.Any(z => z.DVIdx == dvidx));
+            if (d == null) return false;
+
+            var sb = new StringBuilder();
+            var dDef = schema.DimensionList.FirstOrDefault(x => x.DIdx == d.DIdx);
+            var parameters = new List<SqlParameter>();
+            parameters.Add(new SqlParameter { DbType = DbType.String, IsNullable = false, ParameterName = "@v", Value = value });
+            parameters.Add(new SqlParameter { DbType = DbType.Int64, IsNullable = false, ParameterName = "@dvidx", Value = dvidx });
+
+            var dataTable = GetTableName(schema);
+            var dimensionValueTableName = GetDimensionValueTableName(schema.ID);
+            if (schema.ParentID != null)
             {
-                if (string.IsNullOrEmpty(value)) return false;
-
-                var r = dimensionList.SelectMany(x => x.RefinementList).FirstOrDefault(x => x.DVIdx == dvidx);
-                if (r == null) return false;
-                var d = dimensionList.FirstOrDefault(x => x.RefinementList.Any(z => z.DVIdx == dvidx));
-                if (d == null) return false;
-
-                var sb = new StringBuilder();
-                var dDef = schema.DimensionList.FirstOrDefault(x => x.DIdx == d.DIdx);
-                var parameters = new List<SqlParameter>();
-                parameters.Add(new SqlParameter { DbType = DbType.String, IsNullable = false, ParameterName = "@v", Value = value });
-                parameters.Add(new SqlParameter { DbType = DbType.Int64, IsNullable = false, ParameterName = "@dvidx", Value = dvidx });
-
-                var dataTable = GetTableName(schema);
-                var dimensionValueTableName = GetDimensionValueTableName(schema.ID);
-                if (schema.ParentID != null)
+                var parentSchema = RepositoryManager.GetSchema(schema.ParentID.Value);
+                if (parentSchema.DimensionList.Any(x => x.DIdx == dDef.DIdx))
                 {
-                    var parentSchema = RepositoryManager.GetSchema(schema.ParentID.Value);
-                    if (parentSchema.DimensionList.Any(x => x.DIdx == dDef.DIdx))
-                    {
-                        dataTable = GetTableName(schema.ParentID.Value);
-                        dimensionValueTableName = SqlHelper.GetDimensionValueTableName(schema.ParentID.Value);
-                    }
+                    dataTable = GetTableName(schema.ParentID.Value);
+                    dimensionValueTableName = SqlHelper.GetDimensionValueTableName(schema.ParentID.Value);
                 }
-
-                //Update the Dimension Value table
-                sb.AppendLine($"update [{dimensionValueTableName}] set [Value] = @v where [DVIdx] = @dvidx");
-
-                //Update the values in the master table
-                if (dDef != null && dDef.DimensionType == RepositorySchema.DimensionTypeConstants.Normal)
-                {
-                    sb.AppendLine($"update [{dataTable}] set [{dDef.TokenName}] = @v where [__d{dDef.TokenName}] = @dvidx");
-                }
-
-                ExecuteSql(ConfigHelper.ConnectionString, sb.ToString(), parameters);
-
-                return true;
             }
-            catch (Exception ex)
+
+            //Update the Dimension Value table
+            sb.AppendLine($"update [{dimensionValueTableName}] set [Value] = @v where [DVIdx] = @dvidx");
+
+            //Update the values in the master table
+            if (dDef != null && dDef.DimensionType == RepositorySchema.DimensionTypeConstants.Normal)
             {
-                LoggerCQ.LogError(ex);
-                return false;
+                sb.AppendLine($"update [{dataTable}] set [{dDef.TokenName}] = @v where [__d{dDef.TokenName}] = @dvidx");
             }
+
+            ExecuteSql(ConfigHelper.ConnectionString, sb.ToString(), parameters);
+
+            return true;
         }
 
         #endregion
@@ -4709,46 +4557,38 @@ namespace Gravitybox.Datastore.Server.Core
 
         public static bool DeleteDimensionValue(RepositorySchema schema, List<DimensionItem> dimensionList, long dvidx)
         {
-            try
+            var r = dimensionList.SelectMany(x => x.RefinementList).FirstOrDefault(x => x.DVIdx == dvidx);
+            if (r == null) return false;
+            var d = dimensionList.FirstOrDefault(x => x.RefinementList.Any(z => z.DVIdx == dvidx));
+            if (d == null) return false;
+
+            var sb = new StringBuilder();
+            var dDef = schema.DimensionList.FirstOrDefault(x => x.DIdx == d.DIdx);
+            var parameters = new List<SqlParameter>();
+            parameters.Add(new SqlParameter { DbType = DbType.Int64, IsNullable = false, ParameterName = "@dvidx", Value = dvidx });
+
+            //Delete the Dimension Value table
             {
-                var r = dimensionList.SelectMany(x => x.RefinementList).FirstOrDefault(x => x.DVIdx == dvidx);
-                if (r == null) return false;
-                var d = dimensionList.FirstOrDefault(x => x.RefinementList.Any(z => z.DVIdx == dvidx));
-                if (d == null) return false;
-
-                var sb = new StringBuilder();
-                var dDef = schema.DimensionList.FirstOrDefault(x => x.DIdx == d.DIdx);
-                var parameters = new List<SqlParameter>();
-                parameters.Add(new SqlParameter { DbType = DbType.Int64, IsNullable = false, ParameterName = "@dvidx", Value = dvidx });
-
-                //Delete the Dimension Value table
-                {
-                    var dimensionValueTableName = GetDimensionValueTableName(schema.ID);
-                    sb.AppendLine($"delete from [{dimensionValueTableName}] where [DVIdx] = @dvidx");
-                }
-
-                //Delete the values in the master table
-                if (dDef != null && dDef.DimensionType == RepositorySchema.DimensionTypeConstants.Normal)
-                {
-                    var dataTable = GetTableName(schema);
-                    sb.AppendLine($"update [{dataTable}] set [{dDef.TokenName}] = NULL where [__d{dDef.TokenName}] = @dvidx");
-                    sb.AppendLine($"update [{dataTable}] set [__d{dDef.TokenName}] = NULL where [__d{dDef.TokenName}] = @dvidx");
-                }
-                else if (dDef != null && dDef.DimensionType == RepositorySchema.DimensionTypeConstants.List)
-                {
-                    var dataListTable = GetListTableName(schema.ID, dDef.DIdx);
-                    sb.AppendLine($"delete from [{dataListTable}] where [DVIdx] = @dvidx");
-                }
-
-                ExecuteSql(ConfigHelper.ConnectionString, sb.ToString(), parameters);
-
-                return true;
+                var dimensionValueTableName = GetDimensionValueTableName(schema.ID);
+                sb.AppendLine($"delete from [{dimensionValueTableName}] where [DVIdx] = @dvidx");
             }
-            catch (Exception ex)
+
+            //Delete the values in the master table
+            if (dDef != null && dDef.DimensionType == RepositorySchema.DimensionTypeConstants.Normal)
             {
-                LoggerCQ.LogError(ex);
-                return false;
+                var dataTable = GetTableName(schema);
+                sb.AppendLine($"update [{dataTable}] set [{dDef.TokenName}] = NULL where [__d{dDef.TokenName}] = @dvidx");
+                sb.AppendLine($"update [{dataTable}] set [__d{dDef.TokenName}] = NULL where [__d{dDef.TokenName}] = @dvidx");
             }
+            else if (dDef != null && dDef.DimensionType == RepositorySchema.DimensionTypeConstants.List)
+            {
+                var dataListTable = GetListTableName(schema.ID, dDef.DIdx);
+                sb.AppendLine($"delete from [{dataListTable}] where [DVIdx] = @dvidx");
+            }
+
+            ExecuteSql(ConfigHelper.ConnectionString, sb.ToString(), parameters);
+
+            return true;
         }
 
         #endregion
@@ -4759,193 +4599,185 @@ namespace Gravitybox.Datastore.Server.Core
             var retval = new SummarySliceValue();
             retval.RecordList = new List<SummarySliceRecord>();
             retval.Definition = slice;
-            try
+
+            if (schema.ParentID != null)
+                throw new Exception("Unsupported repository with a parent");
+
+            var errors = new List<string>();
+
+            var sb = new StringBuilder();
+            var fields = new List<FieldDefinition>();
+            foreach (var f in slice.GroupFields)
             {
-                if (schema.ParentID != null)
-                    throw new Exception("Unsupported repository with a parent");
+                var field = schema.FieldList.FirstOrDefault(x => x.Name.Match(f) && x.DataType != RepositorySchema.DataTypeConstants.List);
+                if (field == null) errors.Add($"The field '{f}' is not valid.");
+                else fields.Add(field);
+            }
 
-                var errors = new List<string>();
-
-                var sb = new StringBuilder();
-                var fields = new List<FieldDefinition>();
-                foreach (var f in slice.GroupFields)
-                {
-                    var field = schema.FieldList.FirstOrDefault(x => x.Name.Match(f) && x.DataType != RepositorySchema.DataTypeConstants.List);
-                    if (field == null) errors.Add($"The field '{f}' is not valid.");
-                    else fields.Add(field);
-                }
-
-                if (errors.Count > 0)
-                {
-                    retval.ErrorList = errors.ToArray();
-                    return retval;
-                }
-                if (fields.Count == 0)
-                {
-                    retval.ErrorList = new string[] { "There are no valid group by fields." };
-                    return retval;
-                }
-
-                //If use name then calculate the DIdx
-                if (slice.SpliceDIdx == 0 && !string.IsNullOrEmpty(slice.SpliceDName))
-                {
-                    slice.SpliceDIdx = dimensionList.Where(x => x.Name.Match(slice.SpliceDName)).Select(x => x.DIdx).FirstOrDefault();
-                }
-
-                var dimension = dimensionList.FirstOrDefault(x => x.DIdx == slice.SpliceDIdx);
-                if (dimension == null || schema.FieldList.Any(x => x.Name.Match(dimension.Name) && x.DataType == RepositorySchema.DataTypeConstants.List))
-                {
-                    retval.ErrorList = new string[] { "The splice dimension is not valid." };
-                    return retval;
-                }
-
-                var dataTable = GetTableName(schema);
-                if (schema.ParentID != null)
-                    dataTable = GetTableViewName(schema.ID);
-
-                var parameters = new List<SqlParameter>();
-                var whereClause = GetWhereClause(schema, null, slice.Query, dimensionList, parameters);
-                var innerJoinClause = GetInnerJoinClause(schema, null, slice.Query, dimensionList, parameters);
-
-                var allFields = fields.Select(x => x.Name).ToList();
-                sb.Append("SELECT " + string.Join(",", fields.Select(x => "[A].[" + x.TokenName + "]")));
-                var joinFields = string.Join(" AND ", fields.Select(x => "[A].[" + x.TokenName + "] = [Z].[" + x.TokenName + "]"));
-                foreach (var refinement in dimension.RefinementList)
-                {
-                    sb.AppendLine("	,(");
-                    sb.AppendLine("		select count([Z].[" + RecordIdxField + "])");
-                    sb.AppendLine("		from [" + dataTable + "] [Z] " + NoLockText() + innerJoinClause);
-                    sb.AppendLine("		where " + whereClause + "AND " + joinFields);
-                    sb.AppendLine("			and [Z].__d" + Utilities.DbTokenize(dimension.Name) + " = " + refinement.DVIdx);
-                    sb.AppendLine("	) as [" + refinement.DVIdx + "]");
-                    allFields.Add(refinement.DVIdx.ToString());
-                }
-
-                sb.AppendLine("FROM [" + dataTable + "] [A] " + NoLockText() + innerJoinClause.Replace("[Z].", "[A]."));
-                sb.AppendLine("WHERE " + whereClause.Replace("[Z].", "[A]."));
-                sb.AppendLine("GROUP BY " + string.Join(",", fields.Select(x => "[" + x.TokenName + "]")));
-
-                var orderByClause = string.Empty;
-                #region Order By
-                if (slice.Query.FieldSorts.Count() == 0)
-                    orderByClause = "ORDER BY " + string.Join(",", fields.Select(x => "[T].[" + x.TokenName + "]"));
-                else
-                {
-                    var subSort = new List<Tuple<string, SortDirectionConstants>>();
-                    foreach (var f in slice.Query.FieldSorts)
-                    {
-                        if (fields.Any(x => x.Name.Match(f.Name)))
-                            subSort.Add(new Tuple<string, SortDirectionConstants>(f.Name, f.SortDirection));
-                        else
-                        {
-                            long dvidx;
-                            if (!long.TryParse(f.Name, out dvidx))
-                                throw new Exception("The order by column '" + f.Name + "' is not valid.");
-                            if (!dimension.RefinementList.Any(x => x.DVIdx == dvidx))
-                                throw new Exception("The order by column '" + f.Name + "' is not valid.");
-                            subSort.Add(new Tuple<string, SortDirectionConstants>(dvidx.ToString(), f.SortDirection));
-                        }
-                    }
-                    orderByClause = "ORDER BY " + string.Join(",", subSort.Select(x => "[" + x.Item1 + "] " + (x.Item2 == SortDirectionConstants.Asc ? "asc" : "desc")));
-                }
-                #endregion
-
-                #region Setup paging variables
-                var startIndex = ((slice.Query.PageOffset - 1) * slice.Query.RecordsPerPage) + 1;
-                if (startIndex <= 0) startIndex = 1;
-                var endIndex = (startIndex + slice.Query.RecordsPerPage);
-                if (endIndex < 0) endIndex = int.MaxValue;
-                parameters.Add(new SqlParameter { DbType = DbType.Int32, ParameterName = "@startindex", Value = startIndex });
-                parameters.Add(new SqlParameter { DbType = DbType.Int32, ParameterName = "@endindex", Value = endIndex });
-                #endregion
-
-                if (ConfigHelper.SupportsRowsFetch)
-                {
-                    var sbSql = new StringBuilder();
-                    sbSql.AppendLine("WITH T (" + string.Join(",", allFields.Select(x => "[" + x + "]")) + ") AS (");
-                    sbSql.AppendLine(sb.ToString());
-                    sbSql.AppendLine(") SELECT * FROM T");
-                    sbSql.AppendLine(orderByClause);
-                    sbSql.AppendLine("OFFSET (@startindex-1) ROWS FETCH FIRST (@endindex-@startindex) ROWS ONLY;");
-                    sb = sbSql;
-                }
-                else
-                {
-                    throw new Exception("Database row fetch must be supported to use this functionality.");
-                }
-
-                #region Count
-                sb.AppendLine("; WITH T ([Count]) AS (");
-                sb.AppendLine("select count(*) as [Count]");
-                sb.AppendLine("from [" + dataTable + "] Z " + NoLockText() + innerJoinClause);
-                sb.AppendLine("where " + whereClause);
-                sb.AppendLine("GROUP BY " + string.Join(",", fields.Select(x => "[" + x.TokenName + "]")));
-                sb.AppendLine(") select count(*) from T");
-
-                #endregion
-
-                var ds = GetDataset(connectionString, sb.ToString(), parameters);
-                if (ds.Tables.Count != 2) throw new Exception("There were no results");
-                foreach (DataRow dr in ds.Tables[0].Rows)
-                {
-                    var record = new SummarySliceRecord();
-                    #region Group by Fields
-                    foreach (var f in fields)
-                    {
-                        if (dr[f.Name] == System.DBNull.Value)
-                        {
-                            record.FieldValues.Add(null);
-                        }
-                        else
-                        {
-                            switch (f.DataType)
-                            {
-                                case RepositorySchema.DataTypeConstants.Bool:
-                                    record.FieldValues.Add(((bool)dr[f.Name]).ToString());
-                                    break;
-                                case RepositorySchema.DataTypeConstants.DateTime:
-                                    record.FieldValues.Add(((DateTime)dr[f.Name]).ToString());
-                                    break;
-                                case RepositorySchema.DataTypeConstants.GeoCode:
-                                    //Not supported
-                                    break;
-                                case RepositorySchema.DataTypeConstants.Int:
-                                    record.FieldValues.Add(((int)dr[f.Name]).ToString());
-                                    break;
-                                case RepositorySchema.DataTypeConstants.List:
-                                    //Not supported
-                                    break;
-                                case RepositorySchema.DataTypeConstants.String:
-                                    record.FieldValues.Add((string)dr[f.Name]);
-                                    break;
-                            }
-                        }
-                    }
-                    #endregion
-
-                    #region Slices
-                    foreach (var refinement in dimension.RefinementList)
-                    {
-                        record.SliceValues.Add(new RefinementItem
-                        {
-                            Count = ((int)dr[refinement.DVIdx.ToString()]),
-                            DVIdx = refinement.DVIdx,
-                            DIdx = refinement.DIdx,
-                            FieldValue = refinement.FieldValue
-                        });
-                    }
-                    #endregion
-                    retval.RecordList.Add(record);
-                    retval.TotalRecordCount = (int)ds.Tables[1].Rows[0][0];
-                }
+            if (errors.Count > 0)
+            {
+                retval.ErrorList = errors.ToArray();
                 return retval;
             }
-            catch (Exception ex)
+            if (fields.Count == 0)
             {
-                LoggerCQ.LogError(ex);
-                retval.ErrorList = new string[] { "An unexpected error occurred." };
-                throw;
+                retval.ErrorList = new string[] { "There are no valid group by fields." };
+                return retval;
             }
+
+            //If use name then calculate the DIdx
+            if (slice.SpliceDIdx == 0 && !string.IsNullOrEmpty(slice.SpliceDName))
+            {
+                slice.SpliceDIdx = dimensionList.Where(x => x.Name.Match(slice.SpliceDName)).Select(x => x.DIdx).FirstOrDefault();
+            }
+
+            var dimension = dimensionList.FirstOrDefault(x => x.DIdx == slice.SpliceDIdx);
+            if (dimension == null || schema.FieldList.Any(x => x.Name.Match(dimension.Name) && x.DataType == RepositorySchema.DataTypeConstants.List))
+            {
+                retval.ErrorList = new string[] { "The splice dimension is not valid." };
+                return retval;
+            }
+
+            var dataTable = GetTableName(schema);
+            if (schema.ParentID != null)
+                dataTable = GetTableViewName(schema.ID);
+
+            var parameters = new List<SqlParameter>();
+            var whereClause = GetWhereClause(schema, null, slice.Query, dimensionList, parameters);
+            var innerJoinClause = GetInnerJoinClause(schema, null, slice.Query, dimensionList, parameters);
+
+            var allFields = fields.Select(x => x.Name).ToList();
+            sb.Append("SELECT " + string.Join(",", fields.Select(x => "[A].[" + x.TokenName + "]")));
+            var joinFields = string.Join(" AND ", fields.Select(x => "[A].[" + x.TokenName + "] = [Z].[" + x.TokenName + "]"));
+            foreach (var refinement in dimension.RefinementList)
+            {
+                sb.AppendLine("	,(");
+                sb.AppendLine("		select count([Z].[" + RecordIdxField + "])");
+                sb.AppendLine("		from [" + dataTable + "] [Z] " + NoLockText() + innerJoinClause);
+                sb.AppendLine("		where " + whereClause + "AND " + joinFields);
+                sb.AppendLine("			and [Z].__d" + Utilities.DbTokenize(dimension.Name) + " = " + refinement.DVIdx);
+                sb.AppendLine("	) as [" + refinement.DVIdx + "]");
+                allFields.Add(refinement.DVIdx.ToString());
+            }
+
+            sb.AppendLine("FROM [" + dataTable + "] [A] " + NoLockText() + innerJoinClause.Replace("[Z].", "[A]."));
+            sb.AppendLine("WHERE " + whereClause.Replace("[Z].", "[A]."));
+            sb.AppendLine("GROUP BY " + string.Join(",", fields.Select(x => "[" + x.TokenName + "]")));
+
+            var orderByClause = string.Empty;
+            #region Order By
+            if (slice.Query.FieldSorts.Count() == 0)
+                orderByClause = "ORDER BY " + string.Join(",", fields.Select(x => "[T].[" + x.TokenName + "]"));
+            else
+            {
+                var subSort = new List<Tuple<string, SortDirectionConstants>>();
+                foreach (var f in slice.Query.FieldSorts)
+                {
+                    if (fields.Any(x => x.Name.Match(f.Name)))
+                        subSort.Add(new Tuple<string, SortDirectionConstants>(f.Name, f.SortDirection));
+                    else
+                    {
+                        long dvidx;
+                        if (!long.TryParse(f.Name, out dvidx))
+                            throw new Exception("The order by column '" + f.Name + "' is not valid.");
+                        if (!dimension.RefinementList.Any(x => x.DVIdx == dvidx))
+                            throw new Exception("The order by column '" + f.Name + "' is not valid.");
+                        subSort.Add(new Tuple<string, SortDirectionConstants>(dvidx.ToString(), f.SortDirection));
+                    }
+                }
+                orderByClause = "ORDER BY " + string.Join(",", subSort.Select(x => "[" + x.Item1 + "] " + (x.Item2 == SortDirectionConstants.Asc ? "asc" : "desc")));
+            }
+            #endregion
+
+            #region Setup paging variables
+            var startIndex = ((slice.Query.PageOffset - 1) * slice.Query.RecordsPerPage) + 1;
+            if (startIndex <= 0) startIndex = 1;
+            var endIndex = (startIndex + slice.Query.RecordsPerPage);
+            if (endIndex < 0) endIndex = int.MaxValue;
+            parameters.Add(new SqlParameter { DbType = DbType.Int32, ParameterName = "@startindex", Value = startIndex });
+            parameters.Add(new SqlParameter { DbType = DbType.Int32, ParameterName = "@endindex", Value = endIndex });
+            #endregion
+
+            if (ConfigHelper.SupportsRowsFetch)
+            {
+                var sbSql = new StringBuilder();
+                sbSql.AppendLine("WITH T (" + string.Join(",", allFields.Select(x => "[" + x + "]")) + ") AS (");
+                sbSql.AppendLine(sb.ToString());
+                sbSql.AppendLine(") SELECT * FROM T");
+                sbSql.AppendLine(orderByClause);
+                sbSql.AppendLine("OFFSET (@startindex-1) ROWS FETCH FIRST (@endindex-@startindex) ROWS ONLY;");
+                sb = sbSql;
+            }
+            else
+            {
+                throw new Exception("Database row fetch must be supported to use this functionality.");
+            }
+
+            #region Count
+            sb.AppendLine("; WITH T ([Count]) AS (");
+            sb.AppendLine("select count(*) as [Count]");
+            sb.AppendLine("from [" + dataTable + "] Z " + NoLockText() + innerJoinClause);
+            sb.AppendLine("where " + whereClause);
+            sb.AppendLine("GROUP BY " + string.Join(",", fields.Select(x => "[" + x.TokenName + "]")));
+            sb.AppendLine(") select count(*) from T");
+
+            #endregion
+
+            var ds = GetDataset(connectionString, sb.ToString(), parameters);
+            if (ds.Tables.Count != 2) throw new Exception("There were no results");
+            foreach (DataRow dr in ds.Tables[0].Rows)
+            {
+                var record = new SummarySliceRecord();
+                #region Group by Fields
+                foreach (var f in fields)
+                {
+                    if (dr[f.Name] == System.DBNull.Value)
+                    {
+                        record.FieldValues.Add(null);
+                    }
+                    else
+                    {
+                        switch (f.DataType)
+                        {
+                            case RepositorySchema.DataTypeConstants.Bool:
+                                record.FieldValues.Add(((bool)dr[f.Name]).ToString());
+                                break;
+                            case RepositorySchema.DataTypeConstants.DateTime:
+                                record.FieldValues.Add(((DateTime)dr[f.Name]).ToString());
+                                break;
+                            case RepositorySchema.DataTypeConstants.GeoCode:
+                                //Not supported
+                                break;
+                            case RepositorySchema.DataTypeConstants.Int:
+                                record.FieldValues.Add(((int)dr[f.Name]).ToString());
+                                break;
+                            case RepositorySchema.DataTypeConstants.List:
+                                //Not supported
+                                break;
+                            case RepositorySchema.DataTypeConstants.String:
+                                record.FieldValues.Add((string)dr[f.Name]);
+                                break;
+                        }
+                    }
+                }
+                #endregion
+
+                #region Slices
+                foreach (var refinement in dimension.RefinementList)
+                {
+                    record.SliceValues.Add(new RefinementItem
+                    {
+                        Count = ((int)dr[refinement.DVIdx.ToString()]),
+                        DVIdx = refinement.DVIdx,
+                        DIdx = refinement.DIdx,
+                        FieldValue = refinement.FieldValue
+                    });
+                }
+                #endregion
+                retval.RecordList.Add(record);
+                retval.TotalRecordCount = (int)ds.Tables[1].Rows[0][0];
+            }
+            return retval;
         }
         #endregion
 
@@ -4953,42 +4785,34 @@ namespace Gravitybox.Datastore.Server.Core
 
         internal static List<SqlIndex> GetTableIndexes(string connectionString, string table)
         {
-            try
-            {
-                var retval = new List<SqlIndex>();
-                var sb = new StringBuilder();
-                sb.AppendLine("SELECT I.NAME IndexName,C.NAME ColumnName");
-                sb.AppendLine("  FROM SYS.TABLES T");
-                sb.AppendLine("       INNER JOIN SYS.SCHEMAS S");
-                sb.AppendLine("    ON T.SCHEMA_ID = S.SCHEMA_ID");
-                sb.AppendLine("       INNER JOIN SYS.INDEXES I");
-                sb.AppendLine("    ON I.OBJECT_ID = T.OBJECT_ID");
-                sb.AppendLine("       INNER JOIN SYS.INDEX_COLUMNS IC");
-                sb.AppendLine("    ON IC.OBJECT_ID = T.OBJECT_ID");
-                sb.AppendLine("       INNER JOIN SYS.COLUMNS C");
-                sb.AppendLine("    ON C.OBJECT_ID  = T.OBJECT_ID");
-                sb.AppendLine("   AND IC.INDEX_ID    = I.INDEX_ID");
-                sb.AppendLine("   AND IC.COLUMN_ID = C.COLUMN_ID");
-                sb.AppendLine(" WHERE T.Name = '" + table + "' and");
-                sb.AppendLine("	I.Name not like 'PK_%'");
-                sb.AppendLine("ORDER BY I.NAME,I.INDEX_ID,IC.KEY_ORDINAL");
+            var retval = new List<SqlIndex>();
+            var sb = new StringBuilder();
+            sb.AppendLine("SELECT I.NAME IndexName,C.NAME ColumnName");
+            sb.AppendLine("  FROM SYS.TABLES T");
+            sb.AppendLine("       INNER JOIN SYS.SCHEMAS S");
+            sb.AppendLine("    ON T.SCHEMA_ID = S.SCHEMA_ID");
+            sb.AppendLine("       INNER JOIN SYS.INDEXES I");
+            sb.AppendLine("    ON I.OBJECT_ID = T.OBJECT_ID");
+            sb.AppendLine("       INNER JOIN SYS.INDEX_COLUMNS IC");
+            sb.AppendLine("    ON IC.OBJECT_ID = T.OBJECT_ID");
+            sb.AppendLine("       INNER JOIN SYS.COLUMNS C");
+            sb.AppendLine("    ON C.OBJECT_ID  = T.OBJECT_ID");
+            sb.AppendLine("   AND IC.INDEX_ID    = I.INDEX_ID");
+            sb.AppendLine("   AND IC.COLUMN_ID = C.COLUMN_ID");
+            sb.AppendLine(" WHERE T.Name = '" + table + "' and");
+            sb.AppendLine("	I.Name not like 'PK_%'");
+            sb.AppendLine("ORDER BY I.NAME,I.INDEX_ID,IC.KEY_ORDINAL");
 
-                var list = GetDataset(connectionString, sb.ToString())
-                    .ToSqlList<string, string>("IndexName", "ColumnName");
+            var list = GetDataset(connectionString, sb.ToString())
+                .ToSqlList<string, string>("IndexName", "ColumnName");
 
-                foreach (var item in list)
-                {
-                    if (!retval.Any(x => x.Name == item.Item1))
-                        retval.Add(new SqlIndex { Name = item.Item1 });
-                    retval.First(x => x.Name == item.Item1).Columns.Add(item.Item2);
-                }
-                return retval;
-            }
-            catch (Exception ex)
+            foreach (var item in list)
             {
-                LoggerCQ.LogError(ex);
-                throw;
+                if (!retval.Any(x => x.Name == item.Item1))
+                    retval.Add(new SqlIndex { Name = item.Item1 });
+                retval.First(x => x.Name == item.Item1).Columns.Add(item.Item2);
             }
+            return retval;
         }
 
         private static string GetDropView(Guid id)
@@ -5004,69 +4828,60 @@ namespace Gravitybox.Datastore.Server.Core
 
         public static void CreateView(RepositorySchema schemaPart, RepositorySchema fullSchema, string connectionString)
         {
-            try
+            var viewName = GetTableViewName(schemaPart.ID);
+
+            //Drop view if exists
+            ExecuteSql(connectionString, GetDropView(schemaPart.ID));
+
+            //Create indexed view
+            var sb = new StringBuilder();
+            sb.AppendLine("CREATE VIEW [" + viewName + "]");
+            sb.AppendLine("WITH SCHEMABINDING");
+            sb.AppendLine("AS");
+            sb.Append("select Z1.[" + RecordIdxField + "], Z1.[" + TimestampField + "], Z1.[" + HashField + "]");
+
+            //In case there are duplicates, should never happen
+            var fieldList = fullSchema.FieldList.Where(x => x.DataType != RepositorySchema.DataTypeConstants.List)
+                .Distinct(new DistinctFieldComparer())
+                .ToList();
+
+            foreach (var f in fieldList)
             {
-                var viewName = GetTableViewName(schemaPart.ID);
-
-                //Drop view if exists
-                ExecuteSql(connectionString, GetDropView(schemaPart.ID));
-
-                //Create indexed view
-                var sb = new StringBuilder();
-                sb.AppendLine("CREATE VIEW [" + viewName + "]");
-                sb.AppendLine("WITH SCHEMABINDING");
-                sb.AppendLine("AS");
-                sb.Append("select Z1.[" + RecordIdxField + "], Z1.[" + TimestampField + "], Z1.[" + HashField + "]");
-
-                //In case there are duplicates, should never happen
-                var fieldList = fullSchema.FieldList.Where(x => x.DataType != RepositorySchema.DataTypeConstants.List)
-                    .Distinct(new DistinctFieldComparer())
-                    .ToList();
-
-                foreach (var f in fieldList)
+                if (schemaPart.FieldList.Any(x => x.Name == f.Name))
                 {
-                    if (schemaPart.FieldList.Any(x => x.Name == f.Name))
-                    {
-                        sb.Append(",Z2.[" + f.TokenName + "]");
-                        if (f is DimensionDefinition)
-                            sb.Append(",Z2.[__d" + f.TokenName + "]");
-                    }
-                    else
-                    {
-                        sb.Append(",Z1.[" + f.TokenName + "]");
-                        if (f is DimensionDefinition)
-                            sb.Append(",Z1.[__d" + f.TokenName + "]");
-                    }
+                    sb.Append(",Z2.[" + f.TokenName + "]");
+                    if (f is DimensionDefinition)
+                        sb.Append(",Z2.[__d" + f.TokenName + "]");
                 }
-                sb.AppendLine();
-                sb.AppendLine("from dbo.[" + GetTableName(schemaPart.ParentID.Value) + "] Z1 INNER JOIN dbo.[" + GetTableName(schemaPart.ID) + "] Z2");
-                sb.AppendLine("ON Z1." + RecordIdxField + " = Z2." + RecordIdxField + "");
-                ExecuteSql(connectionString, sb.ToString(), null, true, true);
-
-                //Create index on view for FTS
-                sb = new StringBuilder();
-                sb.AppendLine("CREATE UNIQUE CLUSTERED INDEX [IDX" + viewName + "]");
-                sb.AppendLine("ON [" + viewName + "] (" + RecordIdxField + ")");
-                ExecuteSql(connectionString, sb.ToString());
-
-                //Create FTS on it
-                sb = new StringBuilder();
-                fullSchema = fullSchema.Clone();
-                fullSchema.ParentID = null;
-                var columns = GetFTSColumns(fullSchema, false);
-                if (!string.IsNullOrEmpty(columns))
+                else
                 {
-                    sb.AppendLine("CREATE FULLTEXT INDEX ON [" + viewName + "] (" + columns + ")");
-                    sb.AppendLine("KEY INDEX [IDX" + viewName + "]");
-                    sb.AppendLine("ON [DatastoreFTS] WITH STOPLIST = SYSTEM, CHANGE_TRACKING AUTO;");
-                    ExecuteSql(connectionString, sb.ToString(), null, false);
+                    sb.Append(",Z1.[" + f.TokenName + "]");
+                    if (f is DimensionDefinition)
+                        sb.Append(",Z1.[__d" + f.TokenName + "]");
                 }
-
             }
-            catch (Exception ex)
+            sb.AppendLine();
+            sb.AppendLine("from dbo.[" + GetTableName(schemaPart.ParentID.Value) + "] Z1 INNER JOIN dbo.[" + GetTableName(schemaPart.ID) + "] Z2");
+            sb.AppendLine("ON Z1." + RecordIdxField + " = Z2." + RecordIdxField + "");
+            ExecuteSql(connectionString, sb.ToString(), null, true, true);
+
+            //Create index on view for FTS
+            sb = new StringBuilder();
+            sb.AppendLine("CREATE UNIQUE CLUSTERED INDEX [IDX" + viewName + "]");
+            sb.AppendLine("ON [" + viewName + "] (" + RecordIdxField + ")");
+            ExecuteSql(connectionString, sb.ToString());
+
+            //Create FTS on it
+            sb = new StringBuilder();
+            fullSchema = fullSchema.Clone();
+            fullSchema.ParentID = null;
+            var columns = GetFTSColumns(fullSchema, false);
+            if (!string.IsNullOrEmpty(columns))
             {
-                LoggerCQ.LogError(ex);
-                throw;
+                sb.AppendLine("CREATE FULLTEXT INDEX ON [" + viewName + "] (" + columns + ")");
+                sb.AppendLine("KEY INDEX [IDX" + viewName + "]");
+                sb.AppendLine("ON [DatastoreFTS] WITH STOPLIST = SYSTEM, CHANGE_TRACKING AUTO;");
+                ExecuteSql(connectionString, sb.ToString(), null, false);
             }
         }
 
@@ -5126,173 +4941,132 @@ namespace Gravitybox.Datastore.Server.Core
 
         private static string GetListTableCreate(string dimensionTable)
         {
-            try
+            var sb = new StringBuilder();
+
+            sb.AppendLine("if not exists(select * from sys.objects where name = '" + dimensionTable + "' and type = 'U')");
+            sb.AppendLine("CREATE TABLE [" + dimensionTable + "] (");
+            sb.AppendLine("[DVIdx] BIGINT NOT NULL, [" + RecordIdxField + "] BIGINT NOT NULL,");
+            sb.AppendLine("CONSTRAINT [PK_" + dimensionTable + "] PRIMARY KEY CLUSTERED ([" + RecordIdxField + "], [DVIdx])");
+            sb.AppendLine(")");
+
+            var fileGroup = RepositoryManager.GetRandomFileGroup();
+            if (!string.IsNullOrEmpty(fileGroup))
             {
-                var sb = new StringBuilder();
-
-                sb.AppendLine("if not exists(select * from sys.objects where name = '" + dimensionTable + "' and type = 'U')");
-                sb.AppendLine("CREATE TABLE [" + dimensionTable + "] (");
-                sb.AppendLine("[DVIdx] BIGINT NOT NULL, [" + RecordIdxField + "] BIGINT NOT NULL,");
-                sb.AppendLine("CONSTRAINT [PK_" + dimensionTable + "] PRIMARY KEY CLUSTERED ([" + RecordIdxField + "], [DVIdx])");
-                sb.AppendLine(")");
-
-                var fileGroup = RepositoryManager.GetRandomFileGroup();
-                if (!string.IsNullOrEmpty(fileGroup))
-                {
-                    sb.AppendLine("ON [" + fileGroup + "];");
-                }
-
-                if (ConfigHelper.SupportsCompression)
-                {
-                    sb.AppendLine("ALTER TABLE [" + dimensionTable + "] REBUILD PARTITION = ALL WITH (DATA_COMPRESSION = PAGE);");
-                }
-
-                //Create '__RecordIdx' index for speed (makes big difference)
-                var indexName = "IDX_" + dimensionTable + "_RecordIdx";
-                sb.AppendLine("if not exists(select * from sys.indexes where name = '" + indexName + "')");
-                sb.AppendLine("CREATE NONCLUSTERED INDEX [" + indexName + "] ON [" + dimensionTable + "] ([" + RecordIdxField + "])");
-
-                //Create 'DVIDX' index for speed (makes big difference)
-                indexName = "IDX_" + dimensionTable + "_DVIDX";
-                sb.AppendLine("if not exists(select * from sys.indexes where name = '" + indexName + "')");
-                sb.AppendLine("CREATE NONCLUSTERED INDEX [" + indexName + "] ON [" + dimensionTable + "] ([DVIdx])");
-
-                return sb.ToString();
+                sb.AppendLine("ON [" + fileGroup + "];");
             }
-            catch (Exception ex)
+
+            if (ConfigHelper.SupportsCompression)
             {
-                LoggerCQ.LogError(ex);
-                throw;
+                sb.AppendLine("ALTER TABLE [" + dimensionTable + "] REBUILD PARTITION = ALL WITH (DATA_COMPRESSION = PAGE);");
             }
+
+            //Create '__RecordIdx' index for speed (makes big difference)
+            var indexName = "IDX_" + dimensionTable + "_RecordIdx";
+            sb.AppendLine("if not exists(select * from sys.indexes where name = '" + indexName + "')");
+            sb.AppendLine("CREATE NONCLUSTERED INDEX [" + indexName + "] ON [" + dimensionTable + "] ([" + RecordIdxField + "])");
+
+            //Create 'DVIDX' index for speed (makes big difference)
+            indexName = "IDX_" + dimensionTable + "_DVIDX";
+            sb.AppendLine("if not exists(select * from sys.indexes where name = '" + indexName + "')");
+            sb.AppendLine("CREATE NONCLUSTERED INDEX [" + indexName + "] ON [" + dimensionTable + "] ([DVIdx])");
+
+            return sb.ToString();
         }
 
         internal static string GetDimensionTableCreate(Guid repositoryKey)
         {
-            try
+            var sb = new StringBuilder();
+            //Dimension table
+            var dimensionTableName = GetDimensionTableName(repositoryKey);
+            sb.AppendLine("if not exists(select * from sys.objects where name = '" + dimensionTableName + "' and type = 'U')");
+            sb.AppendLine("BEGIN");
+            sb.AppendLine("CREATE TABLE [" + dimensionTableName + "] (");
+            sb.AppendLine("[DIdx] BIGINT NOT NULL CONSTRAINT [PK_" + dimensionTableName + "] PRIMARY KEY CLUSTERED ([DIdx])");
+            sb.AppendLine(")");
+            var fileGroup = RepositoryManager.GetRandomFileGroup();
+            if (!string.IsNullOrEmpty(fileGroup))
             {
-                var sb = new StringBuilder();
-                //Dimension table
-                var dimensionTableName = GetDimensionTableName(repositoryKey);
-                sb.AppendLine("if not exists(select * from sys.objects where name = '" + dimensionTableName + "' and type = 'U')");
-                sb.AppendLine("BEGIN");
-                sb.AppendLine("CREATE TABLE [" + dimensionTableName + "] (");
-                sb.AppendLine("[DIdx] BIGINT NOT NULL CONSTRAINT [PK_" + dimensionTableName + "] PRIMARY KEY CLUSTERED ([DIdx])");
-                sb.AppendLine(")");
-                var fileGroup = RepositoryManager.GetRandomFileGroup();
-                if (!string.IsNullOrEmpty(fileGroup))
-                {
-                    sb.AppendLine("ON [" + fileGroup + "];");
-                }
-                sb.AppendLine("END");
-
-                //Dimension value table
-                var dimensionValueTableName = GetDimensionValueTableName(repositoryKey);
-                sb.AppendLine($"if not exists(select * from sys.objects where name = '{dimensionValueTableName}' and type = 'U')");
-                sb.AppendLine("BEGIN");
-                sb.AppendLine($"CREATE TABLE [{dimensionValueTableName}] (");
-                sb.AppendLine("[DVIdx] BIGINT NOT NULL,");
-                sb.AppendLine("[DIdx] BIGINT NOT NULL,");
-                sb.AppendLine("[Value] NVARCHAR(500) NOT NULL");
-                sb.AppendLine(")");
-                if (!string.IsNullOrEmpty(fileGroup))
-                {
-                    sb.AppendLine($"ON [{fileGroup}];");
-                }
-
-
-                sb.AppendLine($"if not exists(select * from sys.indexes where name = 'PK_{dimensionValueTableName}')");
-                sb.AppendLine($"ALTER TABLE [{dimensionValueTableName}] ADD CONSTRAINT [PK_{dimensionValueTableName}] PRIMARY KEY NONCLUSTERED ([DIdx],[DVIdx]);");
-
-                var indexName = $"{dimensionValueTableName}_DIDX";
-                sb.AppendLine($"if not exists(select * from sys.indexes where name = '{indexName}')");
-                sb.AppendLine($"CREATE NONCLUSTERED INDEX [{indexName}] ON [{dimensionValueTableName}] ([DIdx] ASC);");
-
-                sb.AppendLine("END");
-
-                return sb.ToString();
+                sb.AppendLine("ON [" + fileGroup + "];");
             }
-            catch (Exception ex)
+            sb.AppendLine("END");
+
+            //Dimension value table
+            var dimensionValueTableName = GetDimensionValueTableName(repositoryKey);
+            sb.AppendLine($"if not exists(select * from sys.objects where name = '{dimensionValueTableName}' and type = 'U')");
+            sb.AppendLine("BEGIN");
+            sb.AppendLine($"CREATE TABLE [{dimensionValueTableName}] (");
+            sb.AppendLine("[DVIdx] BIGINT NOT NULL,");
+            sb.AppendLine("[DIdx] BIGINT NOT NULL,");
+            sb.AppendLine("[Value] NVARCHAR(500) NOT NULL");
+            sb.AppendLine(")");
+            if (!string.IsNullOrEmpty(fileGroup))
             {
-                LoggerCQ.LogError(ex);
-                throw;
+                sb.AppendLine($"ON [{fileGroup}];");
             }
+
+            sb.AppendLine($"if not exists(select * from sys.indexes where name = 'PK_{dimensionValueTableName}')");
+            sb.AppendLine($"ALTER TABLE [{dimensionValueTableName}] ADD CONSTRAINT [PK_{dimensionValueTableName}] PRIMARY KEY NONCLUSTERED ([DIdx],[DVIdx]);");
+
+            var indexName = $"{dimensionValueTableName}_DIDX";
+            sb.AppendLine($"if not exists(select * from sys.indexes where name = '{indexName}')");
+            sb.AppendLine($"CREATE NONCLUSTERED INDEX [{indexName}] ON [{dimensionValueTableName}] ([DIdx] ASC);");
+
+            sb.AppendLine("END");
+
+            return sb.ToString();
         }
 
         private static string GetUserPermissionTableCreate(RepositorySchema schema)
         {
-            try
+            if (schema.UserPermissionField == null) return string.Empty;
+            var field = schema.FieldList.FirstOrDefault(x => x.Name.Match(schema.UserPermissionField.Name));
+            if (field == null) return string.Empty;
+            var sb = new StringBuilder();
+            var fileGroup = RepositoryManager.GetRandomFileGroup();
+
+            var sqlLength = string.Empty;
+            if (field.DataType == RepositorySchema.DataTypeConstants.String)
             {
-                if (schema.UserPermissionField == null) return string.Empty;
-                var field = schema.FieldList.FirstOrDefault(x => x.Name.Match(schema.UserPermissionField.Name));
-                if (field == null) return string.Empty;
-                var sb = new StringBuilder();
-                var fileGroup = RepositoryManager.GetRandomFileGroup();
-
-                var sqlLength = string.Empty;
-                if (field.DataType == RepositorySchema.DataTypeConstants.String)
-                {
-                    if (field.Length > 0 && field.Length < 450) sqlLength = $"({field.Length})";
-                    else return string.Empty; //cannot index a field this big
-                }
-
-                //Dimension table
-                var userPermissionTableName = GetUserPermissionTableName(schema.ID);
-                sb.AppendLine($"if not exists(select * from sys.objects where name = '{userPermissionTableName}' and type = 'U')");
-                sb.AppendLine("BEGIN");
-                sb.AppendLine($"CREATE TABLE [{userPermissionTableName}] (");
-                sb.AppendLine("[UserId] INT NOT NULL,");
-                sb.AppendLine($"[FKField] {ServerUtilities.GetSqlType(field.DataType)} {sqlLength} NOT NULL,");
-                sb.AppendLine($"CONSTRAINT [PK_{userPermissionTableName.ToUpper()}] PRIMARY KEY NONCLUSTERED ([UserId], [FKField])");
-                sb.AppendLine(")");
-                if (!string.IsNullOrEmpty(fileGroup))
-                {
-                    sb.AppendLine($"ON [{fileGroup}];");
-                }
-                sb.AppendLine("END");
-
-                return sb.ToString();
+                if (field.Length > 0 && field.Length < 450) sqlLength = $"({field.Length})";
+                else return string.Empty; //cannot index a field this big
             }
-            catch (Exception ex)
+
+            //Dimension table
+            var userPermissionTableName = GetUserPermissionTableName(schema.ID);
+            sb.AppendLine($"if not exists(select * from sys.objects where name = '{userPermissionTableName}' and type = 'U')");
+            sb.AppendLine("BEGIN");
+            sb.AppendLine($"CREATE TABLE [{userPermissionTableName}] (");
+            sb.AppendLine("[UserId] INT NOT NULL,");
+            sb.AppendLine($"[FKField] {ServerUtilities.GetSqlType(field.DataType)} {sqlLength} NOT NULL,");
+            sb.AppendLine($"CONSTRAINT [PK_{userPermissionTableName.ToUpper()}] PRIMARY KEY NONCLUSTERED ([UserId], [FKField])");
+            sb.AppendLine(")");
+            if (!string.IsNullOrEmpty(fileGroup))
             {
-                LoggerCQ.LogError(ex);
-                throw;
+                sb.AppendLine($"ON [{fileGroup}];");
             }
+            sb.AppendLine("END");
+
+            return sb.ToString();
         }
 
         private static List<FieldDefinition> GetNonPrimaryTableFields(RepositorySchema schema)
         {
-            try
-            {
-                //Get all fields that are not List Dimension fields
-                return schema.FieldList
-                    .Where(x => x.DataType == RepositorySchema.DataTypeConstants.List)
-                    .Cast<DimensionDefinition>()
-                    .Where(x => x.DimensionType == RepositorySchema.DimensionTypeConstants.List)
-                    .Cast<FieldDefinition>()
-                    .ToList();
-            }
-            catch (Exception ex)
-            {
-                LoggerCQ.LogError(ex);
-                throw;
-            }
+            //Get all fields that are not List Dimension fields
+            return schema.FieldList
+                .Where(x => x.DataType == RepositorySchema.DataTypeConstants.List)
+                .Cast<DimensionDefinition>()
+                .Where(x => x.DimensionType == RepositorySchema.DimensionTypeConstants.List)
+                .Cast<FieldDefinition>()
+                .ToList();
         }
 
         private static List<FieldDefinition> GetPrimaryTableFields(RepositorySchema schema, bool onlyString)
         {
-            try
-            {
-                //Get all fields that are not List Dimension fields
-                return schema.FieldList
-                    .Where(x => (x.DataType != RepositorySchema.DataTypeConstants.List) &&
-                        (!onlyString || (onlyString && x.DataType == RepositorySchema.DataTypeConstants.String)))
-                    .ToList();
-            }
-            catch (Exception ex)
-            {
-                LoggerCQ.LogError(ex);
-                throw;
-            }
+            //Get all fields that are not List Dimension fields
+            return schema.FieldList
+                .Where(x => (x.DataType != RepositorySchema.DataTypeConstants.List) &&
+                    (!onlyString || (onlyString && x.DataType == RepositorySchema.DataTypeConstants.String)))
+                .ToList();
         }
 
         internal static string NoLockText(bool isData = true)
@@ -5366,87 +5140,71 @@ namespace Gravitybox.Datastore.Server.Core
 
         public static void AddPermission(RepositorySchema schema, IEnumerable<PermissionItem> list)
         {
-            try
+            if (list == null) return;
+            if (schema == null || schema.UserPermissionField == null)
             {
-                if (list == null) return;
-                if (schema == null || schema.UserPermissionField == null)
-                {
-                    LoggerCQ.LogDebug("Repository does not have permissions: " + schema.ID);
-                    return;
-                }
-
-                var userPermissionTable = GetUserPermissionTableName(schema.ID);
-                var chunks = list.Chunk(500).ToList();
-                foreach (var subList in chunks)
-                {
-                    var sb = new StringBuilder();
-                    var parameters = new List<SqlParameter>();
-                    var index = 0;
-                    foreach (var item in subList)
-                    {
-                        sb.AppendLine("if not exists(select * from [" + userPermissionTable + "] where UserId = @UserId" + index + " and FKField = @Field" + index + ")");
-                        sb.AppendLine("insert into [" + userPermissionTable + "] (UserId, FKField) values (@UserId" + index + ", @Field" + index + ")");
-                        parameters.Add(new SqlParameter { DbType = DbType.Int32, IsNullable = false, ParameterName = "@UserId" + index, Value = item.UserId });
-                        if (schema.UserPermissionField.DataType == RepositorySchema.DataTypeConstants.Int)
-                        {
-                            int v;
-                            if (!int.TryParse(item.FieldValue, out v))
-                                throw new Exception("Cannot convert data");
-                            parameters.Add(new SqlParameter { DbType = DbType.Int32, IsNullable = false, ParameterName = "@Field" + index, Value = v });
-                        }
-                        else if (schema.UserPermissionField.DataType == RepositorySchema.DataTypeConstants.String)
-                            parameters.Add(new SqlParameter { DbType = DbType.String, IsNullable = false, ParameterName = "@Field" + index, Value = item.FieldValue });
-                        else
-                            throw new Exception("Unsupported data type!");
-                        index++;
-                    }
-                    ExecuteSql(ConfigHelper.ConnectionString, sb.ToString(), parameters);
-                }
+                LoggerCQ.LogDebug("Repository does not have permissions: " + schema.ID);
+                return;
             }
-            catch (Exception ex)
+
+            var userPermissionTable = GetUserPermissionTableName(schema.ID);
+            var chunks = list.Chunk(500).ToList();
+            foreach (var subList in chunks)
             {
-                LoggerCQ.LogError(ex);
-                throw;
+                var sb = new StringBuilder();
+                var parameters = new List<SqlParameter>();
+                var index = 0;
+                foreach (var item in subList)
+                {
+                    sb.AppendLine("if not exists(select * from [" + userPermissionTable + "] where UserId = @UserId" + index + " and FKField = @Field" + index + ")");
+                    sb.AppendLine("insert into [" + userPermissionTable + "] (UserId, FKField) values (@UserId" + index + ", @Field" + index + ")");
+                    parameters.Add(new SqlParameter { DbType = DbType.Int32, IsNullable = false, ParameterName = "@UserId" + index, Value = item.UserId });
+                    if (schema.UserPermissionField.DataType == RepositorySchema.DataTypeConstants.Int)
+                    {
+                        int v;
+                        if (!int.TryParse(item.FieldValue, out v))
+                            throw new Exception("Cannot convert data");
+                        parameters.Add(new SqlParameter { DbType = DbType.Int32, IsNullable = false, ParameterName = "@Field" + index, Value = v });
+                    }
+                    else if (schema.UserPermissionField.DataType == RepositorySchema.DataTypeConstants.String)
+                        parameters.Add(new SqlParameter { DbType = DbType.String, IsNullable = false, ParameterName = "@Field" + index, Value = item.FieldValue });
+                    else
+                        throw new Exception("Unsupported data type!");
+                    index++;
+                }
+                ExecuteSql(ConfigHelper.ConnectionString, sb.ToString(), parameters);
             }
         }
 
         public static void DeletePermission(RepositorySchema schema, IEnumerable<PermissionItem> list)
         {
-            try
+            if (list == null) return;
+            var userPermissionTable = GetUserPermissionTableName(schema.ID);
+            var chunks = list.Chunk(500).ToList();
+            foreach (var subList in chunks)
             {
-                if (list == null) return;
-                var userPermissionTable = GetUserPermissionTableName(schema.ID);
-                var chunks = list.Chunk(500).ToList();
-                foreach (var subList in chunks)
+                var sb = new StringBuilder();
+                var parameters = new List<SqlParameter>();
+                var index = 0;
+                foreach (var item in list)
                 {
-                    var sb = new StringBuilder();
-                    var parameters = new List<SqlParameter>();
-                    var index = 0;
-                    foreach (var item in list)
+                    sb.AppendLine("if exists(select * from [" + userPermissionTable + "] where UserId = @UserId" + index + " and FKField = @Field" + index + ")");
+                    sb.AppendLine("delete from [" + userPermissionTable + "] where UserId = @UserId" + index + " and FKField = @Field" + index);
+                    parameters.Add(new SqlParameter { DbType = DbType.Int32, IsNullable = false, ParameterName = "@UserId" + index, Value = item.UserId });
+                    if (schema.UserPermissionField.DataType == RepositorySchema.DataTypeConstants.Int)
                     {
-                        sb.AppendLine("if exists(select * from [" + userPermissionTable + "] where UserId = @UserId" + index + " and FKField = @Field" + index + ")");
-                        sb.AppendLine("delete from [" + userPermissionTable + "] where UserId = @UserId" + index + " and FKField = @Field" + index);
-                        parameters.Add(new SqlParameter { DbType = DbType.Int32, IsNullable = false, ParameterName = "@UserId" + index, Value = item.UserId });
-                        if (schema.UserPermissionField.DataType == RepositorySchema.DataTypeConstants.Int)
-                        {
-                            int v;
-                            if (!int.TryParse(item.FieldValue, out v))
-                                throw new Exception("Connot convert data");
-                            parameters.Add(new SqlParameter { DbType = DbType.Int32, IsNullable = false, ParameterName = "@Field" + index, Value = v });
-                        }
-                        else if (schema.UserPermissionField.DataType == RepositorySchema.DataTypeConstants.String)
-                            parameters.Add(new SqlParameter { DbType = DbType.String, IsNullable = false, ParameterName = "@Field" + index, Value = item.FieldValue });
-                        else
-                            throw new Exception("Unsupported data type!");
-                        index++;
+                        int v;
+                        if (!int.TryParse(item.FieldValue, out v))
+                            throw new Exception("Connot convert data");
+                        parameters.Add(new SqlParameter { DbType = DbType.Int32, IsNullable = false, ParameterName = "@Field" + index, Value = v });
                     }
-                    ExecuteSql(ConfigHelper.ConnectionString, sb.ToString(), parameters);
+                    else if (schema.UserPermissionField.DataType == RepositorySchema.DataTypeConstants.String)
+                        parameters.Add(new SqlParameter { DbType = DbType.String, IsNullable = false, ParameterName = "@Field" + index, Value = item.FieldValue });
+                    else
+                        throw new Exception("Unsupported data type!");
+                    index++;
                 }
-            }
-            catch (Exception ex)
-            {
-                LoggerCQ.LogError(ex);
-                throw;
+                ExecuteSql(ConfigHelper.ConnectionString, sb.ToString(), parameters);
             }
         }
 
@@ -5461,78 +5219,62 @@ namespace Gravitybox.Datastore.Server.Core
 
         public static void ClearPermissions(RepositorySchema schema, string fieldValue)
         {
-            try
+            if (schema == null) return;
+            if (schema.UserPermissionField == null) return;
+
+            //Get the count of permissions and if 0 then do not bother to run query
+            //int count;
+            //if (_permissionCount.TryGetValue(schema.ID, out count) && count == 0)
+            //{
+            //    LoggerCQ.LogInfo("ClearPermissions Skipout");
+            //    return;
+            //}
+            if (!NeedClearPermissions(schema.ID))
+                return;
+
+            var userPermissionTable = GetUserPermissionTableName(schema.ID);
+            if (!string.IsNullOrEmpty(fieldValue))
             {
-                if (schema == null) return;
-                if (schema.UserPermissionField == null) return;
-
-                //Get the count of permissions and if 0 then do not bother to run query
-                //int count;
-                //if (_permissionCount.TryGetValue(schema.ID, out count) && count == 0)
-                //{
-                //    LoggerCQ.LogInfo("ClearPermissions Skipout");
-                //    return;
-                //}
-                if (!NeedClearPermissions(schema.ID))
-                    return;
-
-                var userPermissionTable = GetUserPermissionTableName(schema.ID);
-                if (!string.IsNullOrEmpty(fieldValue))
+                const string FKFieldField = "FKField";
+                var parameters = new List<SqlParameter>();
+                if (schema.UserPermissionField.DataType == RepositorySchema.DataTypeConstants.Int)
                 {
-                    const string FKFieldField = "FKField";
-                    var parameters = new List<SqlParameter>();
-                    if (schema.UserPermissionField.DataType == RepositorySchema.DataTypeConstants.Int)
-                    {
-                        int v;
-                        if (!int.TryParse(fieldValue, out v))
-                            throw new Exception("Cannot convert data");
-                        parameters.Add(new SqlParameter { DbType = DbType.Int32, IsNullable = false, ParameterName = $"@{FKFieldField}", Value = v });
-                    }
-                    else if (schema.UserPermissionField.DataType == RepositorySchema.DataTypeConstants.String)
-                        parameters.Add(new SqlParameter { DbType = DbType.String, IsNullable = false, ParameterName = $"@{FKFieldField}", Value = fieldValue });
-                    else
-                        throw new Exception("Unsupported data type!");
-
-                    var ds = GetDataset(ConfigHelper.ConnectionString, $"delete from [{userPermissionTable}] where [{FKFieldField}] = @{FKFieldField};select count(*) from [{userPermissionTable}] {NoLockText()}", parameters);
-                    var count = (int)ds.Tables[0].Rows[0][0];
-                    _permissionCount.AddOrUpdate(schema.ID, count, (key, value) => count);
+                    int v;
+                    if (!int.TryParse(fieldValue, out v))
+                        throw new Exception("Cannot convert data");
+                    parameters.Add(new SqlParameter { DbType = DbType.Int32, IsNullable = false, ParameterName = $"@{FKFieldField}", Value = v });
                 }
+                else if (schema.UserPermissionField.DataType == RepositorySchema.DataTypeConstants.String)
+                    parameters.Add(new SqlParameter { DbType = DbType.String, IsNullable = false, ParameterName = $"@{FKFieldField}", Value = fieldValue });
                 else
-                {
-                    //There is no value so remove all items
-                    ExecuteSql(ConfigHelper.ConnectionString, $"truncate table [{userPermissionTable}]");
-                    _permissionCount.AddOrUpdate(schema.ID, 0, (key, value) => 0);
-                }
+                    throw new Exception("Unsupported data type!");
+
+                var ds = GetDataset(ConfigHelper.ConnectionString, $"delete from [{userPermissionTable}] where [{FKFieldField}] = @{FKFieldField};select count(*) from [{userPermissionTable}] {NoLockText()}", parameters);
+                var count = (int)ds.Tables[0].Rows[0][0];
+                _permissionCount.AddOrUpdate(schema.ID, count, (key, value) => count);
             }
-            catch (Exception ex)
+            else
             {
-                LoggerCQ.LogError(ex);
-                throw;
+                //There is no value so remove all items
+                ExecuteSql(ConfigHelper.ConnectionString, $"truncate table [{userPermissionTable}]");
+                _permissionCount.AddOrUpdate(schema.ID, 0, (key, value) => 0);
             }
         }
 
         public static void ClearUserPermissions(RepositorySchema schema, int userId)
         {
-            try
-            {
-                if (schema == null) return;
-                if (schema.UserPermissionField == null) return;
+            if (schema == null) return;
+            if (schema.UserPermissionField == null) return;
 
-                if (!NeedClearPermissions(schema.ID))
-                    return;
+            if (!NeedClearPermissions(schema.ID))
+                return;
 
-                var userPermissionTable = GetUserPermissionTableName(schema.ID);
-                var parameters = new List<SqlParameter>();
-                parameters.Add(new SqlParameter { DbType = DbType.Int32, IsNullable = false, ParameterName = "@UserId", Value = userId });
-                var ds = GetDataset(ConfigHelper.ConnectionString, $"delete from [{userPermissionTable}] where [UserId] = @UserId;select count(*) from [{userPermissionTable}] {NoLockText()}", parameters);
-                var count = (int)ds.Tables[0].Rows[0][0];
-                _permissionCount.AddOrUpdate(schema.ID, count, (key, value) => count);
-            }
-            catch (Exception ex)
-            {
-                LoggerCQ.LogError(ex);
-                throw;
-            }
+            var userPermissionTable = GetUserPermissionTableName(schema.ID);
+            var parameters = new List<SqlParameter>();
+            parameters.Add(new SqlParameter { DbType = DbType.Int32, IsNullable = false, ParameterName = "@UserId", Value = userId });
+            var ds = GetDataset(ConfigHelper.ConnectionString, $"delete from [{userPermissionTable}] where [UserId] = @UserId;select count(*) from [{userPermissionTable}] {NoLockText()}", parameters);
+            var count = (int)ds.Tables[0].Rows[0][0];
+            _permissionCount.AddOrUpdate(schema.ID, count, (key, value) => count);
         }
 
         #endregion

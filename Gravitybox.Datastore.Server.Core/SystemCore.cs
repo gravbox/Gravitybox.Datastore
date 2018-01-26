@@ -77,141 +77,120 @@ namespace Gravitybox.Datastore.Server.Core
         public SystemCore(string connectionString)
             : base()
         {
+            var builder = new System.Data.SqlClient.SqlConnectionStringBuilder(connectionString);
+            LoggerCQ.LogInfo("Connection: Server=" + builder.DataSource + ", Database=" + builder.InitialCatalog);
+
+            ConfigHelper.ConnectionString = connectionString;
+            ConfigHelper.SupportsCompression = SqlHelper.IsEnterpiseVersion(connectionString);
+            ConfigHelper.SqlVersion = SqlHelper.GetSqlVersion(connectionString);
+
+            if (!SqlHelper.CanConnect(ConfigHelper.ConnectionString))
+                throw new Exception("Connection string is not valid");
+            if (!SqlHelper.HasFTS(ConfigHelper.ConnectionString))
+                throw new Exception("The database must have full text search enabled");
+
+            _manager = new RepositoryManager(this);
+            DataManager.IsActive = true;
+            QueryBuilders.RepositoryHealthMonitor.IsActive = true;
+            //this.StatLocker = new DatastoreLock(System.Threading.LockRecursionPolicy.SupportsRecursion);
+            //this.StatLocker = new DatastoreLock();
+            _lastLogSend = DateTime.Now.Date;
+
+            StatLogger.Initialize();
+            LockLogger.Initialize();
+
+            this.SetupCounters();
+
+            LoggerCQ.LogInfo("Repositories: Count=" + GetRepositoryCount(new PagingInfo()));
+            LoggerCQ.LogInfo("Core initialize: Server=" + Environment.MachineName + ", Mode=x" + (Environment.Is64BitProcess ? "64" : "32") + ", Port=" + ConfigHelper.Port);
+            LoggerCQ.LogInfo("SqlVersion: " + ConfigHelper.SqlVersion);
+            LoggerCQ.LogInfo("SupportsRowsFetch: " + ConfigHelper.SupportsRowsFetch);
+            LoggerCQ.LogInfo("SupportsCompression: " + ConfigHelper.SupportsCompression);
+            LoggerCQ.LogInfo("AllowCaching: " + ConfigHelper.AllowCaching);
+            LoggerCQ.LogInfo("AllowLocking: " + ConfigHelper.AllowLocking);
+            LoggerCQ.LogInfo("DefragIndexes: " + ConfigHelper.DefragIndexes);
+            LoggerCQ.LogInfo("AsyncCachePath: " + ConfigHelper.AsyncCachePath);
+            LoggerCQ.LogInfo("AllowLockStats: " + ConfigHelper.AllowLockStats);
+            LoggerCQ.LogInfo("Timezone: " + TimeZone.CurrentTimeZone.DaylightName);
+#if DEBUG
+            LoggerCQ.LogInfo("Build: Debug");
+#else
+            LoggerCQ.LogInfo("Build: Release");
+#endif
+
             try
             {
-                var builder = new System.Data.SqlClient.SqlConnectionStringBuilder(connectionString);
-                LoggerCQ.LogInfo("Connection: Server=" + builder.DataSource + ", Database=" + builder.InitialCatalog);
-
-                ConfigHelper.ConnectionString = connectionString;
-                ConfigHelper.SupportsCompression = SqlHelper.IsEnterpiseVersion(connectionString);
-                ConfigHelper.SqlVersion = SqlHelper.GetSqlVersion(connectionString);
-
-                if (!SqlHelper.CanConnect(ConfigHelper.ConnectionString))
-                    throw new Exception("Connection string is not valid");
-                if (!SqlHelper.HasFTS(ConfigHelper.ConnectionString))
-                    throw new Exception("The database must have full text search enabled");
-
-                _manager = new RepositoryManager(this);
-                DataManager.IsActive = true;
-                QueryBuilders.RepositoryHealthMonitor.IsActive = true;
-                //this.StatLocker = new DatastoreLock(System.Threading.LockRecursionPolicy.SupportsRecursion);
-                //this.StatLocker = new DatastoreLock();
-                _lastLogSend = DateTime.Now.Date;
-
-                StatLogger.Initialize();
-                LockLogger.Initialize();
-
-                /*
-                // GetDiskInfo assumes Datastore service is running on the same machine as the database server.
-                // When connecting to a remote database server, it produces incorrect results and may cause the
-                // Datastore service to crash if the database server uses a physical drive that does not exist
-                // on the Datastore machine.
-                var diskInfoList = SqlHelper.GetDiskInfo(connectionString);
-                foreach (var item in diskInfoList)
+                //Default to temp folder
+                if (string.IsNullOrEmpty(ConfigHelper.AsyncCachePath))
                 {
-                    LoggerCQ.LogInfo("Disk Info " + item.Item1 + " Available=" + item.Item2.ToString("N0"));
-                }
-*/
-
-                this.SetupCounters();
-
-                LoggerCQ.LogInfo("Repositories: Count=" + GetRepositoryCount(new PagingInfo()));
-                LoggerCQ.LogInfo("Core initialize: Server=" + Environment.MachineName + ", Mode=x" + (Environment.Is64BitProcess ? "64" : "32") + ", Port=" + ConfigHelper.Port);
-                LoggerCQ.LogInfo("SqlVersion: " + ConfigHelper.SqlVersion);
-                LoggerCQ.LogInfo("SupportsRowsFetch: " + ConfigHelper.SupportsRowsFetch);
-                LoggerCQ.LogInfo("SupportsCompression: " + ConfigHelper.SupportsCompression);
-                LoggerCQ.LogInfo("AllowCaching: " + ConfigHelper.AllowCaching);
-                LoggerCQ.LogInfo("AllowLocking: " + ConfigHelper.AllowLocking);
-                LoggerCQ.LogInfo("DefragIndexes: " + ConfigHelper.DefragIndexes);
-                LoggerCQ.LogInfo("AsyncCachePath: " + ConfigHelper.AsyncCachePath);
-                LoggerCQ.LogInfo("AllowLockStats: " + ConfigHelper.AllowLockStats);
-                LoggerCQ.LogInfo("Timezone: " + TimeZone.CurrentTimeZone.DaylightName);
-#if DEBUG
-                LoggerCQ.LogInfo("Build: Debug");
-#else
-                    LoggerCQ.LogInfo("Build: Release");
-#endif
-
-                try
-                {
-                    //Default to temp folder
-                    if (string.IsNullOrEmpty(ConfigHelper.AsyncCachePath))
-                    {
-                        ConfigHelper.AsyncCachePath = Path.GetTempPath();
-                    }
-
-                    if (!string.IsNullOrEmpty(ConfigHelper.AsyncCachePath))
-                    {
-                        if (!Directory.Exists(ConfigHelper.AsyncCachePath))
-                            Directory.CreateDirectory(ConfigHelper.AsyncCachePath);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    LoggerCQ.LogWarning("Cannot create path '" + ConfigHelper.AsyncCachePath + "'");
-                    throw;
+                    ConfigHelper.AsyncCachePath = Path.GetTempPath();
                 }
 
-                #region Force save of configuration
-                ConfigHelper.AllowCaching = ConfigHelper.AllowCaching;
-                ConfigHelper.AllowLocking = ConfigHelper.AllowLocking;
-                ConfigHelper.QueryCacheCount = ConfigHelper.QueryCacheCount;
-                ConfigHelper.DefragIndexes = ConfigHelper.DefragIndexes;
-                ConfigHelper.FromEmail = ConfigHelper.FromEmail;
-                ConfigHelper.DebugEmail = ConfigHelper.DebugEmail;
-                ConfigHelper.MailServerUsername = ConfigHelper.MailServerUsername;
-                ConfigHelper.MailServerPort = ConfigHelper.MailServerPort;
-                ConfigHelper.MailServer = ConfigHelper.MailServer;
-                ConfigHelper.Port = ConfigHelper.Port;
-                #endregion
-
-                using (var q = new AcquireWriterLock(Guid.Empty, "DelayStartup"))
+                if (!string.IsNullOrEmpty(ConfigHelper.AsyncCachePath))
                 {
-                    //Verify that all permissions are in place
-                    if (!this.IsSetupValid())
-                    {
-                        throw new Exception("This application does not have the proper permissions!");
-                    }
-
-                    var a = System.Reflection.Assembly.GetExecutingAssembly();
-                    var version = a.GetName().Version;
-                    var d = System.IO.File.GetLastWriteTime(a.Location);
-                    LoggerCQ.LogInfo("Manager Started: Version=" + version.ToString() + ", Compiled=" + d.ToString("yyyy-MM-dd HH:mm:ss"));
+                    if (!Directory.Exists(ConfigHelper.AsyncCachePath))
+                        Directory.CreateDirectory(ConfigHelper.AsyncCachePath);
                 }
-
-                _cpuCounter = new System.Diagnostics.PerformanceCounter();
-                _cpuCounter.CategoryName = "Processor";
-                _cpuCounter.CounterName = "% Processor Time";
-                _cpuCounter.InstanceName = "_Total";
-
-                //Every 30 seconds tell server that machine is still alive
-                _timer = new System.Timers.Timer(30000);
-                _timer.Elapsed += _timer_Elapsed;
-                _timer.Start();
-
-                _lastServerStatWrite = DateTime.MinValue;
-                _timerStats = new System.Timers.Timer(5000);
-                _timerStats.Elapsed += _timerStats_Elapsed;
-                _timerStats.Start();
-
-                //Every 5 minutes perform housekeeping
-#if DEBUG
-                _timerHouseKeeping = new System.Timers.Timer(30000);
-#else
-                _timerHouseKeeping = new System.Timers.Timer(300000);
-#endif
-                _timerHouseKeeping.Elapsed += _timerHouseKeeping_Elapsed;
-                _timerHouseKeeping.Start();
-
-                var patchThread = new System.Threading.Thread(InitializeService);
-                patchThread.Start();
-
             }
             catch (Exception ex)
             {
-                LoggerCQ.LogError(ex);
+                LoggerCQ.LogWarning(ex, "Cannot create path '" + ConfigHelper.AsyncCachePath + "'");
                 throw;
             }
+
+            #region Force save of configuration
+            ConfigHelper.AllowCaching = ConfigHelper.AllowCaching;
+            ConfigHelper.AllowLocking = ConfigHelper.AllowLocking;
+            ConfigHelper.QueryCacheCount = ConfigHelper.QueryCacheCount;
+            ConfigHelper.DefragIndexes = ConfigHelper.DefragIndexes;
+            ConfigHelper.FromEmail = ConfigHelper.FromEmail;
+            ConfigHelper.DebugEmail = ConfigHelper.DebugEmail;
+            ConfigHelper.MailServerUsername = ConfigHelper.MailServerUsername;
+            ConfigHelper.MailServerPort = ConfigHelper.MailServerPort;
+            ConfigHelper.MailServer = ConfigHelper.MailServer;
+            ConfigHelper.Port = ConfigHelper.Port;
+            #endregion
+
+            using (var q = new AcquireWriterLock(Guid.Empty, "DelayStartup"))
+            {
+                //Verify that all permissions are in place
+                if (!this.IsSetupValid())
+                {
+                    throw new Exception("This application does not have the proper permissions!");
+                }
+
+                var a = System.Reflection.Assembly.GetExecutingAssembly();
+                var version = a.GetName().Version;
+                var d = System.IO.File.GetLastWriteTime(a.Location);
+                LoggerCQ.LogInfo("Manager Started: Version=" + version.ToString() + ", Compiled=" + d.ToString("yyyy-MM-dd HH:mm:ss"));
+            }
+
+            _cpuCounter = new System.Diagnostics.PerformanceCounter();
+            _cpuCounter.CategoryName = "Processor";
+            _cpuCounter.CounterName = "% Processor Time";
+            _cpuCounter.InstanceName = "_Total";
+
+            //Every 30 seconds tell server that machine is still alive
+            _timer = new System.Timers.Timer(30000);
+            _timer.Elapsed += _timer_Elapsed;
+            _timer.Start();
+
+            _lastServerStatWrite = DateTime.MinValue;
+            _timerStats = new System.Timers.Timer(5000);
+            _timerStats.Elapsed += _timerStats_Elapsed;
+            _timerStats.Start();
+
+            //Every 5 minutes perform housekeeping
+#if DEBUG
+            _timerHouseKeeping = new System.Timers.Timer(30000);
+#else
+            _timerHouseKeeping = new System.Timers.Timer(300000);
+#endif
+            _timerHouseKeeping.Elapsed += _timerHouseKeeping_Elapsed;
+            _timerHouseKeeping.Start();
+
+            var patchThread = new System.Threading.Thread(InitializeService);
+            patchThread.Start();
         }
 
         private void InitializeService()
@@ -440,7 +419,7 @@ namespace Gravitybox.Datastore.Server.Core
             }
             catch (Exception ex)
             {
-                LoggerCQ.LogWarning("Housekeeping timer failed");
+                LoggerCQ.LogWarning(ex, "Housekeeping timer failed");
             }
             finally
             {
@@ -458,7 +437,7 @@ namespace Gravitybox.Datastore.Server.Core
             }
             catch (Exception ex)
             {
-                LoggerCQ.LogWarning("Alive timer failed");
+                LoggerCQ.LogWarning(ex, "Alive timer failed");
             }
             finally
             {
@@ -750,24 +729,16 @@ namespace Gravitybox.Datastore.Server.Core
 
         internal static void AddToZip(string zipfile, string sourceFile)
         {
-            try
+            using (var fileStream = new FileStream(zipfile, FileMode.OpenOrCreate))
             {
-                using (var fileStream = new FileStream(zipfile, FileMode.OpenOrCreate))
+                using (var archive = new ZipArchive(fileStream, ZipArchiveMode.Update, true))
                 {
-                    using (var archive = new ZipArchive(fileStream, ZipArchiveMode.Update, true))
-                    {
-                        var fi = new FileInfo(sourceFile);
-                        var data = File.ReadAllBytes(sourceFile);
-                        var zipArchiveEntry = archive.CreateEntry(fi.Name, CompressionLevel.Optimal);
-                        using (var zipStream = zipArchiveEntry.Open())
-                            zipStream.Write(data, 0, data.Length);
-                    }
+                    var fi = new FileInfo(sourceFile);
+                    var data = File.ReadAllBytes(sourceFile);
+                    var zipArchiveEntry = archive.CreateEntry(fi.Name, CompressionLevel.Optimal);
+                    using (var zipStream = zipArchiveEntry.Open())
+                        zipStream.Write(data, 0, data.Length);
                 }
-            }
-            catch (Exception ex)
-            {
-                LoggerCQ.LogError(ex);
-                throw;
             }
         }
 
@@ -995,7 +966,7 @@ namespace Gravitybox.Datastore.Server.Core
             }
             catch (Exception ex)
             {
-                LoggerCQ.LogError("The service does not have permission to the event log!");
+                LoggerCQ.LogError(ex, "The service does not have permission to the event log!");
                 return false;
             }
             return true;
@@ -1024,7 +995,7 @@ namespace Gravitybox.Datastore.Server.Core
             }
             catch (Exception ex)
             {
-                LoggerCQ.LogError(ex);
+                LoggerCQ.LogError(ex, $"RepositoryId={repository.ID}");
                 return null;
             }
         }

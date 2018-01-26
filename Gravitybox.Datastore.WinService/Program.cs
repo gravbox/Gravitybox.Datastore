@@ -1,12 +1,9 @@
 using System;
 using System.Configuration;
-using System.Data.SqlClient;
 using System.Linq;
 using System.ServiceProcess;
-using System.Threading;
 using Gravitybox.Datastore.Common;
 using Gravitybox.Datastore.Install;
-using Gravitybox.Datastore.Server.Core;
 
 namespace Gravitybox.Datastore.WinService
 {
@@ -14,6 +11,8 @@ namespace Gravitybox.Datastore.WinService
     {
         private static void Main(string[] args)
         {
+            NLog.Targets.Target.Register<Logging.ExceptionalErrorStoreTarget>("ErrorStore");
+
             LoggerCQ.LogInfo("Initializing Service...");
 
 #if DEBUG

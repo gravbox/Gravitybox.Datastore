@@ -1,9 +1,5 @@
-#pragma warning disable 0168
 using System;
-using System.Linq;
 using NLog;
-using NLog.Config;
-using NLog.Targets;
 
 namespace Gravitybox.Datastore.Common
 {
@@ -20,7 +16,7 @@ namespace Gravitybox.Datastore.Common
 
         static LoggerCQ()
         {
-            _logger = NLog.LogManager.GetLogger(string.Empty);
+            _logger = LogManager.GetLogger("Gravitybox.Datastore");
         }
 
         #endregion
@@ -30,87 +26,49 @@ namespace Gravitybox.Datastore.Common
         /// <summary />
         public static void LogError(string message)
         {
-            try
-            {
-                if (_logger != null)
-                {
-                    _logger.Error(message);
-                }
-            }
-            catch (Exception)
-            {
-                //Do Nothing
-            }
+            _logger.Error(message);
         }
 
         /// <summary />
         public static void LogError(Exception exception, string message)
         {
-            try
-            {
-                if (_logger != null)
-                    _logger.Error(message + "\n" + exception.ToString());
-            }
-            catch (Exception)
-            {
-                //Do Nothing
-            }
+            _logger.Error(exception, message);
         }
 
         /// <summary />
         public static void LogError(Exception exception)
         {
-            try
-            {
-                if (_logger != null)
-                    _logger.Error(exception.ToString());
-            }
-            catch (Exception)
-            {
-                //Do Nothing
-            }
+            _logger.Error(exception);
         }
 
         /// <summary />
         public static void LogDebug(string message)
         {
-            try
-            {
-                if (_logger != null)
-                    _logger.Debug(message);
-            }
-            catch (Exception)
-            {
-                //Do Nothing
-            }
+            _logger.Debug(message);
         }
 
         /// <summary />
         public static void LogInfo(string message)
         {
-            try
-            {
-                if (_logger != null)
-                    _logger.Info(message);
-            }
-            catch (Exception)
-            {
-                //Do Nothing
-            }
+            _logger.Info(message);
         }
 
         /// <summary />
         public static void LogWarning(string message)
         {
-            try
-            {
-                if (_logger != null)
-                    _logger.Warn(message);
-            }
-            catch (Exception)
-            {
-                //Do Nothing
-            }
+            _logger.Warn(message);
+        }
+
+        /// <summary />
+        public static void LogWarning(Exception exception, string message)
+        {
+            _logger.Warn(exception, message);
+        }
+
+        /// <summary />
+        public static void LogWarning(Exception exception)
+        {
+            _logger.Warn(exception);
         }
 
         #endregion

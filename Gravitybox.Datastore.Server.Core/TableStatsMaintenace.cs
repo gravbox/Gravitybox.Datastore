@@ -54,7 +54,7 @@ namespace Gravitybox.Datastore.Server.Core
             }
             catch (Exception ex)
             {
-                LoggerCQ.LogWarning(ex.Message);
+                LoggerCQ.LogWarning(ex);
             }
         }
 

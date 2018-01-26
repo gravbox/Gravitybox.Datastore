@@ -18,41 +18,33 @@ namespace Gravitybox.Datastore.Server.Core
         /// </summary>
         public static void ApplyFix_ListTableRecordIndex(string connectionString)
         {
-            try
+            using (var context = new DatastoreEntities(connectionString))
             {
-                using (var context = new DatastoreEntities(connectionString))
+                var repositoryKeyList = context.Repository.Where(x => !x.IsDeleted && x.IsInitialized).Select(x => x.UniqueKey).ToList();
+                var count = repositoryKeyList.Count;
+                var index = 0;
+                foreach (var g in repositoryKeyList)
                 {
-                    var repositoryKeyList = context.Repository.Where(x => !x.IsDeleted && x.IsInitialized).Select(x => x.UniqueKey).ToList();
-                    var count = repositoryKeyList.Count;
-                    var index = 0;
-                    foreach (var g in repositoryKeyList)
+                    index++;
+                    var r = context.Repository.FirstOrDefault(x => x.UniqueKey == g);
+                    if (r != null)
                     {
-                        index++;
-                        var r = context.Repository.FirstOrDefault(x => x.UniqueKey == g);
-                        if (r != null)
+                        var schema = new RepositorySchema();
+                        schema.LoadXml(r.DefinitionData);
+                        foreach (var d in schema.DimensionList.Where(x => x.DataType == RepositorySchema.DataTypeConstants.List))
                         {
-                            var schema = new RepositorySchema();
-                            schema.LoadXml(r.DefinitionData);
-                            foreach (var d in schema.DimensionList.Where(x => x.DataType == RepositorySchema.DataTypeConstants.List))
-                            {
-                                var sb = new StringBuilder();
-                                var dimensionTable = SqlHelper.GetListTableName(g, d.DIdx);
-                                var indexName = $"IDX_{dimensionTable}_RecordIdx";
-                                sb.AppendLine($"if not exists(select * from sys.indexes where name = '{indexName}')");
-                                sb.AppendLine($"CREATE NONCLUSTERED INDEX [{indexName}] ON [{dimensionTable}] ([{SqlHelper.RecordIdxField}])");
-                                SqlHelper.ExecuteSql(connectionString, sb.ToString());
-                                LoggerCQ.LogInfo($"Apply Index: {indexName} ({index}/{count})");
-                            }
+                            var sb = new StringBuilder();
+                            var dimensionTable = SqlHelper.GetListTableName(g, d.DIdx);
+                            var indexName = $"IDX_{dimensionTable}_RecordIdx";
+                            sb.AppendLine($"if not exists(select * from sys.indexes where name = '{indexName}')");
+                            sb.AppendLine($"CREATE NONCLUSTERED INDEX [{indexName}] ON [{dimensionTable}] ([{SqlHelper.RecordIdxField}])");
+                            SqlHelper.ExecuteSql(connectionString, sb.ToString());
+                            LoggerCQ.LogInfo($"Apply Index: {indexName} ({index}/{count})");
                         }
                     }
                 }
-                LoggerCQ.LogInfo("ApplyFix_ListTableRecordIndex");
             }
-            catch (Exception ex)
-            {
-                LoggerCQ.LogError(ex);
-                throw;
-            }
+            LoggerCQ.LogInfo("ApplyFix_ListTableRecordIndex");
         }
 
         public static void ApplyFix_MakePKNonClustered(string connectionString)
@@ -108,37 +100,28 @@ namespace Gravitybox.Datastore.Server.Core
 
         public static void ApplyFix_EnsureIndexes(string connectionString)
         {
-            try
+            using (var context = new DatastoreEntities(connectionString))
             {
-                using (var context = new DatastoreEntities(connectionString))
+                var repositoryKeyList = context.Repository.Where(x => !x.IsDeleted && x.IsInitialized).Select(x => x.UniqueKey).ToList();
+                var count = repositoryKeyList.Count;
+                var index = 0;
+                foreach (var g in repositoryKeyList)
                 {
-                    var repositoryKeyList = context.Repository.Where(x => !x.IsDeleted && x.IsInitialized).Select(x => x.UniqueKey).ToList();
-                    var count = repositoryKeyList.Count;
-                    var index = 0;
-                    foreach (var g in repositoryKeyList)
+                    index++;
+                    var r = context.Repository.FirstOrDefault(x => x.UniqueKey == g);
+                    if (r != null)
                     {
-                        index++;
-                        var r = context.Repository.FirstOrDefault(x => x.UniqueKey == g);
-                        if (r != null)
+                        var schema = new RepositorySchema();
+                        schema.LoadXml(r.DefinitionData);
+                        if (!schema.FieldList.Any(x => x.DataType == RepositorySchema.DataTypeConstants.GeoCode))
                         {
-                            var schema = new RepositorySchema();
-                            schema.LoadXml(r.DefinitionData);
-                            if (!schema.FieldList.Any(x => x.DataType == RepositorySchema.DataTypeConstants.GeoCode))
-                            {
-                                var indexList = new List<string>();
-                                var sql = SqlHelper.GetRepositorySql(schema, indexList);
-                                SqlHelper.ExecuteSql(connectionString, sql, null, false);
-                                LoggerCQ.LogInfo("Apply EnsureIndexes: " + g + " (" + index + "/" + count + ")");
-                            }
+                            var indexList = new List<string>();
+                            var sql = SqlHelper.GetRepositorySql(schema, indexList);
+                            SqlHelper.ExecuteSql(connectionString, sql, null, false);
+                            LoggerCQ.LogInfo("Apply EnsureIndexes: " + g + " (" + index + "/" + count + ")");
                         }
                     }
                 }
-
-            }
-            catch (Exception ex)
-            {
-                LoggerCQ.LogError(ex);
-                throw;
             }
         }
 
@@ -200,36 +183,28 @@ namespace Gravitybox.Datastore.Server.Core
         public static void ApplyFix_RepositoryIntegrity(string connectionString)
         {
             //Make sure that all repository entries actually have been initialized
-            //Otherwise there was a creation error like ouot of disk space when creating
-            try
+            //Otherwise there was a creation error like out of disk space when creating
+            using (var context = new DatastoreEntities(connectionString))
             {
-                using (var context = new DatastoreEntities(connectionString))
+                var repositoryKeyList = context.Repository.Where(x => !x.IsDeleted && !x.IsInitialized).Select(x => x.UniqueKey).ToList();
+                foreach (var key in repositoryKeyList)
                 {
-                    var repositoryKeyList = context.Repository.Where(x => !x.IsDeleted && !x.IsInitialized).Select(x => x.UniqueKey).ToList();
-                    foreach (var key in repositoryKeyList)
+                    var dsExisting = SqlHelper.GetDataset(connectionString, "select name from sys.objects where type = 'U' and name like '%" + key + "%'");
+                    var deletedList = new List<string>();
+                    foreach (DataRow row in dsExisting.Tables[0].Rows)
                     {
-                        var dsExisting = SqlHelper.GetDataset(connectionString, "select name from sys.objects where type = 'U' and name like '%" + key + "%'");
-                        var deletedList = new List<string>();
-                        foreach (DataRow row in dsExisting.Tables[0].Rows)
-                        {
-                            deletedList.Add((string)row[0]);
-                        }
-
-                        foreach (var tableName in deletedList)
-                        {
-                            SqlHelper.ExecuteSql(connectionString, "if exists(select * from sys.objects where type = 'U' and name = '" + tableName + "')\r\n" +
-                                "drop table [" + tableName + "]");
-                        }
-
-                        Repository.DeleteData(x => x.UniqueKey == key, connectionString);
-                        LoggerCQ.LogWarning("Delete corrupt repository: ID=" + key);
+                        deletedList.Add((string)row[0]);
                     }
+
+                    foreach (var tableName in deletedList)
+                    {
+                        SqlHelper.ExecuteSql(connectionString, "if exists(select * from sys.objects where type = 'U' and name = '" + tableName + "')\r\n" +
+                            "drop table [" + tableName + "]");
+                    }
+
+                    Repository.DeleteData(x => x.UniqueKey == key, connectionString);
+                    LoggerCQ.LogWarning("Delete corrupt repository: ID=" + key);
                 }
-            }
-            catch (Exception ex)
-            {
-                LoggerCQ.LogError(ex);
-                throw;
             }
         }
 
@@ -433,7 +408,7 @@ namespace Gravitybox.Datastore.Server.Core
                                 }
                                 catch (Exception ex)
                                 {
-                                    LoggerCQ.LogWarning("ApplyFix_AddUniquePKIndex: Upgrade problem. ID=" + ID + "\r\n" + ex.ToString());
+                                    LoggerCQ.LogWarning(ex, "ApplyFix_AddUniquePKIndex: Upgrade problem. ID=" + ID);
                                 }
                             }
                         }

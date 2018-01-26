@@ -78,7 +78,7 @@ namespace Gravitybox.Datastore.Server.Core
             catch (Exception ex)
             {
                 if (ex.ToString().Contains("Timeout expired"))
-                    LoggerCQ.LogWarning("ConfigHelper.GetSettings timeout expired");
+                    LoggerCQ.LogWarning(ex, "ConfigHelper.GetSettings timeout expired");
                 else
                     LoggerCQ.LogError(ex);
                 return null;
@@ -87,39 +87,31 @@ namespace Gravitybox.Datastore.Server.Core
 
         private static void SaveSetting(string connectionString, string name, string value)
         {
-            try
+            lock (_syncObject)
             {
-                lock (_syncObject)
+                using (var connection = new SqlConnection(connectionString))
                 {
-                    using (var connection = new SqlConnection(connectionString))
+                    connection.Open();
+                    using (var command = connection.CreateCommand())
                     {
-                        connection.Open();
-                        using (var command = connection.CreateCommand())
-                        {
-                            var sb = new StringBuilder();
-                            sb.AppendLine("if exists (select * from [ConfigurationSetting] where name=@name)");
-                            sb.AppendLine("BEGIN");
-                            sb.AppendLine("update [ConfigurationSetting] set value=@value where name=@name");
-                            sb.AppendLine("END");
-                            sb.AppendLine("ELSE");
-                            sb.AppendLine("BEGIN");
-                            sb.AppendLine("insert into [ConfigurationSetting] (name, value) values (@name, @value)");
-                            sb.AppendLine("END");
+                        var sb = new StringBuilder();
+                        sb.AppendLine("if exists (select * from [ConfigurationSetting] where name=@name)");
+                        sb.AppendLine("BEGIN");
+                        sb.AppendLine("update [ConfigurationSetting] set value=@value where name=@name");
+                        sb.AppendLine("END");
+                        sb.AppendLine("ELSE");
+                        sb.AppendLine("BEGIN");
+                        sb.AppendLine("insert into [ConfigurationSetting] (name, value) values (@name, @value)");
+                        sb.AppendLine("END");
 
-                            command.CommandText = sb.ToString();
-                            command.CommandType = CommandType.Text;
-                            command.Parameters.Add(new SqlParameter { DbType = DbType.String, ParameterName = "name", Value = name });
-                            command.Parameters.Add(new SqlParameter { DbType = DbType.String, ParameterName = "value", Value = value });
-                            command.ExecuteNonQuery();
-                        }
+                        command.CommandText = sb.ToString();
+                        command.CommandType = CommandType.Text;
+                        command.Parameters.Add(new SqlParameter { DbType = DbType.String, ParameterName = "name", Value = name });
+                        command.Parameters.Add(new SqlParameter { DbType = DbType.String, ParameterName = "value", Value = value });
+                        command.ExecuteNonQuery();
                     }
-                    Refresh();
                 }
-            }
-            catch (Exception ex)
-            {
-                LoggerCQ.LogError(ex);
-                throw;
+                Refresh();
             }
         }
 
@@ -209,11 +201,6 @@ namespace Gravitybox.Datastore.Server.Core
             SetValue(name, value.ToString("yyyy-MM-dd HH:mm:ss").ToLower());
         }
 
-        private static void SetValue(string name, Guid value)
-        {
-            SetValue(name, value.ToString());
-        }
-
         #endregion
 
         #endregion
@@ -225,12 +212,6 @@ namespace Gravitybox.Datastore.Server.Core
             get { return GetValue("AllowCaching", true); }
             set { SetValue("AllowCaching", value); }
         }
-
-        //public static bool AllowStatistics
-        //{
-        //    get { return GetValue("AllowStatistics", true); }
-        //    set { SetValue("AllowStatistics", value); }
-        //}
 
         public static int Port
         {
@@ -259,14 +240,7 @@ namespace Gravitybox.Datastore.Server.Core
         public static string MailServerPassword
         {
             get { return GetValue("MailServerPassword", string.Empty); }
-            set { SetValue("MailServerPassword", value); }
         }
-
-        //public static string NotifyEmail
-        //{
-        //    get { return GetValue("NotifyEmail", string.Empty); }
-        //    set { SetValue("NotifyEmail", value); }
-        //}
 
         public static string DebugEmail
         {
@@ -324,21 +298,12 @@ namespace Gravitybox.Datastore.Server.Core
             set { SetValue("AsyncCachePath", value); }
         }
 
-        public static bool AllowLockStats
-        {
-            get { return GetValue("AllowLockStats", false); }
-            set { SetValue("AllowLockStats", value); }
-        }
+        public static bool AllowLockStats => GetValue("AllowLockStats", false);
 
-        public static bool AllowCoreCache
-        {
-            get { return GetValue("AllowCoreCache", true); }
-            set { SetValue("AllowCoreCache", value); }
-        }
+        public static bool AllowCoreCache => GetValue("AllowCoreCache", true);
 
         public static bool AllowQueryCacheClearing => GetValue("AllowQueryCacheClearing", true);
 
-        //public static bool MemOpt => GetValue("MemOpt", false);
         public static bool MemOpt => false;
 
         public static bool AllowCacheWithKeyword => GetValue("AllowCacheWithKeyword", false);
@@ -386,6 +351,30 @@ namespace Gravitybox.Datastore.Server.Core
             }
         }
 
+        public static void ShutDown()
+        {
+            try
+            {
+                //When shutting down, reset the DB keep alive settings so this server is NOT the master
+                //Only do this if this instance is currently the master
+                using (var context = new DatastoreEntities())
+                {
+                    var item = context.ServiceInstance.FirstOrDefault();
+                    if (item != null && item.InstanceId == RepositoryManager.InstanceId)
+                    {
+                        item.InstanceId = Guid.Empty;
+                        item.LastCommunication = new DateTime(2000, 1, 1);
+                        item.FirstCommunication = item.LastCommunication;
+                        context.SaveChanges();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggerCQ.LogError(ex);
+            }
+        }
+
         public static bool PromoteMaster()
         {
             var tryCount = 0;
@@ -424,7 +413,7 @@ namespace Gravitybox.Datastore.Server.Core
                         }
                     }
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     //If the record could not be created OR not updated try again
                     tryCount++;

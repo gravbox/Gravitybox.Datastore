@@ -137,7 +137,7 @@ namespace Gravitybox.Datastore.Server.Core
             }
             catch (Exception ex)
             {
-                LoggerCQ.LogWarning("QueryCache housekeeping failed");
+                LoggerCQ.LogWarning(ex, "QueryCache housekeeping failed");
             }
             finally
             {
@@ -291,23 +291,15 @@ namespace Gravitybox.Datastore.Server.Core
             if (!ConfigHelper.AllowCaching)
                 return null;
 
-            try
+            using (var q = new AcquireReaderLock(QueryCacheID, "QueryCache"))
             {
-                using (var q = new AcquireReaderLock(QueryCacheID, "QueryCache"))
-                {
-                    var queryHash = slice.GetHashCode();
-                    var changeStamp = RepositoryManager.GetRepositoryChangeStamp(context, repositoryId);
-                    var item = _cacheSlice.FirstOrDefault(x => x.QueryHash == queryHash && x.RepositoryId == repositoryId && x.ChangeStamp == changeStamp);
-                    if (item == null) return null;
-                    item.Timestamp = DateTime.Now;
-                    item.HitCount++;
-                    return item.Results;
-                }
-            }
-            catch (Exception ex)
-            {
-                LoggerCQ.LogError(ex);
-                throw;
+                var queryHash = slice.GetHashCode();
+                var changeStamp = RepositoryManager.GetRepositoryChangeStamp(context, repositoryId);
+                var item = _cacheSlice.FirstOrDefault(x => x.QueryHash == queryHash && x.RepositoryId == repositoryId && x.ChangeStamp == changeStamp);
+                if (item == null) return null;
+                item.Timestamp = DateTime.Now;
+                item.HitCount++;
+                return item.Results;
             }
         }
 
@@ -316,56 +308,48 @@ namespace Gravitybox.Datastore.Server.Core
             if (!ConfigHelper.AllowCaching)
                 return;
 
-            try
+            int changeStamp = 0;
+            int queryHash = 0;
+            CacheResultsSlice item;
+            using (var q = new AcquireReaderLock(QueryCacheID, "QueryCache"))
             {
-                int changeStamp = 0;
-                int queryHash = 0;
-                CacheResultsSlice item;
-                using (var q = new AcquireReaderLock(QueryCacheID, "QueryCache"))
+                //Do not cache big items
+                if (results.RecordList.Count > 500)
+                    return;
+                if (slice.Query != null && !string.IsNullOrEmpty(slice.Query.Keyword) && !ConfigHelper.AllowCacheWithKeyword)
+                    return;
+
+                queryHash = slice.GetHashCode();
+                changeStamp = RepositoryManager.GetRepositoryChangeStamp(context, repositoryId);
+                item = _cacheSlice.FirstOrDefault(x => x.QueryHash == queryHash &&
+                                                    x.RepositoryId == repositoryId &&
+                                                    x.ChangeStamp == changeStamp);
+
+                //If data has not changed and results are in cache then do nothing except mark as accessed
+                if (item != null)
                 {
-                    //Do not cache big items
-                    if (results.RecordList.Count > 500)
-                        return;
-                    if (slice.Query != null && !string.IsNullOrEmpty(slice.Query.Keyword) && !ConfigHelper.AllowCacheWithKeyword)
-                        return;
-
-                    queryHash = slice.GetHashCode();
-                    changeStamp = RepositoryManager.GetRepositoryChangeStamp(context, repositoryId);
-                    item = _cacheSlice.FirstOrDefault(x => x.QueryHash == queryHash &&
-                                                      x.RepositoryId == repositoryId &&
-                                                      x.ChangeStamp == changeStamp);
-
-                    //If data has not changed and results are in cache then do nothing except mark as accessed
-                    if (item != null)
-                    {
-                        item.Results = results;
-                        item.Timestamp = DateTime.Now;
-                        return;
-                    }
-                }
-
-                using (var q = new AcquireWriterLock(QueryCacheID, "QueryCache"))
-                {
-                    //Remove previous cache
-                    _cacheSlice.RemoveAll(x => x.QueryHash == queryHash && x.RepositoryId == repositoryId);
-
-                    //Create a new cache item
-                    item = new CacheResultsSlice()
-                    {
-                        QueryHash = queryHash,
-                        RepositoryId = repositoryId,
-                        ChangeStamp = changeStamp,
-                        Results = results,
-                        QueryString = slice.ToString(),
-                        ParentId = RepositoryManager.GetSchemaParentId(repositoryId),
-                    };
-                    _cacheSlice.Add(item);
+                    item.Results = results;
+                    item.Timestamp = DateTime.Now;
+                    return;
                 }
             }
-            catch (Exception ex)
+
+            using (var q = new AcquireWriterLock(QueryCacheID, "QueryCache"))
             {
-                LoggerCQ.LogError(ex);
-                throw;
+                //Remove previous cache
+                _cacheSlice.RemoveAll(x => x.QueryHash == queryHash && x.RepositoryId == repositoryId);
+
+                //Create a new cache item
+                item = new CacheResultsSlice()
+                {
+                    QueryHash = queryHash,
+                    RepositoryId = repositoryId,
+                    ChangeStamp = changeStamp,
+                    Results = results,
+                    QueryString = slice.ToString(),
+                    ParentId = RepositoryManager.GetSchemaParentId(repositoryId),
+                };
+                _cacheSlice.Add(item);
             }
         }
 
@@ -374,52 +358,43 @@ namespace Gravitybox.Datastore.Server.Core
         /// </summary>
         public void Clear(int repositoryId, Guid id)
         {
-            try
+            var count = 0;
+            var cache = RepositoryCacheManager.GetCache(id, RepositoryManager.GetSchemaParentId(repositoryId));
+            using (var q = new AcquireReaderLock(ServerUtilities.RandomizeGuid(cache.ID, RSeed), "QueryCache"))
             {
-                var count = 0;
-                var cache = RepositoryCacheManager.GetCache(id, RepositoryManager.GetSchemaParentId(repositoryId));
-                using (var q = new AcquireReaderLock(ServerUtilities.RandomizeGuid(cache.ID, RSeed), "QueryCache"))
-                {
-                    count += cache.Count;
-                    cache.Clear();
-                }
-
-                //Find caches where this is the parent and clear them all too
-                var parentCaches = RepositoryCacheManager.All.Where(x => x.ParentId == repositoryId);
-                foreach (var pcache in parentCaches)
-                {
-                    using (var q = new AcquireReaderLock(ServerUtilities.RandomizeGuid(pcache.ID, RSeed), "QueryCache"))
-                    {
-                        count += pcache.Count;
-                        pcache.Clear();
-                    }
-                }
-
-                using (var q = new AcquireWriterLock(QueryCacheID, "QueryCache"))
-                {
-                    count += _cacheSlice.RemoveAll(x => x.RepositoryId == repositoryId);
-                    count += _cacheSlice.RemoveAll(x => x.ParentId == repositoryId);
-                }
-
-                //If the query cache is being cleared then the List dimension count cache should be too
-                QueryBuilders.ListDimensionCache.Clear(repositoryId);
-
-                //Log the invalidation
-                Task.Factory.StartNew(() =>
-                {
-                    using (var context = new DatastoreEntities(ConfigHelper.ConnectionString))
-                    {
-                        context.AddItem(new EFDAL.Entity.CacheInvalidate { Count = count, RepositoryId = repositoryId });
-                        context.SaveChanges();
-                    }
-                });
-
+                count += cache.Count;
+                cache.Clear();
             }
-            catch (Exception ex)
+
+            //Find caches where this is the parent and clear them all too
+            var parentCaches = RepositoryCacheManager.All.Where(x => x.ParentId == repositoryId);
+            foreach (var pcache in parentCaches)
             {
-                LoggerCQ.LogError(ex);
-                throw;
+                using (var q = new AcquireReaderLock(ServerUtilities.RandomizeGuid(pcache.ID, RSeed), "QueryCache"))
+                {
+                    count += pcache.Count;
+                    pcache.Clear();
+                }
             }
+
+            using (var q = new AcquireWriterLock(QueryCacheID, "QueryCache"))
+            {
+                count += _cacheSlice.RemoveAll(x => x.RepositoryId == repositoryId);
+                count += _cacheSlice.RemoveAll(x => x.ParentId == repositoryId);
+            }
+
+            //If the query cache is being cleared then the List dimension count cache should be too
+            QueryBuilders.ListDimensionCache.Clear(repositoryId);
+
+            //Log the invalidation
+            Task.Factory.StartNew(() =>
+            {
+                using (var context = new DatastoreEntities(ConfigHelper.ConnectionString))
+                {
+                    context.AddItem(new EFDAL.Entity.CacheInvalidate { Count = count, RepositoryId = repositoryId });
+                    context.SaveChanges();
+                }
+            });
         }
 
         /// <summary>

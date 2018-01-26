@@ -48,7 +48,7 @@ namespace Gravitybox.Datastore.Server.Core.Housekeeping
             catch (Exception ex)
             {
                 timer.Stop();
-                LoggerCQ.LogWarning(ex.ToString());
+                LoggerCQ.LogWarning(ex);
                 return false;
             }
         }
