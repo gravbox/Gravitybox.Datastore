@@ -442,6 +442,7 @@ namespace Gravitybox.Datastore.Server.Core
                         var indexList = SqlHelper.GetTableIndexes(connectionString, dataTable);
 
                         var schema = RepositoryManager.GetSchema(repository.UniqueKey);
+                        if (schema == null) return;
                         foreach (var dimension in schema.DimensionList)
                         {
                             //var indexName = GetIndexName(dimension, dataTable, true);

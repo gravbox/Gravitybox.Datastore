@@ -211,7 +211,7 @@ namespace Gravitybox.Datastore.Server.Core
                     System.Threading.Thread.Sleep(500);
                 }
             }
-            throw new Exception("Could not delete folder '" + path + "'");
+            throw new Exception($"Could not delete folder '{path}'");
         }
 
         public static string GetSqlType(RepositorySchema.DataTypeConstants type)

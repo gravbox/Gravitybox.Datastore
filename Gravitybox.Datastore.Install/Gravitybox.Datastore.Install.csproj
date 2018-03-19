@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="12.0">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -47,13 +47,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AzureCopy.cs" />
-    <Compile Include="AzureCopyControl.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="AzureCopyControl.Designer.cs">
-      <DependentUpon>AzureCopyControl.cs</DependentUpon>
-    </Compile>
     <Compile Include="CustomMethods.cs" />
     <Compile Include="DatabaseInstaller.cs">
       <SubType>Component</SubType>
@@ -77,6 +70,7 @@
     <Compile Include="InstallSettingsUI.Designer.cs">
       <DependentUpon>InstallSettingsUI.cs</DependentUpon>
     </Compile>
+    <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="..\Docs\AssemblyInfoGlobal.cs">
       <Link>Properties\AssemblyInfoGlobal.cs</Link>
@@ -88,13 +82,11 @@
       <DependentUpon>SqlErrorForm.cs</DependentUpon>
     </Compile>
     <Compile Include="SqlServers.cs" />
+    <Compile Include="Custom.cs" />
     <Compile Include="UpgradeInstaller.cs" />
     <Compile Include="XmlHelper.cs" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="AzureCopyControl.resx">
-      <DependentUpon>AzureCopyControl.cs</DependentUpon>
-    </EmbeddedResource>
     <EmbeddedResource Include="HistoryForm.resx">
       <DependentUpon>HistoryForm.cs</DependentUpon>
     </EmbeddedResource>
@@ -123,9 +115,43 @@
     <Content Include="1_UserDefinedInitialization\ReadMe.txt" />
     <Content Include="1_UserDefinedInitialization\UnVersioned\ReadMe.txt" />
     <Content Include="1_UserDefinedInitialization\Versioned\ReadMe.txt" />
+    <EmbeddedResource Include="GenerationDetails.txt" />
     <EmbeddedResource Include="5_Programmability\Views\Model\Views.sql" />
     <EmbeddedResource Include="5_Programmability\Stored Procedures\Internal\StoredProcedures.sql" />
     <EmbeddedResource Include="5_Programmability\Stored Procedures\Model\StoredProcedures.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\00_00_00_00_0006_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\00_00_00_00_0007_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\00_00_00_00_0008_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\00_00_00_00_0009_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\00_00_00_00_0010_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\00_00_00_00_0012_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\00_00_00_00_0015_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\00_00_00_00_0016_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\00_00_00_00_0024_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\00_00_00_00_0025_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\00_00_00_00_0026_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\00_00_00_00_0027_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\00_00_00_00_0002_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\0000_0000_0000_0000_0030_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\0000_0000_0000_0000_0031_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\0000_0000_0000_0000_0033_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\0000_0000_0000_0000_0034_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\0000_0000_0000_0000_0036_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\0000_0000_0000_0000_0037_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\0000_0000_0000_0000_0038_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\0000_0000_0000_0000_0039_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\0000_0000_0000_0000_0040_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\0000_0000_0000_0000_0041_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\0000_0000_0000_0000_0043_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\0000_0000_0000_0000_0045_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\0000_0000_0000_0000_0046_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\0000_0000_0000_0000_0047_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\0000_0000_0000_0000_0048_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\0000_0000_0000_0000_0052_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\0000_0000_0000_0000_0054_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\0000_0000_0000_0000_0055_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\0000_0000_0000_0000_0056_UpgradeScript.sql" />
+    <EmbeddedResource Include="2_Upgrade Scripts\0000_0000_0000_0000_0058_UpgradeScript.sql" />
     <EmbeddedResource Include="2_Upgrade Scripts\0002_0001_0000_0000_0060_UpgradeScript.sql" />
     <EmbeddedResource Include="2_Upgrade Scripts\0002_0001_0000_0000_0061_UpgradeScript.sql" />
     <EmbeddedResource Include="2_Upgrade Scripts\0002_0001_0000_0000_0062_UpgradeScript.sql" />

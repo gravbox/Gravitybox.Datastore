@@ -1,0 +1,96 @@
+DO NOT MODIFY THIS FILE. IT IS ALWAYS OVERWRITTEN ON GENERATION.
+Generation Details
+
+Version 2.1.0.0
+Generated on 2018-02-09 10:43
+Table Count: 12
+Tenant Table Count: 0
+View Count: 0
+StoredProc Count: 0
+
+TABLE LIST
+AppliedPatch, ColumnCount=2, IsTenant=False
+    Field: [AppliedPatch].[Description], Field Length: 50, Nullable
+    Field: [AppliedPatch].[ID], Not Nullable, Primary Key, Unique, Indexed, Default Value: newid
+CacheInvalidate, ColumnCount=4, IsTenant=False
+    Field: [CacheInvalidate].[AddedDate], Field Length: 2, Not Nullable, Indexed, Default Value: getdate()
+    Field: [CacheInvalidate].[Count], Not Nullable, Default Value: 0
+    Field: [CacheInvalidate].[RepositoryId], Not Nullable, Indexed
+    Field: [CacheInvalidate].[RowId], Not Nullable, Primary Key, AutoNumber, Unique, Indexed
+ConfigurationSetting, ColumnCount=3, IsTenant=False
+    Field: [ConfigurationSetting].[ID], Not Nullable, Primary Key, AutoNumber, Unique, Indexed
+    Field: [ConfigurationSetting].[Name], Field Length: 50, Not Nullable
+    Field: [ConfigurationSetting].[Value], Field Length: max, Not Nullable
+Housekeeping, ColumnCount=3, IsTenant=False
+    Field: [Housekeeping].[Data], Field Length: max, Not Nullable
+    Field: [Housekeeping].[ID], Not Nullable, Primary Key, AutoNumber, Unique, Indexed
+    Field: [Housekeeping].[Type], Not Nullable
+LockStat, ColumnCount=10, IsTenant=False
+    Field: [LockStat].[CurrentReadCount], Not Nullable
+    Field: [LockStat].[DateStamp], Not Nullable
+    Field: [LockStat].[Elapsed], Not Nullable
+    Field: [LockStat].[Failure], Not Nullable, Indexed
+    Field: [LockStat].[IsWriteLockHeld], Not Nullable
+    Field: [LockStat].[LockStatId], Not Nullable, Primary Key, AutoNumber, Unique, Indexed
+    Field: [LockStat].[ThreadId], Not Nullable
+    Field: [LockStat].[TraceInfo], Field Length: 50, Nullable
+    Field: [LockStat].[WaitingReadCount], Not Nullable
+    Field: [LockStat].[WaitingWriteCount], Not Nullable
+Repository, ColumnCount=11, IsTenant=False
+    Field: [Repository].[Changestamp], Not Nullable, Default Value: 0
+    Field: [Repository].[DefinitionData], Field Length: max, Nullable
+    Field: [Repository].[Dimensionstamp], Not Nullable, Default Value: 0
+    Field: [Repository].[IsDeleted], Not Nullable, Indexed, Default Value: false
+    Field: [Repository].[IsInitialized], Not Nullable, Indexed, Default Value: true
+    Field: [Repository].[ItemCount], Not Nullable
+    Field: [Repository].[Name], Field Length: 50, Not Nullable
+    Field: [Repository].[ParentId], Nullable, Indexed
+    Field: [Repository].[RepositoryId], Not Nullable, Primary Key, AutoNumber, Unique, Indexed
+    Field: [Repository].[UniqueKey], Not Nullable, Indexed
+    Field: [Repository].[VersionHash], Not Nullable
+RepositoryActionType, ColumnCount=2, IsTenant=False
+    Field: [RepositoryActionType].[Name], Field Length: 50, Not Nullable
+    Field: [RepositoryActionType].[RepositoryActionTypeId], Not Nullable, Primary Key, AutoNumber, Unique, Indexed
+RepositoryLog, ColumnCount=9, IsTenant=False
+    Field: [RepositoryLog].[Count], Not Nullable
+    Field: [RepositoryLog].[ElapsedTime], Not Nullable
+    Field: [RepositoryLog].[IPAddress], Field Length: 50, Not Nullable
+    Field: [RepositoryLog].[LockTime], Not Nullable, Default Value: 0
+    Field: [RepositoryLog].[Query], Field Length: 500, Nullable
+    Field: [RepositoryLog].[QueryId], Not Nullable
+    Field: [RepositoryLog].[RepositoryId], Not Nullable, Indexed
+    Field: [RepositoryLog].[RepositoryLogId], Not Nullable, Primary Key, AutoNumber, Unique, Indexed
+    Field: [RepositoryLog].[UsedCache], Not Nullable
+RepositoryStat, ColumnCount=9, IsTenant=False
+    Field: [RepositoryStat].[Count], Not Nullable
+    Field: [RepositoryStat].[Elapsed], Not Nullable
+    Field: [RepositoryStat].[ItemCount], Not Nullable
+    Field: [RepositoryStat].[LockTime], Not Nullable, Default Value: 0
+    Field: [RepositoryStat].[ReadLockCount], Not Nullable, Default Value: 0
+    Field: [RepositoryStat].[RepositoryActionTypeId], Not Nullable, Indexed
+    Field: [RepositoryStat].[RepositoryId], Not Nullable
+    Field: [RepositoryStat].[RepositoryStatId], Not Nullable, Primary Key, AutoNumber, Unique, Indexed
+    Field: [RepositoryStat].[WaitingLocks], Not Nullable, Default Value: 0
+Server, ColumnCount=2, IsTenant=False
+    Field: [Server].[Name], Field Length: 50, Not Nullable
+    Field: [Server].[ServerId], Not Nullable, Primary Key, AutoNumber, Unique, Indexed
+ServerStat, ColumnCount=13, IsTenant=False
+    Field: [ServerStat].[AddedDate], Not Nullable, Default Value: getdate
+    Field: [ServerStat].[CachedItems], Not Nullable, Default Value: 0
+    Field: [ServerStat].[MemoryUsageAvailable], Not Nullable
+    Field: [ServerStat].[MemoryUsageProcess], Not Nullable
+    Field: [ServerStat].[MemoryUsageTotal], Not Nullable
+    Field: [ServerStat].[ProcessorUsage], Not Nullable
+    Field: [ServerStat].[RepositoryCreateDelta], Not Nullable
+    Field: [ServerStat].[RepositoryDeleteDelta], Not Nullable
+    Field: [ServerStat].[RepositoryLoadDelta], Not Nullable
+    Field: [ServerStat].[RepositoryTotal], Not Nullable
+    Field: [ServerStat].[RepositoryUnloadDelta], Not Nullable
+    Field: [ServerStat].[ServerId], Not Nullable, Indexed
+    Field: [ServerStat].[ServerStatId], Not Nullable, Primary Key, AutoNumber, Unique, Indexed
+ServiceInstance, ColumnCount=4, IsTenant=False
+    Field: [ServiceInstance].[FirstCommunication], Field Length: 2, Not Nullable
+    Field: [ServiceInstance].[InstanceId], Not Nullable
+    Field: [ServiceInstance].[LastCommunication], Field Length: 2, Not Nullable
+    Field: [ServiceInstance].[RowId], Not Nullable, Primary Key, Unique, Indexed, Default Value: 1
+

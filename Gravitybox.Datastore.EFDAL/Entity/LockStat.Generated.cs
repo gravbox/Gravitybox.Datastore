@@ -143,8 +143,8 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 			get { return _dateStamp; }
 			set
 			{
-				if ((value < GlobalValues.MIN_DATETIME)) throw new Exception("The DateTime value 'DateStamp' (" + value.ToString("yyyy-MM-dd HH:mm:ss") + ") cannot be less than " + GlobalValues.MIN_DATETIME.ToString());
-				if ((value > GlobalValues.MAX_DATETIME)) throw new Exception("The DateTime value 'DateStamp' (" + value.ToString("yyyy-MM-dd HH:mm:ss") + ") cannot be greater than " + GlobalValues.MAX_DATETIME.ToString());
+				if ((value < GlobalValues.MIN_DATETIME)) throw new Exception("The DateTime value 'DateStamp' (" + value.ToString(GlobalValues.YMDHMS_FORMAT) + ") cannot be less than " + GlobalValues.MIN_DATETIME.ToString());
+				if ((value > GlobalValues.MAX_DATETIME)) throw new Exception("The DateTime value 'DateStamp' (" + value.ToString(GlobalValues.YMDHMS_FORMAT) + ") cannot be greater than " + GlobalValues.MAX_DATETIME.ToString());
 				_dateStamp = value;
 			}
 		}

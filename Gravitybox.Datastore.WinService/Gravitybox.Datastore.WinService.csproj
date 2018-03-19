@@ -149,6 +149,10 @@
     <None Include="app.config">
       <SubType>Designer</SubType>
     </None>
+    <None Include="App.Deploy.config">
+      <SubType>Designer</SubType>
+      <DependentUpon>app.config</DependentUpon>
+    </None>
     <None Include="InstallService.bat">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

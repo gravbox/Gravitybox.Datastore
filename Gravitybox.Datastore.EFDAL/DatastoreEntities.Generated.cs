@@ -116,7 +116,7 @@ namespace Gravitybox.Datastore.EFDAL
 		private static Dictionary<string, SequentialIdGenerator> _sequentialIdGeneratorCache = new Dictionary<string, SequentialIdGenerator>();
 		private static object _seqCacheLock = new object();
 
-		private const string _version = "2.1.0.0.62";
+		private const string _version = "2.1.0.0.64";
 		private const string _modelKey = "c4808261-57ef-4c4b-9c5c-b199c70e73ae";
 
 		/// <summary />
@@ -506,13 +506,16 @@ namespace Gravitybox.Datastore.EFDAL
 				if (entity != null)
 				{
 					var audit = entity as IAuditableSet;
-					if (entity.IsModifyAuditImplemented && entity.ModifiedBy != this.ContextStartup.Modifer)
+					if (audit != null && entity.IsModifyAuditImplemented && entity.ModifiedBy != this.ContextStartup.Modifer)
 					{
 						if (audit != null) audit.ResetCreatedBy(this.ContextStartup.Modifer);
 						if (audit != null) audit.ResetModifiedBy(this.ContextStartup.Modifer);
 					}
-					audit.CreatedDate = markedTime;
-					audit.ModifiedDate = markedTime;
+					if (audit != null)
+					{
+						audit.CreatedDate = markedTime;
+						audit.ModifiedDate = markedTime;
+					}
 				}
 			}
 			this.OnBeforeSaveAddedEntity(new EventArguments.EntityListEventArgs { List = addedList });
@@ -716,38 +719,35 @@ namespace Gravitybox.Datastore.EFDAL
 		/// </summary>
 		public string GetDBVersion(string connectionString = null)
 		{
-			var conn = new System.Data.SqlClient.SqlConnection();
 			try
 			{
-				if (string.IsNullOrEmpty(connectionString))
-					connectionString = this.ConnectionString;
-				conn.ConnectionString = connectionString;
-				conn.Open();
-
-				var da = new SqlDataAdapter("select * from sys.tables where name = '__nhydrateschema'", conn);
-				var ds = new DataSet();
-				da.Fill(ds);
-				if (ds.Tables[0].Rows.Count > 0)
+				using (var conn = new System.Data.SqlClient.SqlConnection())
 				{
-					da = new SqlDataAdapter("SELECT * FROM [__nhydrateschema] where [ModelKey] = '" + this.ModelKey + "'", conn);
-					ds = new DataSet();
+					if (string.IsNullOrEmpty(connectionString))
+						connectionString = this.ConnectionString;
+					conn.ConnectionString = connectionString;
+					conn.Open();
+
+					var da = new SqlDataAdapter("select * from sys.tables where name = '__nhydrateschema'", conn);
+					var ds = new DataSet();
 					da.Fill(ds);
-					var t = ds.Tables[0];
-					if (t.Rows.Count > 0)
+					if (ds.Tables[0].Rows.Count > 0)
 					{
-						return (string) t.Rows[0]["dbVersion"];
+						da = new SqlDataAdapter("SELECT * FROM [__nhydrateschema] where [ModelKey] = '" + this.ModelKey + "'", conn);
+						ds = new DataSet();
+						da.Fill(ds);
+						var t = ds.Tables[0];
+						if (t.Rows.Count > 0)
+						{
+							return (string) t.Rows[0]["dbVersion"];
+						}
 					}
+					return string.Empty;
 				}
-				return string.Empty;
 			}
 			catch (Exception)
 			{
 				return string.Empty;
-			}
-			finally
-			{
-				if (conn != null)
-					conn.Close();
 			}
 		}
 
@@ -1128,7 +1128,7 @@ namespace Gravitybox.Datastore.EFDAL
 			try
 			{
 				//If this is a tenant table then rig query plan for this specific tenant
-				if (command.CommandText.Contains("__vw_tenant_") || command.CommandText.Contains("__security"))
+				if (command.CommandText.Contains("__vw_tenant") || command.CommandText.Contains("__security"))
 				{
 					var builder = new SqlConnectionStringBuilder(command.Connection.ConnectionString);
 					command.CommandText = "--T:" + builder.UserID + "\r\n" + command.CommandText;

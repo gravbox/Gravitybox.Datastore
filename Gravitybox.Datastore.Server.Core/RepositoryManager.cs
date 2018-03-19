@@ -167,6 +167,7 @@ namespace Gravitybox.Datastore.Server.Core
                 {
                     if (!RepositoryExists(repositoryId)) return;
                     schema = GetSchema(repositoryId);
+                    if (schema == null) return;
                     id = schema.InternalID;
                     LoggerCQ.LogDebug("Starting RemoveRepository: ID=" + repositoryId + ", InternalId=" + id);
 
@@ -288,9 +289,14 @@ namespace Gravitybox.Datastore.Server.Core
             if (schema == null) throw new Exception("Schema was not specified.");
             var retval = new ActionDiagnostics { RepositoryId = schema.ID, IsSuccess = false };
             var errorList = new List<string>();
+            var schema1 = GetSchema(schema.ID);
+            if (schema1 == null)
+            {
+                errorList.Add($"Repository not found: {schema.ID}");
+                return retval;
+            }
             try
             {
-                var schema1 = GetSchema(schema.ID);
                 if (!RepositoryExists(schema.ID))
                 {
                     LoggerCQ.LogWarning($"Repository not found: {schema.ID}");
@@ -371,12 +377,16 @@ namespace Gravitybox.Datastore.Server.Core
 
             var retval = new ActionDiagnostics { RepositoryId = schema.ID, IsSuccess = false };
             var errorList = new List<string>();
+            var schema1 = GetSchema(schema.ID);
+            if (schema1 == null)
+            {
+                errorList.Add($"Repository not found: {schema.ID}");
+                return retval;
+            }
             var timer = Stopwatch.StartNew();
             try
             {
-                //TODO: Verify Credentials
                 var lockTime = 0;
-                var schema1 = GetSchema(schema.ID);
                 if (!RepositoryExists(schema.ID))
                 {
                     LoggerCQ.LogWarning($"Repository not found: {schema.ID}");
@@ -429,12 +439,12 @@ namespace Gravitybox.Datastore.Server.Core
                     });
 
                     LoggerCQ.LogDebug("DeleteData: ID=" + schema.ID +
-                        ", Elapsed=" + timer.ElapsedMilliseconds +
-                        ", LockTime=" + lockTime +
-                        ", WorkTime=" + (timer.ElapsedMilliseconds - lockTime) +
+                        $", Elapsed={timer.ElapsedMilliseconds}" +
+                        $", LockTime={lockTime}" +
+                        $", WorkTime={(timer.ElapsedMilliseconds - lockTime)}" +
                         (waitingLocks > 0 ? ", WaitLocks=" + waitingLocks : string.Empty) +
-                        ", Count=" + count +
-                        ", QueryString=\"" + query.ToString() + "\"");
+                        $", Count={count}" +
+                        $", QueryString=\"{query.ToString()}\"");
 
                 }
             }
@@ -523,7 +533,7 @@ namespace Gravitybox.Datastore.Server.Core
             DataQueryResults retval = null;
             if (query == null) return null;
             var queryString = query.ToString();
-            var queryKey = queryString + "|" + repositoryId;
+            var queryKey = $"{queryString}|{repositoryId}";
 
             var lockTime = 0;
             var timer = Stopwatch.StartNew();
@@ -544,8 +554,6 @@ namespace Gravitybox.Datastore.Server.Core
                     waitTime = (int)timer.ElapsedMilliseconds;
                     LoggerCQ.LogInfo($"Query Wait, ID={repositoryId}, Elapsed={timer.ElapsedMilliseconds}, WaitCount={_runningQueries.Count}");
                 }
-
-                //TODO: Verify Credentials
 
                 var waitingLocks = 0;
                 var readLockCount = 0;
@@ -810,8 +818,6 @@ namespace Gravitybox.Datastore.Server.Core
             try
             {
                 var timer = Stopwatch.StartNew();
-
-                //TODO: Verify Credentials
 
                 //Do not call RepositoryExists since this does the same thing
                 var schema = GetSchema(repositoryId);
@@ -1214,26 +1220,28 @@ namespace Gravitybox.Datastore.Server.Core
                 throw new NotMasterInstanceException();
 
             var retval = new ActionDiagnostics { RepositoryId = schema.ID, IsSuccess = false };
-            if (list == null)
+            if (list == null || !list.Any())
             {
                 retval.IsSuccess = true;
                 return retval;
             }
 
             var errorList = new List<string>();
+            var schema1 = GetSchema(schema.ID);
+            if (schema1 == null)
+            {
+                LoggerCQ.LogWarning($"Repository not found: {schema.ID}");
+                //throw new Gravitybox.Datastore.Common.Exceptions.RepositoryNotInitializedException(schema.ID);
+                retval.Errors = new string[] { $"Repository not found: {schema.ID}" };
+                return retval;
+            }
+            
             var timer = Stopwatch.StartNew();
             try
             {
                 using (var q = new AcquireWriterLock(schema.ID, TraceInfoUpdateData))
                 {
-                    var schema1 = GetSchema(schema.ID);
-                    if (schema1 == null)
-                    {
-                        LoggerCQ.LogWarning($"Repository not found: {schema.ID}");
-                        //errorList.Add("The repository has not been initialized! ID: " + schema.ID);
-                        throw new Gravitybox.Datastore.Common.Exceptions.RepositoryNotInitializedException(schema.ID);
-                    }
-                    else if (schema.VersionHash != GetSchemaHash(schema1.ID))
+                    if (schema.VersionHash != GetSchemaHash(schema1.ID))
                     {
                         //If version mismatch then log
                         SchemaMismatchDebug(schema, schema1);
@@ -1359,19 +1367,27 @@ namespace Gravitybox.Datastore.Server.Core
                 throw new NotMasterInstanceException();
 
             var retval = new ActionDiagnostics { RepositoryId = schema.ID, IsSuccess = false };
+            if (list == null || !list.Any())
+            {
+                retval.IsSuccess = true;
+                return retval;
+            }
+
+            var schema1 = GetSchema(schema.ID);
+            if (schema1 == null)
+            {
+                LoggerCQ.LogWarning($"Repository not found: {schema.ID}");
+                //throw new Gravitybox.Datastore.Common.Exceptions.RepositoryNotInitializedException(schema.ID);
+                retval.Errors = new string[] { $"Repository not found: {schema.ID}" };
+                return retval;
+            }
+
             var errorList = new List<string>();
             try
             {
                 using (var q = new AcquireReaderLock(schema.ID, TraceInfoUpdateData))
                 {
-                    var schema1 = GetSchema(schema.ID);
-                    if (schema1 == null)
-                    {
-                        LoggerCQ.LogWarning($"Repository not found: {schema.ID}");
-                        //errorList.Add("The repository has not been initialized! ID: " + schema.ID);
-                        throw new Gravitybox.Datastore.Common.Exceptions.RepositoryNotInitializedException(schema.ID);
-                    }
-                    else if (schema.VersionHash != GetSchemaHash(schema1.ID))
+                    if (schema.VersionHash != GetSchemaHash(schema1.ID))
                     {
                         //If version mismatch then log
                         SchemaMismatchDebug(schema, schema1);
@@ -1553,15 +1569,15 @@ namespace Gravitybox.Datastore.Server.Core
                                 if (useIndex)
                                 {
                                     var indexName = SqlHelper.GetIndexName(field, dataTable);
-                                    sbFields.AppendLine("if not exists(select * from sys.indexes where name = '" + indexName + "')");
-                                    sbFields.AppendLine("CREATE NONCLUSTERED INDEX [" + indexName + "] ON [" + dataTable + "] ([" + field.Name + "] ASC);");
+                                    sbFields.AppendLine($"if not exists(select * from sys.indexes where name = '" + indexName + "')");
+                                    sbFields.AppendLine($"CREATE NONCLUSTERED INDEX [" + indexName + "] ON [" + dataTable + "] ([" + field.Name + "] ASC);");
                                     sbFields.AppendLine();
                                 }
                                 else
                                 {
                                     var indexName = SqlHelper.GetIndexName(field, dataTable);
-                                    sbFields.AppendLine("if exists(select * from sys.indexes where name = '" + indexName + "')");
-                                    sbFields.AppendLine("DROP INDEX [" + indexName + "] ON [" + dataTable + "]");
+                                    sbFields.AppendLine($"if exists(select * from sys.indexes where name = '" + indexName + "')");
+                                    sbFields.AppendLine($"DROP INDEX [" + indexName + "] ON [" + dataTable + "]");
                                     sbFields.AppendLine();
                                 }
                             }
@@ -1689,6 +1705,7 @@ namespace Gravitybox.Datastore.Server.Core
             }
         }
 
+        private ConcurrentDictionary<Guid, QueryThreaded> _asyncQueryRunning = new ConcurrentDictionary<Guid, QueryThreaded>();
         public Guid QueryAsync(Guid repositoryId, DataQuery query)
         {
             if (!IsServerMaster())
@@ -1696,8 +1713,6 @@ namespace Gravitybox.Datastore.Server.Core
 
             try
             {
-                //TODO: Verify Credentials
-
                 if (!Directory.Exists(ConfigHelper.AsyncCachePath)) return Guid.Empty;
 
                 //Do not call RepositoryExists since this does the same thing
@@ -1710,9 +1725,10 @@ namespace Gravitybox.Datastore.Server.Core
                 else
                 {
                     var item = new QueryThreaded(_dimensionCache, schema, query);
+                    _asyncQueryRunning.TryAdd(item.Key, item);
                     var myThread = new System.Threading.Thread(new System.Threading.ThreadStart(item.Run));
                     myThread.Start();
-                    LoggerCQ.LogDebug("QueryAsync: ID=" + repositoryId + ", Key=" + item.Key + ", QueryString=\"" + query.ToString() + "\"");
+                    LoggerCQ.LogDebug($"QueryAsync: ID={repositoryId}, Key={item.Key}, QueryString=\"{query.ToString()}\"");
                     return item.Key;
                 }
             }
@@ -1730,10 +1746,14 @@ namespace Gravitybox.Datastore.Server.Core
 
             try
             {
-                //TODO: Verify Credentials
+                if (!_asyncQueryRunning.TryGetValue(key, out QueryThreaded qthread))
+                    return false;
+                if (!qthread.IsComplete)
+                    return false;
+
                 //TODO: Verify that file is fully written!!!!!
                 if (!Directory.Exists(ConfigHelper.AsyncCachePath)) return false;
-                LoggerCQ.LogDebug("QueryAsyncReady: Key=" + key);
+                LoggerCQ.LogDebug($"QueryAsyncReady: Key={key}");
                 var errorFileName = Path.Combine(ConfigHelper.AsyncCachePath, key.ToString() + ".error");
                 if (File.Exists(errorFileName))
                     return true;
@@ -1753,10 +1773,13 @@ namespace Gravitybox.Datastore.Server.Core
             if (!IsServerMaster())
                 throw new NotMasterInstanceException();
 
+            if (!_asyncQueryRunning.TryGetValue(key, out QueryThreaded qthread))
+                return null;
+            if (!qthread.IsComplete)
+                return null;
+
             try
             {
-                //TODO: Verify Credentials
-
                 if (chunk < 0) return null;
 
                 if (!Directory.Exists(ConfigHelper.AsyncCachePath)) return null;
@@ -1765,16 +1788,18 @@ namespace Gravitybox.Datastore.Server.Core
                 var errorFileName = Path.Combine(ConfigHelper.AsyncCachePath, key.ToString() + ".error");
                 if (File.Exists(errorFileName))
                 {
-                    LoggerCQ.LogDebug("QueryAsyncDownload Error: Key=" + key + ", Chunk=" + chunk);
+                    LoggerCQ.LogDebug($"QueryAsyncDownload Error: Key={key}, Chunk={chunk}");
                     if (File.Exists(fileName)) File.Delete(fileName);
                     File.Delete(errorFileName);
+                    _asyncQueryRunning.TryRemove(key, out QueryThreaded z);
                     return null;
                 }
                 else
                 {
                     if (!File.Exists(fileName))
                     {
-                        LoggerCQ.LogWarning("QueryAsyncDownload file not found: Key=" + key + ", File=" + fileName);
+                        LoggerCQ.LogWarning($"QueryAsyncDownload file not found: Key={key}, File={fileName}");
+                        _asyncQueryRunning.TryRemove(key, out QueryThreaded z);
                         return null;
                     }
 
@@ -1802,6 +1827,7 @@ namespace Gravitybox.Datastore.Server.Core
                     catch (Exception ex)
                     {
                         LoggerCQ.LogError(ex);
+                        _asyncQueryRunning.TryRemove(key, out QueryThreaded z);
                         return null;
                     }
 
@@ -1809,11 +1835,12 @@ namespace Gravitybox.Datastore.Server.Core
                     if (bytes != chunkSize)
                     {
                         File.Delete(fileName);
-                        LoggerCQ.LogDebug("QueryAsyncDownload Complete: Key=" + key + ", Chunk=" + chunk + ", Datasize=" + buffer.Length);
+                        LoggerCQ.LogDebug($"QueryAsyncDownload Complete: Key={key}, Chunk={chunk}, Datasize={buffer.Length}");
+                        _asyncQueryRunning.TryRemove(key, out QueryThreaded z);
                     }
                     else
                     {
-                        LoggerCQ.LogDebug("QueryAsyncDownload Processing: Key=" + key + ", Chunk=" + chunk + ", Datasize=" + buffer.Length);
+                        LoggerCQ.LogDebug($"QueryAsyncDownload Processing: Key={key}, Chunk={chunk}, Datasize={buffer.Length}");
                     }
 
                     return buffer;
@@ -1833,8 +1860,6 @@ namespace Gravitybox.Datastore.Server.Core
 
             try
             {
-                //TODO: Verify Credentials
-
                 //Do not call RepositoryExists since this does the same thing
                 var schema = GetSchema(repositoryId);
                 if (schema == null)
@@ -1865,8 +1890,6 @@ namespace Gravitybox.Datastore.Server.Core
 
             try
             {
-                //TODO: Verify Credentials
-
                 //Do not call RepositoryExists since this does the same thing
                 var schema = GetSchema(repositoryId);
                 if (schema == null)
@@ -1901,8 +1924,6 @@ namespace Gravitybox.Datastore.Server.Core
 
             try
             {
-                //TODO: Verify Credentials
-
                 //Do not call RepositoryExists since this does the same thing
                 var schema = GetSchema(repositoryId);
                 if (schema == null)
@@ -1942,8 +1963,8 @@ namespace Gravitybox.Datastore.Server.Core
             try
             {
                 var sb = new StringBuilder();
-                sb.AppendLine("Client:" + string.Join(",", client.FieldList.Select(x => x.Name)) +
-                    "|Current:" + string.Join(",", current.FieldList.Select(x => x.Name)));
+                sb.AppendLine("Client:" + client.FieldList.Select(x => x.Name).ToCommaList() +
+                    "|Current:" + current.FieldList.Select(x => x.Name).ToCommaList());
                 LoggerCQ.LogError("Non-matching schema\r\n" + sb.ToString());
             }
             catch (Exception ex)
@@ -1966,8 +1987,6 @@ namespace Gravitybox.Datastore.Server.Core
                 if (slice.GroupFields == null) throw new Exception("GroupFields is required");
                 //if (slice.Query.FieldSorts == null || slice.Query.FieldSorts.Count == 0) throw new Exception("FieldSorts is required");
                 if (slice.Query.FieldSorts == null) slice.Query.FieldSorts = new List<IFieldSort>();
-
-                //TODO: Verify Credentials
 
                 //Do not call RepositoryExists since this does the same thing
                 var schema = GetSchema(repositoryId);
@@ -2031,8 +2050,6 @@ namespace Gravitybox.Datastore.Server.Core
             if (list.Count() == 0) return;
             try
             {
-                //TODO: Verify Credentials
-
                 //Do not call RepositoryExists since this does the same thing
                 var timer = Stopwatch.StartNew();
                 var schema = GetSchema(repositoryId);
@@ -2059,12 +2076,6 @@ namespace Gravitybox.Datastore.Server.Core
                         _queryCache.Clear(schema.InternalID, schema.ID);
                     }
                     timer.Stop();
-                    //LoggerCQ.LogDebug("AddPermission: Elapsed=" + timer.ElapsedMilliseconds +
-                    //    ", LockTime=" + lockTime +
-                    //    ", WorkTime=" + (timer.ElapsedMilliseconds - lockTime) +
-                    //    ", Count=" + list.Count() +
-                    //    ", ID=" + repositoryId + 
-                    //    ", Values=" + string.Join(",", list.Select(x => x.UserId + "|" + x.FieldValue)));
                 }
             }
             catch (Gravitybox.Datastore.Common.Exceptions.RepositoryNotInitializedException ex)
@@ -2085,8 +2096,6 @@ namespace Gravitybox.Datastore.Server.Core
 
             try
             {
-                //TODO: Verify Credentials
-
                 //Do not call RepositoryExists since this does the same thing
                 var schema = GetSchema(repositoryId);
                 if (schema == null)
@@ -2097,7 +2106,6 @@ namespace Gravitybox.Datastore.Server.Core
                 }
                 else
                 {
-                    //LoggerCQ.LogDebug("DeletePermission: Count=" + list.Count() + ", Values=" + string.Join(",", list.Select(x => x.UserId + "|" + x.FieldValue)));
                     using (var q = new AcquireWriterLock(ServerUtilities.RandomizeGuid(repositoryId, RSeedPermissions), "DeletePermission"))
                     {
                         SqlHelper.DeletePermission(schema, list);
@@ -2123,8 +2131,6 @@ namespace Gravitybox.Datastore.Server.Core
 
             try
             {
-                //TODO: Verify Credentials
-
                 //Do not call RepositoryExists since this does the same thing
                 var timer = Stopwatch.StartNew();
                 var schema = GetSchema(repositoryId);
@@ -2171,8 +2177,6 @@ namespace Gravitybox.Datastore.Server.Core
 
             try
             {
-                //TODO: Verify Credentials
-
                 //Do not call RepositoryExists since this does the same thing
                 var timer = Stopwatch.StartNew();
                 var schema = GetSchema(repositoryId);

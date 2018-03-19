@@ -65,10 +65,10 @@ namespace Gravitybox.Datastore.Server.Core
             var sqlLength = string.Empty;
             if (field.DataType == RepositorySchema.DataTypeConstants.String)
             {
-                if (field.Length > 0) sqlLength = "(" + field.Length + ")";
+                if (field.Length > 0) sqlLength = $"({field.Length})";
                 else sqlLength = "(MAX)";
             }
-            return "[" + field.TokenName + "] [" + ServerUtilities.GetSqlType(field.DataType) + "] " + sqlLength;
+            return $"[{field.TokenName}] [{field.ToSqlType()}] {sqlLength}";
         }
 
         public static HashSet<T> ToHash<T>(this IEnumerable<T> list)
@@ -78,6 +78,29 @@ namespace Gravitybox.Datastore.Server.Core
             foreach (var item in list)
                 retval.Add(item);
             return retval;
+        }
+
+        public static string ToSqlDirection(this IFieldSort sort)
+        {
+            if (sort == null) return string.Empty;
+            return sort.SortDirection == SortDirectionConstants.Desc ? "DESC" : "ASC";
+        }
+
+        public static string ToSqlType(this IFieldDefinition field)
+        {
+            if (field == null) return string.Empty;
+            return ServerUtilities.GetSqlType(field.DataType);
+        }
+
+        public static string ReplaceSqlTicks(this string str)
+        {
+            return str?.Replace("'", "''");
+        }
+
+        internal static string ToCommaList(this IEnumerable<string> list)
+        {
+            if (list == null || !list.Any()) return string.Empty;
+            return string.Join(",", list);
         }
     }
 }

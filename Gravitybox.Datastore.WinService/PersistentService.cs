@@ -127,6 +127,16 @@ namespace Gravitybox.Datastore.WinService
                     InitialCatalog = "Master"
                 };
 
+                //Make sure there are no other nHydrate installations on this database
+                if (DbMaintenanceHelper.ContainsOtherInstalls(connectionStringSettings.ConnectionString))
+                {
+                    LoggerCQ.LogError($"The database contains another installation. This is an error condition. Database={connectionStringBuilder.InitialCatalog}");
+                    throw new Exception($"The database contains another installation. This is an error condition. Database={connectionStringBuilder.InitialCatalog}");
+                }
+
+                //Even a blank database gets updated below so save if DB is blank when started
+                var isBlank = DbMaintenanceHelper.IsBlank(connectionStringSettings.ConnectionString);
+
                 var installer = new DatabaseInstaller();
                 if (installer.NeedsUpdate(connectionStringSettings.ConnectionString))
                 {
@@ -141,6 +151,21 @@ namespace Gravitybox.Datastore.WinService
                     };
                     installer.Install(setup);
                 }
+
+                //If new database then add file split data files to reduce file locking
+                if (isBlank)
+                {
+                    try
+                    {
+                        DbMaintenanceHelper.SplitDbFiles(connectionStringSettings.ConnectionString);
+                        LoggerCQ.LogInfo("New database has split data files.");
+                    }
+                    catch
+                    {
+                        LoggerCQ.LogWarning("New database could not split data files.");
+                    }
+                }
+
             }
             catch (Exception ex)
             {
@@ -162,7 +187,9 @@ namespace Gravitybox.Datastore.WinService
                     try
                     {
                         //Determine if can connect to port
-                        var p1 = new System.Net.Sockets.TcpClient("localhost", ConfigHelper.Port);
+                        using (var p1 = new System.Net.Sockets.TcpClient("localhost", ConfigHelper.Port))
+                        {
+                        }
                         //If did connect successfully then there is already something on this port
                         isPortFree = false;
                         LoggerCQ.LogInfo($"Port {ConfigHelper.Port} is in use...");
@@ -176,7 +203,7 @@ namespace Gravitybox.Datastore.WinService
                 } while (!isPortFree);
                 #endregion
 
-                var primaryAddress = new Uri("net.tcp://localhost:" + ConfigHelper.Port + "/__datastore_core");
+                var primaryAddress = new Uri($"net.tcp://localhost:{ConfigHelper.Port}/__datastore_core");
                 var primaryHost = new ServiceHost(service, primaryAddress);
 
                 //Initialize the service
@@ -193,6 +220,7 @@ namespace Gravitybox.Datastore.WinService
                 #endregion
 
                 LoadEngine(service);
+                service.Manager.ResetMaster();
 
                 LoggerCQ.LogInfo("Service started complete");
 
@@ -210,7 +238,7 @@ namespace Gravitybox.Datastore.WinService
         private static void LoadEngine(Gravitybox.Datastore.Server.Core.SystemCore core)
         {
             //Load Server Object
-            var baseAddress = new Uri("net.tcp://localhost:" + ConfigHelper.Port + "/__datastore_engine");
+            var baseAddress = new Uri($"net.tcp://localhost:{ConfigHelper.Port}/__datastore_engine");
             var serviceInstance = core.Manager;
             var host = new ServiceHost(serviceInstance, baseAddress);
 

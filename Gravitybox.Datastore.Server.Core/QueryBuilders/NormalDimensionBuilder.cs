@@ -49,14 +49,14 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
                         {
                             var subListNaked = tempDimList.Take(GBSize).Select(x => $"[__d{x.TokenName}]").ToList();
                             var subListTVar = tempDimList.Take(GBSize).Select(x => $"T.[__d{x.TokenName}]").ToList();
-                            sbSql.AppendLine("WITH T ([" + SqlHelper.RecordIdxField + "]," + string.Join(",", subListNaked) + " ) AS (");
-                            sbSql.AppendLine("SELECT DISTINCT [Z].[" + SqlHelper.RecordIdxField + "]," + string.Join(",", subList));
-                            sbSql.AppendLine("FROM [" + _configuration.dataTable + "] Z " + SqlHelper.NoLockText() + _configuration.innerJoinClause + " ");
-                            sbSql.AppendLine("WHERE " + _configuration.whereClause + ")");
-                            sbSql.AppendLine("SELECT count(*)," + string.Join(",", subListTVar));
-                            sbSql.AppendLine("FROM T " + SqlHelper.NoLockText());
+                            sbSql.AppendLine($"WITH T ([{SqlHelper.RecordIdxField}],{subListNaked.ToCommaList()}) AS (");
+                            sbSql.AppendLine($"SELECT DISTINCT [Z].[{SqlHelper.RecordIdxField}],{subList.ToCommaList()}");
+                            sbSql.AppendLine($"FROM [{_configuration.dataTable}] Z {SqlHelper.NoLockText()}{_configuration.innerJoinClause} ");
+                            sbSql.AppendLine($"WHERE {_configuration.whereClause})");
+                            sbSql.AppendLine($"SELECT count(*),{subListTVar.ToCommaList()}");
+                            sbSql.AppendLine($"FROM T {SqlHelper.NoLockText()}");
                             sbSql.AppendLine("group by grouping sets (");
-                            sbSql.AppendLine(string.Join(",", subListTVar));
+                            sbSql.AppendLine(subListTVar.ToCommaList());
                             sbSql.AppendLine(");");
                         }
                         else
@@ -65,21 +65,21 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
                             var realFieldList = tempDimList.Take(GBSize).ToList();
                             foreach (var item in realFieldList)
                             {
-                                var fieldName = "[Z].[__d" + item.TokenName + "]";
+                                var fieldName = $"[Z].[__d{item.TokenName}]";
                                 if (_configuration.schema.FieldList.Any(x => x == item)) sbSql.Append(", " + fieldName);
                                 else sbSql.Append(", NULL AS " + fieldName.Replace("[Z].", string.Empty));
                             }
                             sbSql.AppendLine();
 
-                            sbSql.AppendLine("FROM [" + _configuration.dataTable + "] Z " + SqlHelper.NoLockText() + _configuration.innerJoinClause + " ");
-                            sbSql.AppendLine("WHERE " + _configuration.whereClause + " ");
+                            sbSql.AppendLine($"FROM [{_configuration.dataTable}] Z {SqlHelper.NoLockText()}{_configuration.innerJoinClause} ");
+                            sbSql.AppendLine($"WHERE {_configuration.whereClause} ");
                             sbSql.AppendLine("group by grouping sets (");
                             sbSql.Append((firstGroup ? "()," : string.Empty)); //The "()" is the COUNT field = no grouping
 
                             var index = 0;
                             foreach (var item in realFieldList)
                             {
-                                var fieldName = "[Z].[__d" + item.TokenName + "]";
+                                var fieldName = $"[Z].[__d{item.TokenName}]";
                                 if (index > 0) sbSql.Append(",");
                                 if (_configuration.schema.FieldList.Any(x => x == item)) sbSql.Append(fieldName);
                                 else sbSql.Append("()");
@@ -91,13 +91,15 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
                         }
                         sbSql.AppendLine();
                         tempDimList = tempDimList.Skip(GBSize).ToList();
-                        subList = tempDimList.Take(GBSize).Select(x => "[Z].[__d" + x.TokenName + "]").ToList();
+                        subList = tempDimList.Take(GBSize).Select(x => $"[Z].[__d{x.TokenName}]").ToList();
                         _configuration.dimensionGroups++;
                         firstGroup = false;
                         _doExecute = true;
                     }
                 }
-                _sql = sbSql.ToString().Replace(" AND "+ SqlHelper.EmptyWhereClause, string.Empty).Replace(" WHERE "+ SqlHelper.EmptyWhereClause, string.Empty);
+                _sql = sbSql.ToString()
+                    .Replace($" AND {SqlHelper.EmptyWhereClause}", string.Empty)
+                    .Replace($" WHERE {SqlHelper.EmptyWhereClause}", string.Empty);
                 //Console.WriteLine("NormalDimensionBuilder:GenerateSql:Complete");
             });
         }
@@ -121,7 +123,7 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
                     {
                         RepositoryHealthMonitor.HealthCheck(_configuration.schema.ID);
                         DataManager.AddSkipItem(_configuration.schema.ID);
-                        LoggerCQ.LogError(ex, "NormalDimensionBuilder: ID=" + _configuration.schema.ID + ", Error=" + ex.Message);
+                        LoggerCQ.LogError(ex, $"NormalDimensionBuilder: ID={_configuration.schema.ID}, Error={ex.Message}");
                     }
                 }
                 //Console.WriteLine("NormalDimensionBuilder:Execute:Complete");

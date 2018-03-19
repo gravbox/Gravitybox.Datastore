@@ -5,6 +5,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using Gravitybox.Datastore.Common;
 using System.ComponentModel;
+using System.Globalization;
 
 namespace Gravitybox.Datastore.Common.Queryable
 {
@@ -487,7 +488,11 @@ namespace Gravitybox.Datastore.Common.Queryable
             parser.Visit(methodExpression.Arguments[0]);
 
             var dataQuery = BuildDataQueryFromParser(parser);
-            return new DatastoreResultsAsync(dsService, dataQuery);
+
+            var flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
+            var retval = Activator.CreateInstance(type: returnType, bindingAttr: flags, binder: null, args: new object[] { dsService, dataQuery }, culture: CultureInfo.CurrentCulture);
+            return retval;
+            //return new DatastoreResultsAsync<object>(dsService, dataQuery);
         }
 
         private static void SetResultItems(object resultObj, Type itemType, DataQuery dataQuery, DataQueryResults results, Expression selectExpression)
@@ -561,7 +566,12 @@ namespace Gravitybox.Datastore.Common.Queryable
                         var property = itemType.GetProperty(fieldset.Name);
                         if (property != null && property.CanWrite)
                         {
-                            property.SetValue(obj, value);
+                            if (value ==null)
+                                property.SetValue(obj, null);
+                            else if (property.PropertyType == typeof(Single?) || property.PropertyType == typeof(Single))
+                                property.SetValue(obj, Convert.ToSingle(value));
+                            else
+                                property.SetValue(obj, value);
                         }
                         else
                         {

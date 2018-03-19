@@ -72,7 +72,8 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
                     {
                         var extraFields = string.Empty;
                         if (_configuration.orderByColumns.Any())
-                            extraFields = ", " + string.Join(",", _configuration.orderByFields.Select(x => x.GetSqlDefinition()));
+                            extraFields = ", " + _configuration.orderByFields.Select(x => x.GetSqlDefinition()).ToCommaList();
+                        
 
                         //if (_configuration.query.RecordsPerPage <= SqlHelper.SmallRecordBlock)
                         //{
@@ -106,11 +107,11 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
                             sb.AppendLine($"--MARKER 2");
                             sb.Append($"WITH T ([{SqlHelper.RecordIdxField}]");
                             if (_configuration.orderByColumns.Any())
-                                sb.Append("," + string.Join(",", _configuration.orderByColumns));
+                                sb.Append("," + _configuration.orderByColumns.ToCommaList());
                             sb.Append(") AS (");
                             sb.Append($"    select " + (_configuration.hasFilteredListDims ? "DISTINCT" : string.Empty) + " [Z].[" + SqlHelper.RecordIdxField + "]");
                             if (_configuration.orderByColumns.Any())
-                                sb.Append("," + string.Join(",", _configuration.orderByColumns.Select(x => "Z." + x)));
+                                sb.Append("," + _configuration.orderByColumns.Select(x => "Z." + x).ToCommaList());
                             sb.AppendLine();
                             sb.AppendLine($"    FROM [{_configuration.dataTable}] Z {SqlHelper.NoLockText()}");
                             sb.AppendLine(_configuration.innerJoinClause);

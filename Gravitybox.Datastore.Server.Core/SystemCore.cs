@@ -78,7 +78,7 @@ namespace Gravitybox.Datastore.Server.Core
             : base()
         {
             var builder = new System.Data.SqlClient.SqlConnectionStringBuilder(connectionString);
-            LoggerCQ.LogInfo("Connection: Server=" + builder.DataSource + ", Database=" + builder.InitialCatalog);
+            LoggerCQ.LogInfo($"Connection: Server={builder.DataSource}, Database={builder.InitialCatalog}");
 
             ConfigHelper.ConnectionString = connectionString;
             ConfigHelper.SupportsCompression = SqlHelper.IsEnterpiseVersion(connectionString);
@@ -103,15 +103,20 @@ namespace Gravitybox.Datastore.Server.Core
 
             LoggerCQ.LogInfo("Repositories: Count=" + GetRepositoryCount(new PagingInfo()));
             LoggerCQ.LogInfo("Core initialize: Server=" + Environment.MachineName + ", Mode=x" + (Environment.Is64BitProcess ? "64" : "32") + ", Port=" + ConfigHelper.Port);
-            LoggerCQ.LogInfo("SqlVersion: " + ConfigHelper.SqlVersion);
-            LoggerCQ.LogInfo("SupportsRowsFetch: " + ConfigHelper.SupportsRowsFetch);
-            LoggerCQ.LogInfo("SupportsCompression: " + ConfigHelper.SupportsCompression);
-            LoggerCQ.LogInfo("AllowCaching: " + ConfigHelper.AllowCaching);
-            LoggerCQ.LogInfo("AllowLocking: " + ConfigHelper.AllowLocking);
-            LoggerCQ.LogInfo("DefragIndexes: " + ConfigHelper.DefragIndexes);
-            LoggerCQ.LogInfo("AsyncCachePath: " + ConfigHelper.AsyncCachePath);
-            LoggerCQ.LogInfo("AllowLockStats: " + ConfigHelper.AllowLockStats);
-            LoggerCQ.LogInfo("Timezone: " + TimeZone.CurrentTimeZone.DaylightName);
+            LoggerCQ.LogInfo($"Machine: {Environment.MachineName}");
+            LoggerCQ.LogInfo($"Timezone: {TimeZone.CurrentTimeZone.StandardName}");
+            LoggerCQ.LogInfo($"Local Time: {DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")}");
+            LoggerCQ.LogInfo($"UTC Time: {DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss")}");
+            LoggerCQ.LogInfo($"IP: {Utilities.LocalIPAddress()}");
+            LoggerCQ.LogInfo($"SqlVersion: {ConfigHelper.SqlVersion}");
+            LoggerCQ.LogInfo($"SupportsRowsFetch: {ConfigHelper.SupportsRowsFetch}");
+            LoggerCQ.LogInfo($"SupportsCompression: {ConfigHelper.SupportsCompression}");
+            LoggerCQ.LogInfo($"AllowCaching: {ConfigHelper.AllowCaching}");
+            LoggerCQ.LogInfo($"AllowLocking: {ConfigHelper.AllowLocking}");
+            LoggerCQ.LogInfo($"DefragIndexes: {ConfigHelper.DefragIndexes}");
+            LoggerCQ.LogInfo($"AsyncCachePath: {ConfigHelper.AsyncCachePath}");
+            LoggerCQ.LogInfo($"AllowLockStats: {ConfigHelper.AllowLockStats}");
+            LoggerCQ.LogInfo($"Timezone: {TimeZone.CurrentTimeZone.DaylightName}");
 #if DEBUG
             LoggerCQ.LogInfo("Build: Debug");
 #else

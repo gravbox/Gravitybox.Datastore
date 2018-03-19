@@ -40,25 +40,25 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
                         switch (field.Action)
                         {
                             case AggregateOperationConstants.Count:
-                                sb.Append("COUNT([Z].[" + field.Field + "]), ");
+                                sb.Append($"COUNT([Z].[{field.Field}]), ");
                                 break;
                             case AggregateOperationConstants.Max:
-                                sb.Append("MAX([Z].[" + field.Field + "]), ");
+                                sb.Append($"MAX([Z].[{field.Field}]), ");
                                 break;
                             case AggregateOperationConstants.Min:
-                                sb.Append("MIN([Z].[" + field.Field + "]), ");
+                                sb.Append($"MIN([Z].[{field.Field}]), ");
                                 break;
                             case AggregateOperationConstants.Sum:
-                                sb.Append("SUM([Z].[" + field.Field + "]), ");
+                                sb.Append($"SUM([Z].[{field.Field}]), ");
                                 break;
                             case AggregateOperationConstants.Distinct:
-                                sb.Append("COUNT(DISTINCT [Z].[" + field.Field + "]), ");
+                                sb.Append($"COUNT(DISTINCT [Z].[{field.Field}]), ");
                                 break;
                         }
                     }
                     sb.AppendLine("0");
-                    sb.AppendLine("FROM [" + _configuration.dataTable + "] Z " + SqlHelper.NoLockText() + _configuration.innerJoinClause);
-                    sb.AppendLine("WHERE " + _configuration.whereClause);
+                    sb.AppendLine($"FROM [{_configuration.dataTable}] Z {SqlHelper.NoLockText()}{_configuration.innerJoinClause}");
+                    sb.AppendLine($"WHERE {_configuration.whereClause}");
                     _sql = sb.ToString();
                 }
             });

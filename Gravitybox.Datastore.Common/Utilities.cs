@@ -94,6 +94,23 @@ namespace Gravitybox.Datastore.Common
         }
 
         /// <summary />
+        public static string LocalIPAddress()
+        {
+            try
+            {
+                if (!System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable())
+                    return null;
+
+                var host = System.Net.Dns.GetHostEntry(System.Net.Dns.GetHostName());
+                return string.Join(",", host
+                    .AddressList
+                    .Where(ip => ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+                    .Select(x => x.ToString()));
+            }
+            catch { return null; }
+        }
+
+        /// <summary />
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static T Clone<T>(T source)
         {

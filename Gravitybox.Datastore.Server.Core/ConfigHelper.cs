@@ -276,7 +276,7 @@ namespace Gravitybox.Datastore.Server.Core
 
         public static bool DefragIndexes
         {
-            get { return GetValue("DefragIndexes", false); }
+            get { return GetValue("DefragIndexes", true); }
             set { SetValue("DefragIndexes", value); }
         }
 

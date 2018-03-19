@@ -47,7 +47,7 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
                             groupListSql.Add($"[Z].[{field.TokenName}]");
                         }
 
-                        groupSql = string.Join(",", groupListSql);
+                        groupSql = groupListSql.ToCommaList();
                     }
                     #endregion
 

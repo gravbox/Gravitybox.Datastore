@@ -100,7 +100,7 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
                     }
                 }
 
-                fieldSql = string.Join(",", fieldListSql);
+                fieldSql = fieldListSql.ToCommaList();
             }
             #endregion
 
@@ -118,10 +118,10 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
 
                 foreach (var field in fields)
                 {
-                    groupListSql.Add("[Z].[" + field.TokenName + "]");
+                    groupListSql.Add($"[Z].[{field.TokenName}]");
                 }
 
-                groupSql = string.Join(",", groupListSql);
+                groupSql = groupListSql.ToCommaList();
             }
             #endregion
 
@@ -136,25 +136,25 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
                 if (_configuration.query.RecordsPerPage <= 0 || _configuration.query.RecordsPerPage == int.MaxValue)
                 {
                     //No paging...this is faster
-                    sbSql.AppendLine("SELECT " + fieldSql);
-                    sbSql.AppendLine("FROM [" + _configuration.dataTable + "] Z " + SqlHelper.NoLockText() + _configuration.innerJoinClause);
-                    sbSql.AppendLine("WHERE " + _configuration.whereClause);
-                    sbSql.AppendLine("GROUP BY " + groupSql);
-                    sbSql.AppendLine("ORDER BY " + groupSql);
+                    sbSql.AppendLine($"SELECT {fieldSql}");
+                    sbSql.AppendLine($"FROM [{_configuration.dataTable}] Z {SqlHelper.NoLockText()}{_configuration.innerJoinClause}");
+                    sbSql.AppendLine($"WHERE {_configuration.whereClause}");
+                    sbSql.AppendLine($"GROUP BY {groupSql}");
+                    sbSql.AppendLine($"ORDER BY {groupSql}");
                 }
                 else
                 {
                     //Big records so do NOT select into temp table
-                    sbSql.AppendLine("WITH T ([" + SqlHelper.RecordIdxField + "]) AS (");
-                    sbSql.AppendLine("SELECT " + (_configuration.hasFilteredListDims ? "DISTINCT" : string.Empty) + " [Z].[" + SqlHelper.RecordIdxField + "]");
-                    sbSql.AppendLine("FROM [" + _configuration.dataTable + "] Z " + SqlHelper.NoLockText() + _configuration.innerJoinClause);
-                    sbSql.AppendLine("WHERE " + _configuration.whereClause);
-                    sbSql.AppendLine("), S ([" + SqlHelper.RecordIdxField + "]) AS ( select distinct T.[" + SqlHelper.RecordIdxField + "] from T )");
-                    sbSql.AppendLine("SELECT " + fieldSql);
-                    sbSql.AppendLine("FROM [" + _configuration.dataTable + "] Z " + SqlHelper.NoLockText() + " inner join S on [Z].[" + SqlHelper.RecordIdxField + "] = S.[" + SqlHelper.RecordIdxField + "]");
-                    sbSql.AppendLine("GROUP BY " + groupSql);
-                    sbSql.AppendLine("ORDER BY " + groupSql);
-                    sbSql.AppendLine("OFFSET (@startindex-1) ROWS FETCH FIRST (@endindex-@startindex) ROWS ONLY");
+                    sbSql.AppendLine($"WITH T ([{SqlHelper.RecordIdxField}]) AS (");
+                    sbSql.AppendLine($"SELECT {(_configuration.hasFilteredListDims ? "DISTINCT" : string.Empty)} [Z].[{SqlHelper.RecordIdxField}]");
+                    sbSql.AppendLine($"FROM [{_configuration.dataTable}] Z {SqlHelper.NoLockText()}{_configuration.innerJoinClause}");
+                    sbSql.AppendLine($"WHERE {_configuration.whereClause}");
+                    sbSql.AppendLine($"), S ([{SqlHelper.RecordIdxField}]) AS ( select distinct T.[{SqlHelper.RecordIdxField}] from T )");
+                    sbSql.AppendLine($"SELECT {fieldSql}");
+                    sbSql.AppendLine($"FROM [{_configuration.dataTable}] Z {SqlHelper.NoLockText()} inner join S on [Z].[{SqlHelper.RecordIdxField}] = S.[{SqlHelper.RecordIdxField}]");
+                    sbSql.AppendLine($"GROUP BY {groupSql}");
+                    sbSql.AppendLine($"ORDER BY {groupSql}");
+                    sbSql.AppendLine($"OFFSET (@startindex-1) ROWS FETCH FIRST (@endindex-@startindex) ROWS ONLY");
                 }
                 sbSql.AppendLine(";");
             }
@@ -197,11 +197,11 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
 
             foreach (var field in fields)
             {
-                if (field.DataType == RepositorySchema.DataTypeConstants.List) fieldListSql.Add("0 AS [__" + field.TokenName + "]");
-                else fieldListSql.Add("[Z].[" + field.TokenName + "]");
+                if (field.DataType == RepositorySchema.DataTypeConstants.List) fieldListSql.Add($"0 AS [__{field.TokenName}]");
+                else fieldListSql.Add($"[Z].[{field.TokenName}]");
             }
 
-            var fieldSql = string.Join(",", fieldListSql) + ", [Z].[" + SqlHelper.RecordIdxField + "], [Z].[" + SqlHelper.TimestampField + "], [Z].[" + SqlHelper.HashField + "]";
+            var fieldSql = $"{fieldListSql.ToCommaList()}, [Z].[{SqlHelper.RecordIdxField}], [Z].[{SqlHelper.TimestampField}], [Z].[{SqlHelper.HashField}]";
 
             #endregion
 
@@ -219,10 +219,10 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
                 if (_configuration.query.RecordsPerPage <= 0 || _configuration.query.RecordsPerPage == int.MaxValue)
                 {
                     //No paging...this is faster
-                    sbSql.AppendLine("SELECT " + fieldSql);
-                    sbSql.AppendLine("FROM [" + _configuration.dataTable + "] Z " + SqlHelper.NoLockText() + _configuration.innerJoinClause);
-                    sbSql.AppendLine("WHERE " + _configuration.whereClause);
-                    sbSql.AppendLine("ORDER BY " + _configuration.orderByClause);
+                    sbSql.AppendLine($"SELECT {fieldSql}");
+                    sbSql.AppendLine($"FROM [{_configuration.dataTable}] Z {SqlHelper.NoLockText()}{_configuration.innerJoinClause}");
+                    sbSql.AppendLine($"WHERE {_configuration.whereClause}");
+                    sbSql.AppendLine($"ORDER BY {_configuration.orderByClause}");
                 }
                 #region OLD CODE - There is no need to select into a temp object
                 //else if (_configuration.query.RecordsPerPage <= SqlHelper.SmallRecordBlock && !_configuration.hasFilteredListDims)
@@ -280,7 +280,9 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
 
             #endregion
 
-            _sql = sbSql.ToString().Replace(" AND " + SqlHelper.EmptyWhereClause, string.Empty).Replace(" WHERE " + SqlHelper.EmptyWhereClause, string.Empty);
+            _sql = sbSql.ToString()
+                .Replace(" AND " + SqlHelper.EmptyWhereClause, string.Empty)
+                .Replace(" WHERE " + SqlHelper.EmptyWhereClause, string.Empty);
             //Console.WriteLine("RecordBuilder:GenerateSql:Complete");
         }
 
@@ -298,7 +300,7 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
                 {
                     RepositoryHealthMonitor.HealthCheck(_configuration.schema.ID);
                     DataManager.AddSkipItem(_configuration.schema.ID);
-                    LoggerCQ.LogError(ex, "RecordBuilder: ID=" + _configuration.schema.ID + ", Error=" + ex.Message);
+                    LoggerCQ.LogError(ex, $"RecordBuilder: ID={_configuration.schema.ID}, Error={ex.Message}");
                 }
             });
         }

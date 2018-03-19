@@ -409,6 +409,8 @@ namespace Gravitybox.Datastore.EFDAL
 		{
 			if (optimizer == null)
 				optimizer = new QueryOptimizer();
+			if (query == null)
+				throw new Exception("Query must be set");
 
 			//There is nothing to do
 			if (query.ToString().Replace("\r", string.Empty).Split(new char[] { '\n' }).LastOrDefault().Trim() == "WHERE 1 = 0")
@@ -444,7 +446,8 @@ namespace Gravitybox.Datastore.EFDAL
 						var context = context2.GetValue(query.Provider);
 						objectContext = context as System.Data.Entity.Core.Objects.ObjectContext;
 						var qq = objectContext.InterceptionContext.DbContexts.First() as Gravitybox.Datastore.EFDAL.IDatastoreEntities;
-						instanceKey = qq.InstanceKey;
+						if (qq != null)
+							instanceKey = qq.InstanceKey;
 						if (string.IsNullOrEmpty(connectionString))
 						{
 							connectionString = Util.StripEFCS2Normal(objectContext.Connection.ConnectionString);
@@ -662,6 +665,8 @@ namespace Gravitybox.Datastore.EFDAL
 
 			if (optimizer == null)
 				optimizer = new QueryOptimizer();
+			if (query == null)
+				throw new Exception("Query must be set");
 
 			//There is nothing to do
 			if (query.ToString().Replace("\r", string.Empty).Split(new char[] { '\n' }).LastOrDefault().Trim() == "WHERE 1 = 0")

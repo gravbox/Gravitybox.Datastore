@@ -1337,19 +1337,19 @@ namespace Gravitybox.Datastore.Common.Queryable
         }
 
         /// <summary />
-        public static DatastoreResultsAsync ResultsAsync<TSourceType>(this IDatastoreQueryable<TSourceType> source)
-            where TSourceType : IDatastoreItem
+        public static DatastoreResultsAsync<TSourceType> ResultsAsync<TSourceType>(this IDatastoreQueryable<TSourceType> source)
+            where TSourceType : IDatastoreItem, new()
         {
             if (source == null)
                 throw new ArgumentNullException(ERROR_SOURCE);
 
             try
             {
-                DatastoreResultsAsync retval = null;
+                DatastoreResultsAsync<TSourceType> retval = null;
                 RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
                     .Execute(() =>
                     {
-                        retval = (DatastoreResultsAsync)source.Provider.Execute<DatastoreResultsAsync>(
+                        retval = (DatastoreResultsAsync<TSourceType>)source.Provider.Execute<DatastoreResultsAsync<TSourceType>>(
                             Expression.Call(
                                 null,
                                 GetMethodInfo(DatastoreExtensions.ResultsAsync<TSourceType>, source),
