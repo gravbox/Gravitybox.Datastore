@@ -7,7 +7,7 @@ namespace Gravitybox.Datastore.Common.Exceptions
 {
     /// <summary />
     [Serializable]
-    public class NotMasterInstanceException : System.Exception
+    public class NotMasterInstanceException : System.ServiceModel.FaultException
     {
         /// <summary />
         public NotMasterInstanceException() : base("The service instance is not the master.") { }

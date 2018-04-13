@@ -58,7 +58,7 @@ namespace Gravitybox.Datastore.Server.Core
             this.ReadLockCount = m_Lock.CurrentReadCount;
             this.WaitingLocksOnEntry = m_Lock.WaitingWriteCount;
             if (this.WaitingLocksOnEntry > 10)
-                LoggerCQ.LogWarning("AcquireReaderLock Waiting Writer Locks: Count=" + this.WaitingLocksOnEntry + ", RepositoryId=" + id + ", TraceInfo=" + traceInfo);
+                LoggerCQ.LogWarning($"AcquireReaderLock Waiting Writer Locks: Count={this.WaitingLocksOnEntry}, RepositoryId={id}, TraceInfo={traceInfo}");
 
             if (!m_Lock.TryEnterReadLock(TimeOut))
             {
@@ -66,13 +66,13 @@ namespace Gravitybox.Datastore.Server.Core
 
                 throw new Exception("Could not get reader lock: " +
                     ((m_Lock.ObjectId == Guid.Empty) ? string.Empty : "ID=" + m_Lock.ObjectId) +
-                    ", CurrentReadCount=" + m_Lock.CurrentReadCount +
-                    ", WaitingReadCount=" + m_Lock.WaitingReadCount +
-                    ", WaitingWriteCount=" + m_Lock.WaitingWriteCount +
-                    ", HoldingThread=" + m_Lock.HoldingThreadId +
-                    ", TraceInfo=" + m_Lock.TraceInfo +
-                    ", LockFailTime=" + (int)DateTime.Now.Subtract(_initTime).TotalMilliseconds +
-                    ", WriteHeldTime=" + m_Lock.WriteHeldTime);
+                    $", CurrentReadCount={m_Lock.CurrentReadCount}" +
+                    $", WaitingReadCount={m_Lock.WaitingReadCount}" +
+                    $", WaitingWriteCount={m_Lock.WaitingWriteCount}" +
+                    $", HoldingThread={m_Lock.HoldingThreadId}" +
+                    $", TraceInfo={m_Lock.TraceInfo}" +
+                    $", LockFailTime={(int)DateTime.Now.Subtract(_initTime).TotalMilliseconds}" +
+                    $", WriteHeldTime={m_Lock.WriteHeldTime}");
             }
 
             this.LockTime = (int)DateTime.Now.Subtract(_initTime).TotalMilliseconds;
@@ -109,12 +109,16 @@ namespace Gravitybox.Datastore.Server.Core
                 if (disposing && m_Lock != null)
                 {
                     var traceInfo = m_Lock.TraceInfo;
-                    var totalTime = DateTime.Now.Subtract(_initTime);
+                    var elapsed = (int)DateTime.Now.Subtract(_initTime).TotalMilliseconds;
                     if (!_inError)
                     {
-                        DateTime dt;
-                        if (!m_Lock.HeldReads.TryRemove(_lockIndex, out dt))
-                            LoggerCQ.LogWarning("HeldReads was not released. ObjectId=" + m_Lock.ObjectId + ", Index=" + _lockIndex + ", TraceInfo=" + m_Lock.TraceInfo + ", Elapsed=" + totalTime.TotalMilliseconds);
+                        if (_lockIndex != 0)
+                        {
+                            DateTime dt;
+                            if (!m_Lock.HeldReads.TryRemove(_lockIndex, out dt))
+                                LoggerCQ.LogWarning($"HeldReads was not released. ObjectId={m_Lock.ObjectId}, Index={_lockIndex}, TraceInfo={m_Lock.TraceInfo}, Elapsed={elapsed}");
+                            _lockIndex = 0;
+                        }
                         m_Lock.TraceInfo = null;
                         m_Lock.HoldingThreadId = null;
                     }
@@ -122,8 +126,8 @@ namespace Gravitybox.Datastore.Server.Core
                     if (ConfigHelper.AllowLocking)
                         m_Lock.ExitReadLock();
 
-                    if (totalTime.TotalSeconds > 60)
-                        LoggerCQ.LogWarning("ReaderLock Long: Elapsed=" + totalTime.TotalSeconds);
+                    if (elapsed > 60000)
+                        LoggerCQ.LogWarning($"ReaderLock Long: Elapsed={elapsed}");
                 }
             }
             m_Disposed = true;
@@ -158,7 +162,7 @@ namespace Gravitybox.Datastore.Server.Core
             this.ReadLockCount = m_Lock.CurrentReadCount;
             this.WaitingLocksOnEntry = m_Lock.WaitingWriteCount;
             if (this.WaitingLocksOnEntry > 10)
-                LoggerCQ.LogWarning("AcquireWriterLock Waiting Writer Locks: Count=" + this.WaitingLocksOnEntry + ", RepositoryId=" + id + ", TraceInfo=" + traceInfo);
+                LoggerCQ.LogWarning($"AcquireWriterLock Waiting Writer Locks: Count=" + this.WaitingLocksOnEntry + ", RepositoryId=" + id + ", TraceInfo=" + traceInfo);
 
             //If there is another write lock held then wait to enter and give the read locks to run
             //This is a hack to address the issue with the lock object: it prioritizes writes and starves reads
@@ -174,7 +178,7 @@ namespace Gravitybox.Datastore.Server.Core
 
             var delay = (int)DateTime.Now.Subtract(_initTime).TotalMilliseconds;
             if (lockHeld)
-                LoggerCQ.LogDebug("AcquireWriterLock: Held=" + delay + ", RepositoryId=" + id + ", TraceInfo=" + traceInfo);
+                LoggerCQ.LogDebug($"AcquireWriterLock: Held={delay}, RepositoryId={id}, TraceInfo={traceInfo}");
 
             var timeoutValue = TimeOut - delay;
             if (!m_Lock.TryEnterWriteLock(timeoutValue))
@@ -195,14 +199,14 @@ namespace Gravitybox.Datastore.Server.Core
                 var lapses = string.Join("-", m_Lock.HeldReads.Values.ToList().Select(x => (int)DateTime.Now.Subtract(x).TotalSeconds).ToList());
                 throw new Exception("Could not get writer lock: " +
                     ((m_Lock.ObjectId == Guid.Empty) ? string.Empty : "ID=" + m_Lock.ObjectId) +
-                    ", CurrentReadCount=" + m_Lock.CurrentReadCount +
-                    ", WaitingReadCount=" + m_Lock.WaitingReadCount +
-                    ", WaitingWriteCount=" + m_Lock.WaitingWriteCount +
-                    ", HoldingThread=" + m_Lock.HoldingThreadId +
-                    ", TraceInfo=" + m_Lock.TraceInfo +
-                    ", WriteHeldTime=" + m_Lock.WriteHeldTime +
-                    ", LockFailTime=" + (int)DateTime.Now.Subtract(_initTime).TotalMilliseconds +
-                    ", Lapses=" + lapses);
+                    $", CurrentReadCount={m_Lock.CurrentReadCount}" +
+                    $", WaitingReadCount={m_Lock.WaitingReadCount}" +
+                    $", WaitingWriteCount={m_Lock.WaitingWriteCount}" +
+                    $", HoldingThread={m_Lock.HoldingThreadId}" +
+                    $", TraceInfo={m_Lock.TraceInfo}" +
+                    $", WriteHeldTime={m_Lock.WriteHeldTime}" +
+                    $", LockFailTime={(int)DateTime.Now.Subtract(_initTime).TotalMilliseconds}" +
+                    $", Lapses={lapses}");
             }
 
             this.LockTime = (int)DateTime.Now.Subtract(_initTime).TotalMilliseconds;
@@ -246,9 +250,9 @@ namespace Gravitybox.Datastore.Server.Core
                 {
                     m_Lock.ExitWriteLock();
 
-                    var totalTime = (int)DateTime.Now.Subtract(_initTime).TotalSeconds;
-                    if (totalTime > 60)
-                        LoggerCQ.LogWarning("WriterLock Long: Elapsed=" + totalTime);
+                    var totalTime = (int)DateTime.Now.Subtract(_initTime).TotalMilliseconds;
+                    if (totalTime > 60000)
+                        LoggerCQ.LogWarning($"WriterLock Long: Elapsed={totalTime}");
 
                     RepositoryManager.SystemCore.LogLockStat(new LockInfoItem
                     {

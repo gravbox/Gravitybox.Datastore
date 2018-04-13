@@ -49,6 +49,7 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
                         {
                             var subListNaked = tempDimList.Take(GBSize).Select(x => $"[__d{x.TokenName}]").ToList();
                             var subListTVar = tempDimList.Take(GBSize).Select(x => $"T.[__d{x.TokenName}]").ToList();
+                            sbSql.AppendLine($"--MARKER 15");
                             sbSql.AppendLine($"WITH T ([{SqlHelper.RecordIdxField}],{subListNaked.ToCommaList()}) AS (");
                             sbSql.AppendLine($"SELECT DISTINCT [Z].[{SqlHelper.RecordIdxField}],{subList.ToCommaList()}");
                             sbSql.AppendLine($"FROM [{_configuration.dataTable}] Z {SqlHelper.NoLockText()}{_configuration.innerJoinClause} ");
@@ -61,6 +62,7 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
                         }
                         else
                         {
+                            sbSql.AppendLine($"--MARKER 16");
                             sbSql.Append("SELECT count(*)");
                             var realFieldList = tempDimList.Take(GBSize).ToList();
                             foreach (var item in realFieldList)

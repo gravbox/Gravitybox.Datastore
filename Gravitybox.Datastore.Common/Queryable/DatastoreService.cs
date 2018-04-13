@@ -96,13 +96,7 @@ namespace Gravitybox.Datastore.Common.Queryable
         public virtual ActionDiagnostics ClearRepository()
         {
             ValidateService();
-
-            var result = DataModelService.Clear(this.RepositoryId);
-            if (result?.Errors?.Length > 0)
-            {
-                throw new Exception(result.Errors.First());
-            }
-            return result;
+            return DataModelService.Clear(this.RepositoryId);
         }
 
         /// <summary />
@@ -182,7 +176,15 @@ namespace Gravitybox.Datastore.Common.Queryable
         internal virtual bool QueryAsyncReady(Guid hookId)
         {
             ValidateService();
-            return DataModelService.QueryAsyncReady(hookId);
+
+            //Try multiple times in case of communication error
+            var retval = false;
+            RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
+                .Execute(() =>
+                {
+                    retval = DataModelService.QueryAsyncReady(hookId);
+                });
+            return retval;
         }
 
         internal virtual byte[] QueryAsyncDownload(Guid hookId, long chunk)
@@ -256,17 +258,10 @@ namespace Gravitybox.Datastore.Common.Queryable
         public virtual ActionDiagnostics UpdateData(IEnumerable<DataItem> dataItems)
         {
             ValidateService();
-
             var schema = Schema;
             if (schema == null) throw new Exception("The schema is not set.");
             if (schema.ID != this.RepositoryId) throw new Exception("The schema does not match the RepositoryID.");
-
-            var result = DataModelService.UpdateData(schema, dataItems);
-            if (result?.Errors?.Length > 0)
-            {
-                throw new Exception(result.Errors.First());
-            }
-            return result;
+            return DataModelService.UpdateData(schema, dataItems);
         }
 
         /// <summary />
@@ -276,13 +271,7 @@ namespace Gravitybox.Datastore.Common.Queryable
             var schema = Schema;
             if (schema == null) throw new Exception("The schema is not set.");
             if (schema.ID != this.RepositoryId) throw new Exception("The schema does not match the RepositoryID.");
-
-            var result = DataModelService.DeleteData(schema, query);
-            if (result?.Errors?.Length > 0)
-            {
-                throw new Exception(result.Errors.First());
-            }
-            return result;
+            return DataModelService.DeleteData(schema, query);
         }
 
         /// <summary />
@@ -292,13 +281,7 @@ namespace Gravitybox.Datastore.Common.Queryable
             var schema = Schema;
             if (schema == null) throw new Exception("The schema is not set.");
             if (schema.ID != this.RepositoryId) throw new Exception("The schema does not match the RepositoryID.");
-
-            var result = DataModelService.UpdateDataWhere(schema, query, list);
-            if (result?.Errors?.Length > 0)
-            {
-                throw new Exception(result.Errors.First());
-            }
-            return result;
+            return DataModelService.UpdateDataWhere(schema, query, list);
         }
 
         /// <summary />
@@ -615,6 +598,27 @@ namespace Gravitybox.Datastore.Common.Queryable
         /// <summary />
         protected virtual void Dispose(bool disposing)
         {
+            if (this.DataModelService is IClientChannel channel)
+            {
+                try
+                {
+                    if (channel.State != CommunicationState.Faulted)
+                        channel.Close();
+                }
+                catch (Exception)
+                {
+                    //Do Nothing
+                    channel.Abort();
+                }
+                finally
+                {
+                    if (channel.State != CommunicationState.Closed)
+                        channel.Abort();
+                    channel = null;
+                }
+            }
+            this.DataModelService = null;
+
             if (ChannelFactory != null)
             {
                 try
@@ -625,6 +629,7 @@ namespace Gravitybox.Datastore.Common.Queryable
                 catch (Exception)
                 {
                     //Do Nothing
+                    ChannelFactory.Abort();
                 }
                 finally
                 {
@@ -633,6 +638,7 @@ namespace Gravitybox.Datastore.Common.Queryable
                     ChannelFactory = null;
                 }
             }
+
         }
 
         /// <summary />

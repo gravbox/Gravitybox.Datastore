@@ -17,6 +17,7 @@ namespace Gravitybox.Datastore.WinService
     {
         #region Class Members
 
+        private const int ThrottleMax = 1000;
         private static Gravitybox.Datastore.Common.ISystemCore _core = null;
         private bool _echoConsole = false;
 
@@ -62,7 +63,7 @@ namespace Gravitybox.Datastore.WinService
             }
             catch (Exception ex)
             {
-                LoggerCQ.LogError(ex);
+                LoggerCQ.LogError("Error 0x2400: Shutdown Failed");
             }
 
             LoggerCQ.LogInfo("Services Stopped");
@@ -79,7 +80,7 @@ namespace Gravitybox.Datastore.WinService
             }
             catch (Exception ex)
             {
-                LoggerCQ.LogError(ex);
+                LoggerCQ.LogError("Error 0x2401: Shutdown Failed");
                 throw;
             }
         }
@@ -208,8 +209,19 @@ namespace Gravitybox.Datastore.WinService
 
                 //Initialize the service
                 var netTcpBinding = new NetTcpBinding();
+                netTcpBinding.MaxConnections = ThrottleMax;
                 netTcpBinding.Security.Mode = SecurityMode.None;
                 primaryHost.AddServiceEndpoint(typeof(Gravitybox.Datastore.Common.ISystemCore), netTcpBinding, string.Empty);
+
+                //Add more threads
+                var stb = new ServiceThrottlingBehavior
+                {
+                    MaxConcurrentSessions = ThrottleMax,
+                    MaxConcurrentCalls = ThrottleMax,
+                    MaxConcurrentInstances = ThrottleMax,
+                };
+                primaryHost.Description.Behaviors.Add(stb);
+
                 primaryHost.Open();
 
                 //Create Core Listener
@@ -221,12 +233,8 @@ namespace Gravitybox.Datastore.WinService
 
                 LoadEngine(service);
                 service.Manager.ResetMaster();
-
                 LoggerCQ.LogInfo("Service started complete");
-
-                //Initialize instances for fail over
                 ConfigHelper.StartUp();
-
             }
             catch (Exception ex)
             {
@@ -248,6 +256,7 @@ namespace Gravitybox.Datastore.WinService
                 MaxBufferSize = int.MaxValue,
                 MaxReceivedMessageSize = int.MaxValue,
                 MaxBufferPoolSize = 0,
+                MaxConnections = ThrottleMax,
                 ReaderQuotas = new System.Xml.XmlDictionaryReaderQuotas()
                 {
                     MaxArrayLength = int.MaxValue,
@@ -277,6 +286,15 @@ namespace Gravitybox.Datastore.WinService
             var behavior = host.Description.Behaviors.FirstOrDefault(x => x is System.ServiceModel.ServiceBehaviorAttribute);
             if (behavior != null)
                 ((System.ServiceModel.ServiceBehaviorAttribute)behavior).IncludeExceptionDetailInFaults = true;
+
+            //Add more threads
+            var stb = new ServiceThrottlingBehavior
+            {
+                MaxConcurrentSessions = ThrottleMax,
+                MaxConcurrentCalls = ThrottleMax,
+                MaxConcurrentInstances = ThrottleMax,
+            };
+            host.Description.Behaviors.Add(stb);
 
             host.Open();
         }

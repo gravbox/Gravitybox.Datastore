@@ -23,8 +23,11 @@ namespace Gravitybox.Datastore.Server.Core
             get { return _connectionString; }
             set
             {
-                _connectionString = value;
-                Refresh();
+                if (_connectionString != value)
+                {
+                    _connectionString = value;
+                    Refresh();
+                }
             }
         }
 
@@ -313,6 +316,10 @@ namespace Gravitybox.Datastore.Server.Core
         public static Guid CurrentMaster { get; private set; }
 
         private static double _serverTimeSkew = 0;
+
+        /// <summary>
+        /// Initialize instances for fail over
+        /// </summary>
         public static void StartUp()
         {
             try

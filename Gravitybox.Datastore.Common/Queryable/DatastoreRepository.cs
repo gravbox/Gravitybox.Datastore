@@ -153,14 +153,8 @@ namespace Gravitybox.Datastore.Common.Queryable
             query.IncludeRecords = true;
             query.IncludeDimensions = false;
 
-            var retval = false;
-            RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
-                .Execute(() =>
-                {
-                    var results = _datastoreService.Query(query);
-                    retval = _datastoreService.IsFieldsetValidForType(results.Fieldset, typeof(TSourceType));
-                });
-            return retval;
+            var results = _datastoreService.Query(query);
+            return _datastoreService.IsFieldsetValidForType(results.Fieldset, typeof(TSourceType));
         }
 
         /// <summary>
@@ -193,13 +187,7 @@ namespace Gravitybox.Datastore.Common.Queryable
         /// </summary>
         public virtual bool RepositoryExists()
         {
-            var retval = false;
-            RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
-                .Execute(() =>
-                {
-                    retval = _datastoreService.RepositoryExists();
-                });
-            return retval;
+            return _datastoreService.RepositoryExists();
         }
 
         /// <summary>
@@ -207,13 +195,7 @@ namespace Gravitybox.Datastore.Common.Queryable
         /// </summary>
         public virtual bool DeleteRepository()
         {
-            var retval = false;
-            RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
-                .Execute(() =>
-                {
-                    retval = _datastoreService.DeleteRepository();
-                });
-            return retval;
+            return _datastoreService.DeleteRepository();
         }
 
         /// <summary>
@@ -221,13 +203,7 @@ namespace Gravitybox.Datastore.Common.Queryable
         /// </summary>
         public virtual ActionDiagnostics ClearRepository()
         {
-            ActionDiagnostics retval = null;
-            RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
-                .Execute(() =>
-                {
-                    retval = _datastoreService.ClearRepository();
-                });
-            return retval;
+            return _datastoreService.ClearRepository();
         }
 
         /// <summary>
@@ -238,11 +214,7 @@ namespace Gravitybox.Datastore.Common.Queryable
             var schema = LoadSchemaTemplate();
             schema.ID = this.RepositoryId;
             schema.Name = name ?? string.Empty;
-            RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
-                .Execute(() =>
-                {
-                    _datastoreService.CreateRepository(schema);
-                });
+            _datastoreService.CreateRepository(schema);
         }
 
         /// <summary>
@@ -253,11 +225,7 @@ namespace Gravitybox.Datastore.Common.Queryable
             var schema = LoadSchemaTemplate();
             schema.ID = repositoryid;
             schema.Name = name ?? string.Empty;
-            RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
-                .Execute(() =>
-                {
-                    _datastoreService.CreateRepository(schema);
-                });
+            _datastoreService.CreateRepository(schema);
         }
 
         /// <summary>
@@ -275,13 +243,7 @@ namespace Gravitybox.Datastore.Common.Queryable
         /// </summary>
         public virtual RepositorySchema GetSchema()
         {
-            RepositorySchema retval = null;
-            RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
-                .Execute(() =>
-                {
-                    retval = _datastoreService.Schema;
-                });
-            return retval;
+            return _datastoreService.Schema;
         }
 
         /// <summary>
@@ -291,13 +253,7 @@ namespace Gravitybox.Datastore.Common.Queryable
         /// <returns></returns>
         public virtual long GetDataVersion()
         {
-            long retval = 0;
-            RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
-                .Execute(() =>
-                {
-                    retval = _datastoreService.GetDataVersion();
-                });
-            return retval;
+            return _datastoreService.GetDataVersion();
         }
 
         /// <summary>
@@ -325,13 +281,7 @@ namespace Gravitybox.Datastore.Common.Queryable
         /// </summary>
         public virtual ActionDiagnostics UpdateSchema(RepositorySchema schema)
         {
-            ActionDiagnostics retval = null;
-            RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
-                .Execute(() =>
-                {
-                    retval = _datastoreService.UpdateSchema(schema);
-                });
-            return retval;
+            return _datastoreService.UpdateSchema(schema);
         }
 
         /// <summary>
@@ -340,11 +290,7 @@ namespace Gravitybox.Datastore.Common.Queryable
         /// </summary>
         public virtual void ResetSchema(RepositorySchema schema)
         {
-            RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
-                .Execute(() =>
-                {
-                    _datastoreService.Schema = schema;
-                });
+            _datastoreService.Schema = schema;
         }
 
         /// <summary>
@@ -361,13 +307,8 @@ namespace Gravitybox.Datastore.Common.Queryable
         public virtual ActionDiagnostics InsertOrUpdate(List<TSourceType> itemsToInsert)
         {
             var genericType = typeof(TSourceType);
-            RepositorySchema schema = null;
+            var schema = _datastoreService.Schema;
 
-            RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
-                .Execute(() =>
-                {
-                    schema = _datastoreService.Schema;
-                });
             if (schema == null)
                 throw new Exception("Schema is null");
             if (schema.FieldList == null)
@@ -416,12 +357,7 @@ namespace Gravitybox.Datastore.Common.Queryable
                 dataItems.Add(dataItem);
             }
 
-            ActionDiagnostics retval = null;
-            RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
-                .Execute(() => {
-                    retval = _datastoreService.UpdateData(dataItems);
-                });
-            return retval;
+            return _datastoreService.UpdateData(dataItems);
         }
 
         /// <summary>
@@ -449,83 +385,50 @@ namespace Gravitybox.Datastore.Common.Queryable
         /// <summary />
         public virtual void AddPermissions(IEnumerable<PermissionItem> list)
         {
-            RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
-                .Execute(() => {
-                    _datastoreService.AddPermissions(list);
-                });
+            _datastoreService.AddPermissions(list);
         }
 
         /// <summary />
         public virtual void ClearPermissions(string fieldValue)
         {
-            RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
-                .Execute(() => {
-                    _datastoreService.ClearPermissions(fieldValue);
-                });
+            _datastoreService.ClearPermissions(fieldValue);
         }
 
         /// <summary />
         public virtual void ClearPermissions(int? fieldValue)
         {
-            RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
-                .Execute(() =>
-                {
-                    if (fieldValue == null) _datastoreService.ClearPermissions(null);
-                    else _datastoreService.ClearPermissions(fieldValue.ToString());
-                });
+            if (fieldValue == null) _datastoreService.ClearPermissions(null);
+            else _datastoreService.ClearPermissions(fieldValue.ToString());
         }
 
         /// <summary />
         public virtual void ClearUserPermissions(int userId)
         {
-            RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
-                .Execute(() =>
-                {
-                    _datastoreService.ClearUserPermissions(userId);
-                });
+            _datastoreService.ClearUserPermissions(userId);
         }
 
         /// <summary />
         public virtual void DeletePermissions(IEnumerable<PermissionItem> list)
         {
-            RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
-                .Execute(() => {
-                    _datastoreService.DeletePermissions(list);
-                });
+            _datastoreService.DeletePermissions(list);
         }
 
         /// <summary />
         public virtual bool ResetDimensionValue(long dvidx, string value)
         {
-            var retval = false;
-            RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
-                .Execute(() => {
-                    retval = _datastoreService.ResetDimensionValue(dvidx, value);
-                });
-            return retval;
+            return _datastoreService.ResetDimensionValue(dvidx, value);
         }
 
         /// <summary />
         public virtual bool DeleteDimensionValue(long dvidx)
         {
-            var retval = false;
-            RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
-                .Execute(() => {
-                    retval = _datastoreService.DeleteDimensionValue(dvidx);
-                });
-            return retval;
+            return _datastoreService.DeleteDimensionValue(dvidx);
         }
 
         /// <summary />
         public virtual int GetTimestamp()
         {
-            var retval = 0;
-            RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
-                .Execute(() =>
-                {
-                    retval = _datastoreService.GetTimestamp();
-                });
-            return retval;
+            return _datastoreService.GetTimestamp();
         }
 
         /// <summary>

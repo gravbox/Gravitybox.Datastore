@@ -315,24 +315,24 @@ namespace Gravitybox.Datastore.Server.Core
                         var dataTable = SqlHelper.GetTableName(ID);
 
                         //Add Timestamp field
-                        sb.AppendLine("if exists(select * from sys.objects where name = '" + dataTable + "' and type = 'U') and not exists (select * from syscolumns c inner join sysobjects o on c.id = o.id where c.name = '" + SqlHelper.TimestampField + "' and o.name = '" + dataTable + "')");
-                        sb.AppendLine("ALTER TABLE [" + dataTable + "] ADD [" + SqlHelper.TimestampField + "] [INT] NOT NULL CONSTRAINT [DF__" + dataTable + "_" + SqlHelper.TimestampField + "] DEFAULT 0");
+                        sb.AppendLine($"if exists(select * from sys.objects where name = '{dataTable}' and type = 'U') and not exists (select * from syscolumns c inner join sysobjects o on c.id = o.id where c.name = '{SqlHelper.TimestampField}' and o.name = '{dataTable}')");
+                        sb.AppendLine($"ALTER TABLE [{dataTable}] ADD [{SqlHelper.TimestampField}] [INT] NOT NULL CONSTRAINT [DF__{dataTable}_{SqlHelper.TimestampField}] DEFAULT 0");
 
                         //Index
                         var indexName = SqlHelper.GetIndexName(new FieldDefinition { Name = SqlHelper.TimestampField }, dataTable);
-                        sb.AppendLine("if not exists(select * from sys.indexes where name = '" + indexName + "')");
+                        sb.AppendLine($"if not exists(select * from sys.indexes where name = '{indexName}')");
                         sb.AppendLine("BEGIN");
-                        sb.AppendLine("CREATE NONCLUSTERED INDEX [" + indexName + "] ON [" + dataTable + "] ([" + SqlHelper.TimestampField + "] ASC);");
+                        sb.AppendLine($"CREATE NONCLUSTERED INDEX [{indexName}] ON [{dataTable}] ([{SqlHelper.TimestampField}] ASC);");
 
                         if (ConfigHelper.SupportsCompression)
-                            sb.AppendLine("ALTER INDEX [" + indexName + "] ON [" + dataTable + "] REBUILD WITH (DATA_COMPRESSION = PAGE);");
+                            sb.AppendLine($"ALTER INDEX [{indexName}] ON [{dataTable}] REBUILD WITH (DATA_COMPRESSION = PAGE);");
 
                         sb.AppendLine("END");
                         sb.AppendLine();
 
                         SqlHelper.ExecuteSql(connectionString, sb.ToString(), null, false);
                         index++;
-                        LoggerCQ.LogInfo("ApplyFix_AddTimestamp: ID=" + ID + ", Progress:" + index + "/" + list.Count);
+                        LoggerCQ.LogInfo($"ApplyFix_AddTimestamp: ID={ID}, Progress:{index}/{list.Count}");
                     }
 
                 }
@@ -834,17 +834,24 @@ namespace Gravitybox.Datastore.Server.Core
                     {
                         var dataTable = SqlHelper.GetTableName(r);
                         var sb = new StringBuilder();
-                        sb.AppendLine("if exists(select * from sys.objects where name = '" + dataTable + "' and type = 'U') AND not exists (select * from syscolumns c inner join sysobjects o on c.id = o.id where c.name = '" + SqlHelper.HashField + "' and o.name = '" + dataTable + "')");
-                        sb.AppendLine("ALTER TABLE [" + dataTable + "] ADD [" + SqlHelper.HashField + "] [BIGINT] CONSTRAINT [DF__" + dataTable + "_" + SqlHelper.HashField + "] DEFAULT 0 NOT NULL");
+                        sb.AppendLine($"if exists(select * from sys.objects where name = '{dataTable}' and type = 'U') AND not exists (select * from syscolumns c inner join sysobjects o on c.id = o.id where c.name = '{SqlHelper.HashField}' and o.name = '{dataTable}')");
+                        sb.AppendLine($"ALTER TABLE [{dataTable}] ADD [{SqlHelper.HashField}] [BIGINT] CONSTRAINT [DF__{dataTable}_{SqlHelper.HashField}] DEFAULT 0 NOT NULL");
 
                         var indexName = SqlHelper.GetIndexName(new FieldDefinition { Name = SqlHelper.HashField }, dataTable);
-                        sb.AppendLine("if not exists(select * from sys.indexes where name = '" + indexName + "')");
-                        sb.AppendLine("CREATE NONCLUSTERED INDEX [" + indexName + "] ON [" + dataTable + "] ([" + SqlHelper.HashField + "] ASC);");
+                        sb.AppendLine($"if not exists(select * from sys.indexes where name = '{indexName}')");
+                        sb.AppendLine("BEGIN");
+                        sb.AppendLine($"CREATE NONCLUSTERED INDEX [{indexName}] ON [{dataTable}] ([{SqlHelper.HashField}] ASC);");
+
+                        if (ConfigHelper.SupportsCompression)
+                            sb.AppendLine($"ALTER INDEX [{indexName}] ON [{dataTable}] REBUILD WITH (DATA_COMPRESSION = PAGE);");
+
+                        sb.AppendLine("END");
+                        sb.AppendLine();
 
                         try
                         {
                             SqlHelper.ExecuteSql(connectionString, sb.ToString(), null, false, false);
-                            LoggerCQ.LogInfo("ApplyFix_AddZHash: ID=" + r + ", Elapsed=" + timer.ElapsedMilliseconds + ", Progress:" + index + "/" + repositorylist.Count);
+                            LoggerCQ.LogInfo($"ApplyFix_AddZHash: ID={r}, Elapsed={timer.ElapsedMilliseconds}, Progress:{index}/{repositorylist.Count}");
                         }
                         catch (Exception ex)
                         {

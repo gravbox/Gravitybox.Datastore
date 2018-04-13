@@ -135,6 +135,7 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
                         if (string.IsNullOrEmpty(_configuration.whereClause) || _configuration.whereClause == SqlHelper.EmptyWhereClause)
                         {
                             //If there is no WHERE clause then we can skip the whole Z table and 10x performance
+                            sb.AppendLine($"--MARKER 7");
                             sb.AppendLine("SELECT DV.DVIdx, COUNT(DV.DVIdx)");
                             sb.AppendLine($"FROM [{listTable}] Y {SqlHelper.NoLockText()}");
                             sb.AppendLine($"inner join [{dimensionValueTableLoop}] DV {SqlHelper.NoLockText()} ON DV.DVIdx = Y.DVIdx");
@@ -145,6 +146,7 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
                         else if (ConfigHelper.MemOpt)
                         {
                             //Default way of calling list table
+                            sb.AppendLine($"--MARKER 8");
                             sb.AppendLine("DECLARE @tmp RIdxItem;");
                             sb.AppendLine("insert into @tmp ([__RecordIdx])");
                             sb.AppendLine($"    select {(_configuration.hasFilteredListDims ? "DISTINCT" : string.Empty)} [Z].[{SqlHelper.RecordIdxField}] FROM [{_configuration.dataTable}] Z {SqlHelper.NoLockText()}");
@@ -161,19 +163,20 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
                         else
                         {
                             //Default way of calling list table
+                            sb.AppendLine($"--MARKER 9");
                             sb.AppendLine("WITH S ([" + SqlHelper.RecordIdxField + "])");
                             sb.AppendLine("AS");
                             sb.AppendLine("(");
                             sb.AppendLine("    select " + (_configuration.hasFilteredListDims ? "DISTINCT" : string.Empty) + " [Z].[" + SqlHelper.RecordIdxField + "] FROM [" + _configuration.dataTable + "] Z " + SqlHelper.NoLockText());
                             sb.AppendLine(_configuration.innerJoinClause);
-                            sb.AppendLine("    WHERE " + _configuration.whereClause);
+                            sb.AppendLine($"    WHERE {_configuration.whereClause}");
                             sb.AppendLine(")");
                             sb.AppendLine("SELECT DV.DVIdx, COUNT(DV.DVIdx)");
-                            sb.AppendLine("FROM [" + listTable + "] Y " + SqlHelper.NoLockText());
-                            sb.AppendLine("inner join [" + dimensionValueTableLoop + "] DV " + SqlHelper.NoLockText() + " ON DV.DVIdx = Y.DVIdx");
-                            sb.AppendLine("inner join [" + dimensionTableLoop + "] D " + SqlHelper.NoLockText() + " ON DV.DIdx = D.DIdx");
-                            sb.AppendLine("inner join S Z " + SqlHelper.NoLockText() + " ON Y." + SqlHelper.RecordIdxField + " = Z." + SqlHelper.RecordIdxField);
-                            sb.AppendLine("WHERE D.DIdx = " + listParamValue.ParameterName);
+                            sb.AppendLine($"FROM [{listTable}] Y {SqlHelper.NoLockText()}");
+                            sb.AppendLine($"inner join [{dimensionValueTableLoop}] DV {SqlHelper.NoLockText()} ON DV.DVIdx = Y.DVIdx");
+                            sb.AppendLine($"inner join [{dimensionTableLoop}] D {SqlHelper.NoLockText()} ON DV.DIdx = D.DIdx");
+                            sb.AppendLine($"inner join S Z {SqlHelper.NoLockText()} ON Y.{SqlHelper.RecordIdxField} = Z.{SqlHelper.RecordIdxField}");
+                            sb.AppendLine($"WHERE D.DIdx = {listParamValue.ParameterName}");
                             sb.AppendLine("GROUP BY DV.DVIdx");
                         }
                     }
@@ -183,23 +186,24 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
                 {
                     if (!_configuration.query.IncludeRecords)
                     {
-                        sb.AppendLine("SELECT CAST(0 AS BIGINT) AS " + SqlHelper.RecordIdxField + ", CAST(0 AS BIGINT) AS DVIdx, CAST('' AS NVARCHAR(500)) AS Value;");
+                        sb.AppendLine($"SELECT CAST(0 AS BIGINT) AS {SqlHelper.RecordIdxField}, CAST(0 AS BIGINT) AS DVIdx, CAST('' AS NVARCHAR(500)) AS Value;");
                     }
                     else
                     {
-                        sb.AppendLine("SELECT Z." + SqlHelper.RecordIdxField + ", DV.DVIdx, DV.Value, [__RowNum] FROM (");
-                        sb.AppendLine("    SELECT [Z].[" + SqlHelper.RecordIdxField + "], [__RowNum] FROM (");
-                        sb.AppendLine("    SELECT ROW_NUMBER() OVER ( ORDER BY " + _configuration.orderByClause + " ) AS [__RowNum], [Z].[" + SqlHelper.RecordIdxField + "]");
-                        sb.AppendLine("    FROM [" + _configuration.dataTable + "] Z " + SqlHelper.NoLockText());
+                        sb.AppendLine($"--MARKER 11");
+                        sb.AppendLine($"SELECT Z.{SqlHelper.RecordIdxField}, DV.DVIdx, DV.Value, [__RowNum] FROM (");
+                        sb.AppendLine($"    SELECT [Z].[{SqlHelper.RecordIdxField}], [__RowNum] FROM (");
+                        sb.AppendLine($"    SELECT ROW_NUMBER() OVER ( ORDER BY " + _configuration.orderByClause + " ) AS [__RowNum], [Z].[" + SqlHelper.RecordIdxField + "]");
+                        sb.AppendLine($"    FROM [{_configuration.dataTable}] Z {SqlHelper.NoLockText()}");
                         sb.AppendLine(_configuration.innerJoinClause);
-                        sb.AppendLine("    WHERE " + _configuration.whereClause);
+                        sb.AppendLine($"    WHERE {_configuration.whereClause}");
                         sb.AppendLine(") as Z ");
                         sb.AppendLine("WHERE ([Z].[__RowNum] >= @startindex AND [Z].[__RowNum] < @endindex)");
                         sb.AppendLine(") as Z");
-                        sb.AppendLine("inner join [" + listTable + "] Y " + SqlHelper.NoLockText() + " ON Y." + SqlHelper.RecordIdxField + " = Z." + SqlHelper.RecordIdxField);
-                        sb.AppendLine("inner join [" + dimensionValueTableLoop + "] DV " + SqlHelper.NoLockText() + " ON DV.DVIdx = Y.DVIdx");
-                        sb.AppendLine("inner join [" + dimensionTableLoop + "] D " + SqlHelper.NoLockText() + " ON DV.DIdx = D.DIdx");
-                        sb.AppendLine("WHERE D.DIdx = " + listParamValue.ParameterName);
+                        sb.AppendLine($"inner join [{listTable}] Y {SqlHelper.NoLockText()} ON Y.{SqlHelper.RecordIdxField} = Z.{SqlHelper.RecordIdxField}");
+                        sb.AppendLine($"inner join [{dimensionValueTableLoop}] DV {SqlHelper.NoLockText()} ON DV.DVIdx = Y.DVIdx");
+                        sb.AppendLine($"inner join [{dimensionTableLoop}] D {SqlHelper.NoLockText()} ON DV.DIdx = D.DIdx");
+                        sb.AppendLine($"WHERE D.DIdx = {listParamValue.ParameterName}");
                         sb.AppendLine("ORDER BY [__RowNum];");
                     }
                     sb.AppendLine();
@@ -207,14 +211,15 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
                     if (!this.IsCachehit) //only need the second query for counts
                     {
                         //TODO: This must be optimized with paging!!!!!! Really bad on 2008 machines with large # of refinements
+                        sb.AppendLine($"--MARKER 12");
                         sb.AppendLine("SELECT DV.DVIdx, COUNT(DV.DVIdx)");
-                        sb.AppendLine("FROM [" + _configuration.dataTable + "] Z " + SqlHelper.NoLockText());
+                        sb.AppendLine($"FROM [{_configuration.dataTable}] Z {SqlHelper.NoLockText()}");
                         sb.AppendLine(_configuration.innerJoinClause);
-                        sb.AppendLine("inner join [" + listTable + "] Y " + SqlHelper.NoLockText() + " ON Y." + SqlHelper.RecordIdxField + " = Z." + SqlHelper.RecordIdxField);
-                        sb.AppendLine("inner join [" + dimensionValueTableLoop + "] DV " + SqlHelper.NoLockText() + " ON DV.DVIdx = Y.DVIdx");
-                        sb.AppendLine("inner join [" + dimensionTableLoop + "] D " + SqlHelper.NoLockText() + " ON DV.DIdx = D.DIdx");
-                        sb.AppendLine("WHERE " + _configuration.whereClause);
-                        sb.AppendLine("    AND D.DIdx = " + listParamValue.ParameterName);
+                        sb.AppendLine($"inner join [{listTable}] Y {SqlHelper.NoLockText()} ON Y.{SqlHelper.RecordIdxField} = Z.{SqlHelper.RecordIdxField}");
+                        sb.AppendLine($"inner join [{dimensionValueTableLoop}] DV {SqlHelper.NoLockText()} ON DV.DVIdx = Y.DVIdx");
+                        sb.AppendLine($"inner join [{dimensionTableLoop}] D {SqlHelper.NoLockText()} ON DV.DIdx = D.DIdx");
+                        sb.AppendLine($"WHERE {_configuration.whereClause}");
+                        sb.AppendLine($"    AND D.DIdx = {listParamValue.ParameterName}");
                         sb.AppendLine("GROUP BY DV.DVIdx");
                     }
                 }
@@ -243,7 +248,10 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
                 {
                     RepositoryHealthMonitor.HealthCheck(_configuration.schema.ID);
                     DataManager.AddSkipItem(_configuration.schema.ID);
-                    LoggerCQ.LogError(ex, $"ListDimensionBuilder: ID={_configuration.schema.ID}, Error={ex.Message}");
+                    var message = ex.Message;
+                    if (message.Contains("Timeout Expired"))
+                        message = "Timeout Expired"; //Do no show whole message, no value
+                    LoggerCQ.LogError(ex, $"ListDimensionBuilder: ID={_configuration.schema.ID}, Error={message}");
                 }
             });
         }

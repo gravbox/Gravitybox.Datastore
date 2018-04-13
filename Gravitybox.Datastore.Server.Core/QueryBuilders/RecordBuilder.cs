@@ -219,6 +219,7 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
                 if (_configuration.query.RecordsPerPage <= 0 || _configuration.query.RecordsPerPage == int.MaxValue)
                 {
                     //No paging...this is faster
+                    sbSql.AppendLine("--MARKER 4");
                     sbSql.AppendLine($"SELECT {fieldSql}");
                     sbSql.AppendLine($"FROM [{_configuration.dataTable}] Z {SqlHelper.NoLockText()}{_configuration.innerJoinClause}");
                     sbSql.AppendLine($"WHERE {_configuration.whereClause}");
@@ -247,24 +248,26 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
                 else
                 {
                     //Big records so do NOT select into temp table
-                    sbSql.AppendLine("WITH T ([" + SqlHelper.RecordIdxField + "]) AS (");
-                    sbSql.AppendLine("SELECT " + (_configuration.hasFilteredListDims ? "DISTINCT" : string.Empty) + " [Z].[" + SqlHelper.RecordIdxField + "]");
-                    sbSql.AppendLine("FROM [" + _configuration.dataTable + "] Z " + SqlHelper.NoLockText() + _configuration.innerJoinClause);
-                    sbSql.AppendLine("WHERE " + _configuration.whereClause);
-                    sbSql.AppendLine("), S ([" + SqlHelper.RecordIdxField + "]) AS ( select distinct T.[" + SqlHelper.RecordIdxField + "] from T )");
-                    sbSql.AppendLine("SELECT " + fieldSql);
-                    sbSql.AppendLine("FROM [" + _configuration.dataTable + "] Z " + SqlHelper.NoLockText() + " inner join S on [Z].[" + SqlHelper.RecordIdxField + "] = S.[" + SqlHelper.RecordIdxField + "]");
-                    sbSql.AppendLine("ORDER BY " + _configuration.orderByClause);
-                    sbSql.AppendLine("OFFSET (@startindex-1) ROWS FETCH FIRST (@endindex-@startindex) ROWS ONLY");
+                    sbSql.AppendLine("--MARKER 5");
+                    sbSql.AppendLine($"WITH T ([{SqlHelper.RecordIdxField}]) AS (");
+                    sbSql.AppendLine($"SELECT {(_configuration.hasFilteredListDims ? "DISTINCT" : string.Empty)} [Z].[{SqlHelper.RecordIdxField}]");
+                    sbSql.AppendLine($"FROM [{_configuration.dataTable}] Z {SqlHelper.NoLockText()}{_configuration.innerJoinClause}");
+                    sbSql.AppendLine($"WHERE {_configuration.whereClause}");
+                    sbSql.AppendLine($"), S ([{SqlHelper.RecordIdxField}]) AS ( select distinct T.[{SqlHelper.RecordIdxField}] from T )");
+                    sbSql.AppendLine($"SELECT {fieldSql}");
+                    sbSql.AppendLine($"FROM [{_configuration.dataTable}] Z {SqlHelper.NoLockText()} inner join S on [Z].[{SqlHelper.RecordIdxField}] = S.[{SqlHelper.RecordIdxField}]");
+                    sbSql.AppendLine($"ORDER BY {_configuration.orderByClause}");
+                    sbSql.AppendLine($"OFFSET (@startindex-1) ROWS FETCH FIRST (@endindex-@startindex) ROWS ONLY");
                 }
                 sbSql.AppendLine(";");
             }
             else
             {
+                sbSql.AppendLine("--MARKER 6");
                 sbSql.AppendLine("WITH Z AS (");
-                sbSql.AppendLine("SELECT ROW_NUMBER() OVER ( ORDER BY " + _configuration.orderByClause + " ) AS [__RowNum], " + fieldSql + " FROM [" + _configuration.dataTable + "] Z " + SqlHelper.NoLockText() + _configuration.innerJoinClause + " WHERE " + _configuration.whereClause);
+                sbSql.AppendLine($"SELECT ROW_NUMBER() OVER ( ORDER BY {_configuration.orderByClause} ) AS [__RowNum], {fieldSql} FROM [{_configuration.dataTable}] Z {SqlHelper.NoLockText()}{_configuration.innerJoinClause} WHERE {_configuration.whereClause}");
                 sbSql.AppendLine(")");
-                sbSql.AppendLine("SELECT " + fieldSql);
+                sbSql.AppendLine($"SELECT {fieldSql}");
                 sbSql.AppendLine("FROM Z");
                 sbSql.AppendLine("where (@startindex) <= [__RowNum] AND [__RowNum] < (@endindex);");
             }

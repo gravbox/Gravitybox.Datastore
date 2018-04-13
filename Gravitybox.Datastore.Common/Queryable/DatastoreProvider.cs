@@ -12,7 +12,7 @@ namespace Gravitybox.Datastore.Common.Queryable
     /// <summary />
     internal class DatastoreProvider : IDatastoreProvider
     {
-        private DatastoreService dsService;
+        protected internal DatastoreService _dsService;
 
         private static Dictionary<string, Func<MethodCallExpression, Type, DatastoreService, object>> _functionMap;
 
@@ -45,37 +45,37 @@ namespace Gravitybox.Datastore.Common.Queryable
         /// <summary />
         public DatastoreProvider(DatastoreService service)
         {
-            dsService = service;
+            _dsService = service;
         }
 
         /// <summary />
         public IDatastoreQueryable<TResult> CreateQuery<TResult>(Expression expression)
         {
-            return new DatastoreQueryable<TResult>(this, expression, dsService);
+            return new DatastoreQueryable<TResult>(this, expression, _dsService);
         }
 
         /// <summary />
         public IDatastoreUpdatable<TResult> CreateUpdateQuery<TResult>(Expression expression)
         {
-            return new DatastoreUpdatable<TResult>(this, expression, dsService);
+            return new DatastoreUpdatable<TResult>(this, expression, _dsService);
         }
 
         /// <summary />
         public IDatastoreDeletable<TResult> CreateDeleteQuery<TResult>(Expression expression)
         {
-            return new DatastoreDeletable<TResult>(this, expression, dsService);
+            return new DatastoreDeletable<TResult>(this, expression, _dsService);
         }
 
         /// <summary />
         public IDatastoreGroupable<IDatastoreGrouping<TKey, TResult>> CreateGroupingQuery<TKey, TResult>(Expression expression)
         {
-            return new DatastoreGroupable<IDatastoreGrouping<TKey, TResult>>(this, expression, dsService);
+            return new DatastoreGroupable<IDatastoreGrouping<TKey, TResult>>(this, expression, _dsService);
         }
 
         /// <summary />
         public IDatastoreGroupable<TResult> CreateGroupingSelectQuery<TKey, TResult>(Expression expression)
         {
-            return new DatastoreGroupable<TResult>(this, expression, dsService);
+            return new DatastoreGroupable<TResult>(this, expression, _dsService);
         }
 
         /// <summary />
@@ -96,7 +96,7 @@ namespace Gravitybox.Datastore.Common.Queryable
             if (!_functionMap.ContainsKey(methodName))
                 throw new NotImplementedException($"Method {methodName} not implemented!");
 
-            return _functionMap[methodName](methodExpression, returnType, dsService);
+            return _functionMap[methodName](methodExpression, returnType, _dsService);
         }
 
         private static DataQuery BuildDataQueryFromParser(DatastoreExpressionParser parser)
@@ -711,7 +711,7 @@ namespace Gravitybox.Datastore.Common.Queryable
         /// <summary />
         public IDatastoreSliceable<TSourceType> CreateSliceQuery<TSourceType>(Expression expression)
         {
-            return new DatastoreSliceable<TSourceType>(this, expression, dsService);
+            return new DatastoreSliceable<TSourceType>(this, expression, _dsService);
         }
     }
 }

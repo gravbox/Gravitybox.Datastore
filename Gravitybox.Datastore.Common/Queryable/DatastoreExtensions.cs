@@ -1263,35 +1263,12 @@ namespace Gravitybox.Datastore.Common.Queryable
             if (source == null)
                 throw new ArgumentNullException(ERROR_SOURCE);
 
-            try
-            {
-                int retval = 0;
-                RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
-                    .Execute(() =>
-                    {
-                        retval = source.Provider.Execute<int>(
-                            Expression.Call(
-                                null,
-                                GetMethodInfo(DatastoreExtensions.Count, source),
-                                new Expression[] { source.Expression }
-                            ));
-                    });
-                return retval;
-            }
-            catch (Exception ex)
-            {
-                if (ex is System.ServiceModel.CommunicationObjectFaultedException ||
-                    ex is System.ServiceModel.EndpointNotFoundException ||
-                    ex is System.ServiceModel.CommunicationException)
-                {
-                    if (FailoverConfiguration.IsConfigured)
-                    {
-                        if (FailoverConfiguration.TryFailOver())
-                            throw new Exceptions.FailoverException();
-                    }
-                }
-                throw;
-            }
+            return source.Provider.Execute<int>(
+                Expression.Call(
+                    null,
+                    GetMethodInfo(DatastoreExtensions.Count, source),
+                    new Expression[] { source.Expression }
+                ));
         }
 
         #endregion
@@ -1305,35 +1282,12 @@ namespace Gravitybox.Datastore.Common.Queryable
             if (source == null)
                 throw new ArgumentNullException(ERROR_SOURCE);
 
-            try
-            {
-                DatastoreResults<TSourceType> retval = null;
-                RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
-                    .Execute(() =>
-                    {
-                        retval = (DatastoreResults<TSourceType>)source.Provider.Execute<DatastoreResults<TSourceType>>(
-                            Expression.Call(
-                                null,
-                                GetMethodInfo(DatastoreExtensions.Results<TSourceType>, source),
-                                new Expression[] { source.Expression }
-                            ));
-                    });
-                return retval;
-            }
-            catch (Exception ex)
-            {
-                if (ex is System.ServiceModel.CommunicationObjectFaultedException ||
-                    ex is System.ServiceModel.EndpointNotFoundException ||
-                    ex is System.ServiceModel.CommunicationException)
-                {
-                    if (FailoverConfiguration.IsConfigured)
-                    {
-                        if (FailoverConfiguration.TryFailOver())
-                            throw new Exceptions.FailoverException();
-                    }
-                }
-                throw;
-            }
+            return (DatastoreResults<TSourceType>)source.Provider.Execute<DatastoreResults<TSourceType>>(
+                                        Expression.Call(
+                                            null,
+                                            GetMethodInfo(DatastoreExtensions.Results<TSourceType>, source),
+                                            new Expression[] { source.Expression }
+                                        ));
         }
 
         /// <summary />
@@ -1343,35 +1297,12 @@ namespace Gravitybox.Datastore.Common.Queryable
             if (source == null)
                 throw new ArgumentNullException(ERROR_SOURCE);
 
-            try
-            {
-                DatastoreResultsAsync<TSourceType> retval = null;
-                RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
-                    .Execute(() =>
-                    {
-                        retval = (DatastoreResultsAsync<TSourceType>)source.Provider.Execute<DatastoreResultsAsync<TSourceType>>(
-                            Expression.Call(
-                                null,
-                                GetMethodInfo(DatastoreExtensions.ResultsAsync<TSourceType>, source),
-                                new Expression[] { source.Expression }
-                            ));
-                    });
-                return retval;
-            }
-            catch (Exception ex)
-            {
-                if (ex is System.ServiceModel.CommunicationObjectFaultedException ||
-                    ex is System.ServiceModel.EndpointNotFoundException ||
-                    ex is System.ServiceModel.CommunicationException)
-                {
-                    if (FailoverConfiguration.IsConfigured)
-                    {
-                        if (FailoverConfiguration.TryFailOver())
-                            throw new Exceptions.FailoverException();
-                    }
-                }
-                throw;
-            }
+            return (DatastoreResultsAsync<TSourceType>)source.Provider.Execute<DatastoreResultsAsync<TSourceType>>(
+                Expression.Call(
+                    null,
+                    GetMethodInfo(DatastoreExtensions.ResultsAsync<TSourceType>, source),
+                    new Expression[] { source.Expression }
+                ));
         }
 
         #endregion
@@ -1385,18 +1316,12 @@ namespace Gravitybox.Datastore.Common.Queryable
             if (source == null)
                 throw new ArgumentNullException(ERROR_SOURCE);
 
-            string retval = null;
-            RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
-                .Execute(() =>
-                {
-                    retval = source.Provider.Execute<string>(
-                        Expression.Call(
-                            null,
-                            GetMethodInfo(DatastoreExtensions.ToUrl<TSourceType>, source),
-                            new Expression[] { source.Expression }
-                        ));
-                });
-            return retval;
+            return source.Provider.Execute<string>(
+                                    Expression.Call(
+                                        null,
+                                        GetMethodInfo(DatastoreExtensions.ToUrl<TSourceType>, source),
+                                        new Expression[] { source.Expression }
+                                    ));
         }
 
         #endregion
@@ -1410,18 +1335,12 @@ namespace Gravitybox.Datastore.Common.Queryable
             if (source == null)
                 throw new ArgumentNullException(ERROR_SOURCE);
 
-            DataQuery retval = null;
-            RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
-                .Execute(() =>
-                {
-                    retval = source.Provider.Execute<DataQuery>(
-                        Expression.Call(
-                            null,
-                            GetMethodInfo(DatastoreExtensions.ToQuery<TSourceType>, source),
-                            new Expression[] { source.Expression }
-                        ));
-                });
-            return retval;
+            return source.Provider.Execute<DataQuery>(
+                                    Expression.Call(
+                                        null,
+                                        GetMethodInfo(DatastoreExtensions.ToQuery<TSourceType>, source),
+                                        new Expression[] { source.Expression }
+                                    ));
         }
 
         #endregion
@@ -1577,35 +1496,12 @@ namespace Gravitybox.Datastore.Common.Queryable
             if (source == null)
                 throw new ArgumentNullException(ERROR_SOURCE);
 
-            try
-            {
-                var retval = default(TSourceType);
-                RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
-                    .Execute(() =>
-                    {
-                        retval = source.Provider.Execute<TSourceType>(
+            return source.Provider.Execute<TSourceType>(
                             Expression.Call(
                                 null,
                                 GetMethodInfo(DatastoreExtensions.AggregateExecute<TSourceType>, source),
                                 new Expression[] { source.Expression }
                             ));
-                    });
-                return retval;
-            }
-            catch (Exception ex)
-            {
-                if (ex is System.ServiceModel.CommunicationObjectFaultedException ||
-                    ex is System.ServiceModel.EndpointNotFoundException ||
-                    ex is System.ServiceModel.CommunicationException)
-                {
-                    if (FailoverConfiguration.IsConfigured)
-                    {
-                        if (FailoverConfiguration.TryFailOver())
-                            throw new Exceptions.FailoverException();
-                    }
-                }
-                throw;
-            }
         }
 
         private static TSourceType AggregateExecuteMin<TSourceType>(this IDatastoreQueryable<TSourceType> source)
@@ -1613,35 +1509,12 @@ namespace Gravitybox.Datastore.Common.Queryable
             if (source == null)
                 throw new ArgumentNullException(ERROR_SOURCE);
 
-            try
-            {
-                var retval = default(TSourceType);
-                RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
-                    .Execute(() =>
-                    {
-                        retval = source.Provider.Execute<TSourceType>(
+            return source.Provider.Execute<TSourceType>(
                             Expression.Call(
                                 null,
                                 GetMethodInfo(DatastoreExtensions.AggregateExecuteMin<TSourceType>, source),
                                 new Expression[] { source.Expression }
                             ));
-                    });
-                return retval;
-            }
-            catch (Exception ex)
-            {
-                if (ex is System.ServiceModel.CommunicationObjectFaultedException ||
-                    ex is System.ServiceModel.EndpointNotFoundException ||
-                    ex is System.ServiceModel.CommunicationException)
-                {
-                    if (FailoverConfiguration.IsConfigured)
-                    {
-                        if (FailoverConfiguration.TryFailOver())
-                            throw new Exceptions.FailoverException();
-                    }
-                }
-                throw;
-            }
         }
 
         private static TSourceType AggregateExecuteMax<TSourceType>(this IDatastoreQueryable<TSourceType> source)
@@ -1649,35 +1522,12 @@ namespace Gravitybox.Datastore.Common.Queryable
             if (source == null)
                 throw new ArgumentNullException(ERROR_SOURCE);
 
-            try
-            {
-                var retval = default(TSourceType);
-                RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
-                    .Execute(() =>
-                    {
-                        retval = source.Provider.Execute<TSourceType>(
+            return source.Provider.Execute<TSourceType>(
                             Expression.Call(
                                 null,
                                 GetMethodInfo(DatastoreExtensions.AggregateExecuteMax<TSourceType>, source),
                                 new Expression[] { source.Expression }
                             ));
-                    });
-                return retval;
-            }
-            catch (Exception ex)
-            {
-                if (ex is System.ServiceModel.CommunicationObjectFaultedException ||
-                    ex is System.ServiceModel.EndpointNotFoundException ||
-                    ex is System.ServiceModel.CommunicationException)
-                {
-                    if (FailoverConfiguration.IsConfigured)
-                    {
-                        if (FailoverConfiguration.TryFailOver())
-                            throw new Exceptions.FailoverException();
-                    }
-                }
-                throw;
-            }
         }
 
         private static TSourceType AggregateExecuteCount<TSourceType>(this IDatastoreQueryable<TSourceType> source)
@@ -1685,35 +1535,12 @@ namespace Gravitybox.Datastore.Common.Queryable
             if (source == null)
                 throw new ArgumentNullException(ERROR_SOURCE);
 
-            try
-            {
-                var retval = default(TSourceType);
-                RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
-                    .Execute(() =>
-                    {
-                        retval = source.Provider.Execute<TSourceType>(
+            return source.Provider.Execute<TSourceType>(
                             Expression.Call(
                                 null,
                                 GetMethodInfo(DatastoreExtensions.AggregateExecuteCount<TSourceType>, source),
                                 new Expression[] { source.Expression }
                             ));
-                    });
-                return retval;
-            }
-            catch (Exception ex)
-            {
-                if (ex is System.ServiceModel.CommunicationObjectFaultedException ||
-                    ex is System.ServiceModel.EndpointNotFoundException ||
-                    ex is System.ServiceModel.CommunicationException)
-                {
-                    if (FailoverConfiguration.IsConfigured)
-                    {
-                        if (FailoverConfiguration.TryFailOver())
-                            throw new Exceptions.FailoverException();
-                    }
-                }
-                throw;
-            }
         }
 
         private static TSourceType AggregateExecuteCountDistinct<TSourceType>(this IDatastoreQueryable<TSourceType> source)
@@ -1721,35 +1548,12 @@ namespace Gravitybox.Datastore.Common.Queryable
             if (source == null)
                 throw new ArgumentNullException(ERROR_SOURCE);
 
-            try
-            {
-                var retval = default(TSourceType);
-                RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
-                    .Execute(() =>
-                    {
-                        retval = source.Provider.Execute<TSourceType>(
+            return source.Provider.Execute<TSourceType>(
                             Expression.Call(
                                 null,
                                 GetMethodInfo(DatastoreExtensions.AggregateExecuteCountDistinct<TSourceType>, source),
                                 new Expression[] { source.Expression }
                             ));
-                    });
-                return retval;
-            }
-            catch (Exception ex)
-            {
-                if (ex is System.ServiceModel.CommunicationObjectFaultedException ||
-                    ex is System.ServiceModel.EndpointNotFoundException ||
-                    ex is System.ServiceModel.CommunicationException)
-                {
-                    if (FailoverConfiguration.IsConfigured)
-                    {
-                        if (FailoverConfiguration.TryFailOver())
-                            throw new Exceptions.FailoverException();
-                    }
-                }
-                throw;
-            }
         }
 
         private static TSourceType AggregateExecuteSum<TSourceType>(this IDatastoreQueryable<TSourceType> source)
@@ -1757,35 +1561,12 @@ namespace Gravitybox.Datastore.Common.Queryable
             if (source == null)
                 throw new ArgumentNullException(ERROR_SOURCE);
 
-            try
-            {
-                var retval = default(TSourceType);
-                RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
-                    .Execute(() =>
-                    {
-                        retval = source.Provider.Execute<TSourceType>(
+            return source.Provider.Execute<TSourceType>(
                             Expression.Call(
                                 null,
                                 GetMethodInfo(DatastoreExtensions.AggregateExecuteSum<TSourceType>, source),
                                 new Expression[] { source.Expression }
                             ));
-                    });
-                return retval;
-            }
-            catch (Exception ex)
-            {
-                if (ex is System.ServiceModel.CommunicationObjectFaultedException ||
-                    ex is System.ServiceModel.EndpointNotFoundException ||
-                    ex is System.ServiceModel.CommunicationException)
-                {
-                    if (FailoverConfiguration.IsConfigured)
-                    {
-                        if (FailoverConfiguration.TryFailOver())
-                            throw new Exceptions.FailoverException();
-                    }
-                }
-                throw;
-            }
         }
 
         #endregion
@@ -1875,35 +1656,12 @@ namespace Gravitybox.Datastore.Common.Queryable
             if (source == null)
                 throw new ArgumentNullException(ERROR_SOURCE);
 
-            try
-            {
-                DatastoreItems<TSourceType> retval = null;
-                RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
-                    .Execute(() =>
-                    {
-                        retval = source.Provider.Execute<DatastoreItems<TSourceType>>(
+            return source.Provider.Execute<DatastoreItems<TSourceType>>(
                             Expression.Call(
                                 null,
                                 GetMethodInfo(DatastoreExtensions.Items<TSourceType>, source),
                                 new Expression[] { source.Expression }
                             ));
-                    });
-                return retval;
-            }
-            catch (Exception ex)
-            {
-                if (ex is System.ServiceModel.CommunicationObjectFaultedException ||
-                    ex is System.ServiceModel.EndpointNotFoundException ||
-                    ex is System.ServiceModel.CommunicationException)
-                {
-                    if (FailoverConfiguration.IsConfigured)
-                    {
-                        if (FailoverConfiguration.TryFailOver())
-                            throw new Exceptions.FailoverException();
-                    }
-                }
-                throw;
-            }
         }
 
         /// <summary />
@@ -1932,8 +1690,11 @@ namespace Gravitybox.Datastore.Common.Queryable
                     if (FailoverConfiguration.IsConfigured)
                     {
                         if (FailoverConfiguration.TryFailOver())
-                            throw new Exceptions.FailoverException();
+                            throw new Exceptions.FailoverException(source.Provider.ToServerInfo());
+                        else if (FailoverConfiguration.Servers.Count == 1)
+                            throw new System.ServiceModel.CommunicationObjectFaultedException($"Communication Error, Server={source.Provider.ToServerInfo()}");
                     }
+                    else throw new System.ServiceModel.CommunicationObjectFaultedException($"Communication Error, Server={source.Provider.ToServerInfo()}");
                 }
                 throw;
             }
@@ -1966,8 +1727,11 @@ namespace Gravitybox.Datastore.Common.Queryable
                     if (FailoverConfiguration.IsConfigured)
                     {
                         if (FailoverConfiguration.TryFailOver())
-                            throw new Exceptions.FailoverException();
+                            throw new Exceptions.FailoverException(source.Provider.ToServerInfo());
+                        else if (FailoverConfiguration.Servers.Count == 1)
+                            throw new System.ServiceModel.CommunicationObjectFaultedException($"Communication Error, Server={source.Provider.ToServerInfo()}");
                     }
+                    else throw new System.ServiceModel.CommunicationObjectFaultedException($"Communication Error, Server={source.Provider.ToServerInfo()}");
                 }
                 throw;
             }
@@ -1981,35 +1745,12 @@ namespace Gravitybox.Datastore.Common.Queryable
             if (source == null)
                 throw new ArgumentNullException(ERROR_SOURCE);
 
-            try
-            {
-                DatastoreItems<TSourceType> retval = null;
-                RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
-                    .Execute(() =>
-                    {
-                        retval = source.Provider.Execute<DatastoreItems<TSourceType>>(
+            return source.Provider.Execute<DatastoreItems<TSourceType>>(
                             Expression.Call(
                                 null,
                                 GetMethodInfo(DatastoreExtensions.Items, source),
                                 new Expression[] { source.Expression }
                             ));
-                    });
-                return retval;
-            }
-            catch (Exception ex)
-            {
-                if (ex is System.ServiceModel.CommunicationObjectFaultedException ||
-                    ex is System.ServiceModel.EndpointNotFoundException ||
-                    ex is System.ServiceModel.CommunicationException)
-                {
-                    if (FailoverConfiguration.IsConfigured)
-                    {
-                        if (FailoverConfiguration.TryFailOver())
-                            throw new Exceptions.FailoverException();
-                    }
-                }
-                throw;
-            }
         }
 
         #endregion
@@ -2025,35 +1766,12 @@ namespace Gravitybox.Datastore.Common.Queryable
             if (source == null)
                 throw new ArgumentNullException(ERROR_SOURCE);
 
-            try
-            {
-                DimensionStore<TSourceType> retval = null;
-                RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
-                    .Execute(() =>
-                    {
-                        retval = source.Provider.Execute<DimensionStore<TSourceType>>(
+            return source.Provider.Execute<DimensionStore<TSourceType>>(
                             Expression.Call(
                                 null,
                                 GetMethodInfo(DatastoreExtensions.AllDimensions<TSourceType>, source),
                                 new Expression[] { source.Expression }
                             ));
-                    });
-                return retval;
-            }
-            catch (Exception ex)
-            {
-                if (ex is System.ServiceModel.CommunicationObjectFaultedException ||
-                    ex is System.ServiceModel.EndpointNotFoundException ||
-                    ex is System.ServiceModel.CommunicationException)
-                {
-                    if (FailoverConfiguration.IsConfigured)
-                    {
-                        if (FailoverConfiguration.TryFailOver())
-                            throw new Exceptions.FailoverException();
-                    }
-                }
-                throw;
-            }
         }
 
         #endregion
@@ -2102,35 +1820,12 @@ namespace Gravitybox.Datastore.Common.Queryable
             if (source == null)
                 throw new ArgumentNullException(ERROR_SOURCE);
 
-            try
-            {
-                ActionDiagnostics retval = null;
-                RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
-                    .Execute(() =>
-                    {
-                        retval = source.Provider.Execute<ActionDiagnostics>(
+            return source.Provider.Execute<ActionDiagnostics>(
                             Expression.Call(
                                 null,
                                 GetMethodInfo(DatastoreExtensions.Commit<TSourceType>, source),
                                 new Expression[] { source.Expression }
                             ));
-                    });
-                return retval;
-            }
-            catch (Exception ex)
-            {
-                if (ex is System.ServiceModel.CommunicationObjectFaultedException ||
-                    ex is System.ServiceModel.EndpointNotFoundException ||
-                    ex is System.ServiceModel.CommunicationException)
-                {
-                    if (FailoverConfiguration.IsConfigured)
-                    {
-                        if (FailoverConfiguration.TryFailOver())
-                            throw new Exceptions.FailoverException();
-                    }
-                }
-                throw;
-            }
         }
 
         /// <summary>
@@ -2141,35 +1836,12 @@ namespace Gravitybox.Datastore.Common.Queryable
             if (source == null)
                 throw new ArgumentNullException(ERROR_SOURCE);
 
-            try
-            {
-                ActionDiagnostics retval = null;
-                RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
-                    .Execute(() =>
-                    {
-                        retval = source.Provider.Execute<ActionDiagnostics>(
+            return source.Provider.Execute<ActionDiagnostics>(
                             Expression.Call(
                                 null,
                                 GetMethodInfo(DatastoreExtensions.Commit<TSourceType>, source),
                                 new Expression[] { source.Expression }
                             ));
-                    });
-                return retval;
-            }
-            catch (Exception ex)
-            {
-                if (ex is System.ServiceModel.CommunicationObjectFaultedException ||
-                    ex is System.ServiceModel.EndpointNotFoundException ||
-                    ex is System.ServiceModel.CommunicationException)
-                {
-                    if (FailoverConfiguration.IsConfigured)
-                    {
-                        if (FailoverConfiguration.TryFailOver())
-                            throw new Exceptions.FailoverException();
-                    }
-                }
-                throw;
-            }
         }
 
         #endregion
@@ -2182,35 +1854,12 @@ namespace Gravitybox.Datastore.Common.Queryable
             if (source == null)
                 throw new ArgumentNullException(ERROR_SOURCE);
 
-            try
-            {
-                SummarySliceValue retval = null;
-                RetryHelper.DefaultRetryPolicy(FailoverConfiguration.RetryOnFailCount)
-                    .Execute(() =>
-                    {
-                        retval = (SummarySliceValue)source.Provider.Execute<SummarySliceValue>(
+            return (SummarySliceValue)source.Provider.Execute<SummarySliceValue>(
                             Expression.Call(
                                 null,
                                 GetMethodInfo(DatastoreExtensions.ToSlice<TSourceType>, source),
                                 new Expression[] { source.Expression }
                             ));
-                    });
-                return retval;
-            }
-            catch (Exception ex)
-            {
-                if (ex is System.ServiceModel.CommunicationObjectFaultedException ||
-                    ex is System.ServiceModel.EndpointNotFoundException ||
-                    ex is System.ServiceModel.CommunicationException)
-                {
-                    if (FailoverConfiguration.IsConfigured)
-                    {
-                        if (FailoverConfiguration.TryFailOver())
-                            throw new Exceptions.FailoverException();
-                    }
-                }
-                throw;
-            }
         }
 
         /// <summary />
@@ -2240,8 +1889,11 @@ namespace Gravitybox.Datastore.Common.Queryable
                     if (FailoverConfiguration.IsConfigured)
                     {
                         if (FailoverConfiguration.TryFailOver())
-                            throw new Exceptions.FailoverException();
+                            throw new Exceptions.FailoverException(source.Provider.ToServerInfo());
+                        else if (FailoverConfiguration.Servers.Count == 1)
+                            throw new System.ServiceModel.CommunicationObjectFaultedException($"Communication Error, Server={source.Provider.ToServerInfo()}");
                     }
+                    else throw new System.ServiceModel.CommunicationObjectFaultedException($"Communication Error, Server={source.Provider.ToServerInfo()}");
                 }
                 throw;
             }
@@ -2274,8 +1926,11 @@ namespace Gravitybox.Datastore.Common.Queryable
                     if (FailoverConfiguration.IsConfigured)
                     {
                         if (FailoverConfiguration.TryFailOver())
-                            throw new Exceptions.FailoverException();
+                            throw new Exceptions.FailoverException(source.Provider.ToServerInfo());
+                        else if (FailoverConfiguration.Servers.Count == 1)
+                            throw new System.ServiceModel.CommunicationObjectFaultedException($"Communication Error, Server={source.Provider.ToServerInfo()}");
                     }
+                    else throw new System.ServiceModel.CommunicationObjectFaultedException($"Communication Error, Server={source.Provider.ToServerInfo()}");
                 }
                 throw;
             }
@@ -2355,6 +2010,18 @@ namespace Gravitybox.Datastore.Common.Queryable
             var result = query.RecordsPerPage(1)
                               .RecordsOnly();
             return result?.Items != null ? result.Items.FirstOrDefault() : default(T);
+        }
+
+        #endregion
+
+        #region Helpers
+
+        private static string ToServerInfo(this IDatastoreProvider obj)
+        {
+            if (obj == null) return string.Empty;
+            var p = ((DatastoreProvider)obj)?._dsService;
+            if (p == null) return string.Empty;
+            return $"{p.ServerName}:{p.Port}";
         }
 
         #endregion

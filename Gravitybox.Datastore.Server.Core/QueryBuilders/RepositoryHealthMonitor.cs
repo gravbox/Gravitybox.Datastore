@@ -1,24 +1,24 @@
 using Gravitybox.Datastore.Common;
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Threading;
 
 namespace Gravitybox.Datastore.Server.Core.QueryBuilders
 {
     internal static class RepositoryHealthMonitor
     {
-        private static System.Timers.Timer _timer = null;
-        private static ConcurrentBag<Guid> _repositoryList = new ConcurrentBag<Guid>();
+        private static readonly System.Timers.Timer _timer = null;
+        private static readonly ConcurrentBag<Guid> _repositoryList = new ConcurrentBag<Guid>();
+
+        private static int _isProcessing = 0;
 
         static RepositoryHealthMonitor()
         {
 #if DEBUG
-            const int TimeInterval = 5000;
+            const int TimeInterval = 5000;  // reduce interval to 5 seconds for easier testing
 #else
-            const int TimeInterval = 60000;
+            const int TimeInterval = 10 * 60 * 1000;  // 10 minutes
 #endif
 
             _timer = new System.Timers.Timer(TimeInterval);
@@ -31,27 +31,50 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
 
         private static void _timer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
-            //If the system is turned off then do nothing
+            // If the system is turned off then do nothing
             if (!IsActive) return;
+
+            // Test for timer reentry
+            var isProcessing = Interlocked.Exchange(ref _isProcessing, 1);
+            if (isProcessing != 0)
+            {
+                LoggerCQ.LogTrace("RepositoryHealthMonitor: timer event already active");
+                return;
+            }
 
             try
             {
-                Guid id;
-                var manager = ((SystemCore)RepositoryManager.SystemCore).Manager;
-                while (_repositoryList.TryTake(out id))
+                if (_repositoryList.Any())
                 {
-                    if (!IsActive) return; //Stop when housekeeping comes on
-
-                    var schema = RepositoryManager.GetSchema(id);
-                    if (schema != null)
+                    using (new PerformanceLogger($"ProcessHealthChecks: Count={_repositoryList.Count}"))
                     {
-                        manager.UpdateSchema(schema, true);
+                        ProcessHealthChecks();
                     }
                 }
             }
             catch (Exception ex)
             {
-                LoggerCQ.LogError(ex);
+                LoggerCQ.LogError(ex, "RepositoryHealthMonitor: timer event failed");
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _isProcessing, 0);  // clear the processing flag
+            }
+        }
+
+        private static void ProcessHealthChecks()
+        {
+            var manager = ((SystemCore) RepositoryManager.SystemCore).Manager;
+            while (_repositoryList.TryTake(out var id))
+            {
+                if (!IsActive) return; // Stop when housekeeping comes on
+
+                LoggerCQ.LogDebug($"ProcessHealthChecks: RepositoryId={id}");
+                var schema = RepositoryManager.GetSchema(id);
+                if (schema != null)
+                {
+                    manager.UpdateSchema(schema, true);
+                }
             }
         }
 
@@ -60,9 +83,11 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
             lock (_repositoryList)
             {
                 if (!_repositoryList.Contains(id))
+                {
                     _repositoryList.Add(id);
+                    LoggerCQ.LogTrace($"HealthCheck queued: RepositoryId={id}");
+                }
             }
         }
-
     }
 }

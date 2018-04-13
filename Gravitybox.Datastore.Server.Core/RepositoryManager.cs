@@ -13,6 +13,7 @@ using System.Collections.Concurrent;
 using Gravitybox.Datastore.Server.Core.Housekeeping;
 using Gravitybox.Datastore.Common.Queryable;
 using Gravitybox.Datastore.Common.Exceptions;
+using System.Threading;
 
 namespace Gravitybox.Datastore.Server.Core
 {
@@ -26,20 +27,16 @@ namespace Gravitybox.Datastore.Server.Core
         private static Random _rnd = new Random();
         private DimensionCache _dimensionCache = new DimensionCache();
         private QueryCache _queryCache = new QueryCache();
-        public static Dictionary<int, int> _dimensionChangeStampCache = new Dictionary<int, int>();
+        private static Dictionary<int, int> _dimensionChangeStampCache = new Dictionary<int, int>();
         private static Dictionary<Guid, int> _repositoryChangeStampCache = new Dictionary<Guid, int>();
-        private static Dictionary<Guid, RepositoryCacheItem> _schemaCache = new Dictionary<Guid, RepositoryCacheItem>();
-        private static Dictionary<Guid, long> _schemaVersionCache = new Dictionary<Guid, long>();
-        private static ConcurrentDictionary<int, int?> _schemaParentCache = new ConcurrentDictionary<int, int?>();
+        private static readonly SchemaCache _schemaCache = new SchemaCache();
         private static ConcurrentHashSet<Guid> _repositoryExistCache = new ConcurrentHashSet<Guid>();
-        private QueryLogManager _queryLogManager = new QueryLogManager();
-        private static readonly Guid RepositoryExistsID = new Guid("6541FFC1-F4F6-477E-B9AC-B10E59C4BD63");
-        private static readonly Guid SchemaCacheID = new Guid("1726FFC1-F4F6-477E-B9AC-B10E59C4BD63");
+        private readonly QueryLogManager _queryLogManager = new QueryLogManager();
         private static readonly Guid DimensionCacheID = new Guid("2726FFC1-F4F6-477E-B9AC-B10E59C4BD63");
         private static readonly Guid RepositoryChangeStampID = new Guid("9941FFC1-F4F6-477E-B9AC-B10E59C4BD63");
-        private static readonly Guid AllRepositoryLockID = new Guid("D517782E-F4F6-477E-B9AC-B10E59C4BD63");
         private static TableStatsMaintenace _statsMaintenance = new TableStatsMaintenace();
         private static HousekeepingMonitor _housekeepingMonitor = new HousekeepingMonitor();
+        private bool _masterReset = false;
         private const byte RSeedPermissions = 187;
 
         //every start is a new instance. this is used to keep track of failover
@@ -54,11 +51,30 @@ namespace Gravitybox.Datastore.Server.Core
             LoggerCQ.LogInfo("Filegroups: Count=" + _fileGroups.Count);
 
             //This will process the Async update where statements
-            _timerUpdateDataWhereAsync = new System.Timers.Timer(10000);
+            //_timerUpdateDataWhereAsync = new System.Timers.Timer(10000);
+            _timerUpdateDataWhereAsync = new System.Timers.Timer(2000);
             _timerUpdateDataWhereAsync.Elapsed += _timerUpdateDataWhereAsync_Elapsed;
             _timerUpdateDataWhereAsync.Start();
 
-            Task.Factory.StartNew(() => { this.SetupParentIdCache(); });
+            #region Reset thread pool to larger count
+            try
+            {
+                int a; int b;
+                ThreadPool.SetMinThreads(200, 200);
+                ThreadPool.GetMinThreads(out a, out b);
+                LoggerCQ.LogInfo($"Thread Pool Min Count={b}, WorkerThreads={a}");
+                ThreadPool.GetMaxThreads(out a, out b);
+                ThreadPool.SetMaxThreads(a, 10000);
+                ThreadPool.GetMaxThreads(out a, out b);
+                LoggerCQ.LogInfo($"Thread Pool Completion Port Count={b}, WorkerThreads={a}");
+            }
+            catch
+            {
+                LoggerCQ.LogWarning("Failed to initialize thread count");
+            }
+            #endregion
+
+            Task.Factory.StartNew(() => { _schemaCache.Populate(); });
         }
 
         public static ISystemCore SystemCore
@@ -83,7 +99,7 @@ namespace Gravitybox.Datastore.Server.Core
             catch (Exception ex)
             {
                 LoggerCQ.LogError(ex);
-                throw;
+                throw new FaultException(ex.Message);
             }
         }
 
@@ -104,7 +120,7 @@ namespace Gravitybox.Datastore.Server.Core
             catch (Exception ex)
             {
                 LoggerCQ.LogError(ex);
-                throw;
+                throw new FaultException(ex.Message);
             }
         }
 
@@ -125,7 +141,7 @@ namespace Gravitybox.Datastore.Server.Core
             catch (Exception ex)
             {
                 LoggerCQ.LogError(ex);
-                throw;
+                throw new FaultException(ex.Message);
             }
         }
 
@@ -146,7 +162,7 @@ namespace Gravitybox.Datastore.Server.Core
             catch (Exception ex)
             {
                 LoggerCQ.LogError(ex);
-                throw;
+                throw new FaultException(ex.Message);
             }
         }
 
@@ -162,11 +178,10 @@ namespace Gravitybox.Datastore.Server.Core
 
                 //Delete from list in case error
                 var id = 0;
-                RepositorySchema schema;
                 using (var q = new AcquireWriterLock(repositoryId, "RemoveRepository"))
                 {
                     if (!RepositoryExists(repositoryId)) return;
-                    schema = GetSchema(repositoryId);
+                    var schema = GetSchema(repositoryId);
                     if (schema == null) return;
                     id = schema.InternalID;
                     LoggerCQ.LogDebug("Starting RemoveRepository: ID=" + repositoryId + ", InternalId=" + id);
@@ -206,7 +221,7 @@ namespace Gravitybox.Datastore.Server.Core
             catch (Exception ex)
             {
                 LoggerCQ.LogError(ex, $"RepositoryId={repositoryId}");
-                throw;
+                throw new FaultException(ex.Message);
             }
         }
 
@@ -215,61 +230,69 @@ namespace Gravitybox.Datastore.Server.Core
             if (!IsServerMaster())
                 throw new NotMasterInstanceException();
 
-            var timer = Stopwatch.StartNew();
-            timer.Start();
-            using (var q = new AcquireWriterLock(schema.ID, "AddRepository"))
+            try
             {
-                //Ensure that the item is gone
-                RemoveRepository(schema.ID);
-
-                //Get parent schema for merge
-                long didx;
-                if (schema.ParentID == null)
-                    didx = Constants.DGROUP;
-                else
-                    didx = Constants.DGROUPEXT;
-
-                RepositorySchema parentSchema = null;
-                if (schema.ParentID != null)
+                var timer = Stopwatch.StartNew();
+                timer.Start();
+                using (var q = new AcquireWriterLock(schema.ID, "AddRepository"))
                 {
-                    if (string.IsNullOrEmpty(schema.ObjectAlias))
-                        throw new Exception("An inherited repository must have an alias.");
+                    //Ensure that the item is gone
+                    RemoveRepository(schema.ID);
 
-                    parentSchema = GetSchema(schema.ParentID.Value);
-                    if (parentSchema == null)
-                        throw new Exception("Parent schema not found");
+                    //Get parent schema for merge
+                    long didx;
+                    if (schema.ParentID == null)
+                        didx = Constants.DGROUP;
+                    else
+                        didx = Constants.DGROUPEXT;
 
-                    //if (parentSchema.DimensionList.Any())
-                    //    didx = parentSchema.DimensionList.Max(x => x.DIdx) + 1;
-
-                    using (var context = new DatastoreEntities())
+                    RepositorySchema parentSchema = null;
+                    if (schema.ParentID != null)
                     {
-                        if (!context.Repository.Any(x => x.UniqueKey == schema.ParentID && x.ParentId == null))
-                            throw new Exception("Cannot create an repository from a non-base parent");
-                        schema = parentSchema.Merge(schema);
+                        if (string.IsNullOrEmpty(schema.ObjectAlias))
+                            throw new Exception("An inherited repository must have an alias.");
+
+                        parentSchema = GetSchema(schema.ParentID.Value);
+                        if (parentSchema == null)
+                            throw new Exception("Parent schema not found");
+
+                        //if (parentSchema.DimensionList.Any())
+                        //    didx = parentSchema.DimensionList.Max(x => x.DIdx) + 1;
+
+                        using (var context = new DatastoreEntities())
+                        {
+                            if (!context.Repository.Any(x => x.UniqueKey == schema.ParentID && x.ParentId == null))
+                                throw new Exception("Cannot create an repository from a non-base parent");
+                            schema = parentSchema.Merge(schema);
+                        }
+                    }
+
+                    #region Setup DIdx
+                    foreach (var d in schema.DimensionList.Where(x => x.DIdx == 0).ToList())
+                    {
+                        d.DIdx = didx;
+                        didx++;
+                    }
+                    #endregion
+
+                    var assignedFilegroup = GetRandomFileGroup();
+                    SqlHelper.AddRepository(ConfigHelper.ConnectionString, schema, assignedFilegroup);
+
+                    timer.Stop();
+                    LoggerCQ.LogDebug("AddRepository: ID=" + schema.ID + ", Elapsed=" + timer.ElapsedMilliseconds);
+
+                    var schema2 = GetSchema(schema.ID);
+                    if (schema2 != null)
+                    {
+                        _queryCache.Clear(schema2.InternalID, schema2.ID);
+                        RepositoryCacheAdd(schema2.ID);
                     }
                 }
-
-                #region Setup DIdx
-                foreach (var d in schema.DimensionList.Where(x => x.DIdx == 0).ToList())
-                {
-                    d.DIdx = didx;
-                    didx++;
-                }
-                #endregion
-
-                var assignedFilegroup = GetRandomFileGroup();
-                SqlHelper.AddRepository(ConfigHelper.ConnectionString, schema, assignedFilegroup);
-
-                timer.Stop();
-                LoggerCQ.LogDebug("AddRepository: ID=" + schema.ID + ", Elapsed=" + timer.ElapsedMilliseconds);
-
-                var schema2 = GetSchema(schema.ID);
-                if (schema2 != null)
-                {
-                    _queryCache.Clear(schema2.InternalID, schema2.ID);
-                    RepositoryCacheAdd(schema2.ID);
-                }
+            }
+            catch (Exception ex)
+            {
+                LoggerCQ.LogError(ex);
+                throw new FaultException(ex.Message);
             }
         }
 
@@ -286,7 +309,7 @@ namespace Gravitybox.Datastore.Server.Core
             if (!IsServerMaster())
                 throw new NotMasterInstanceException();
 
-            if (schema == null) throw new Exception("Schema was not specified.");
+            if (schema == null) throw new FaultException("Schema was not specified.");
             var retval = new ActionDiagnostics { RepositoryId = schema.ID, IsSuccess = false };
             var errorList = new List<string>();
             var schema1 = GetSchema(schema.ID);
@@ -351,11 +374,12 @@ namespace Gravitybox.Datastore.Server.Core
                     LoggerCQ.LogDebug("DeleteItems: ID=" + schema.ID +
                         ", Elapsed=" + timer.ElapsedMilliseconds +
                         ", LockTime=" + lockTime +
-                        ", WorkTime=" + (timer.ElapsedMilliseconds - lockTime) +
+                        ", WorkTime=" + CalcWorkTime(timer, lockTime) +
                         (waitingLocks > 0 ? ", WaitLocks=" + waitingLocks : string.Empty) +
                         ", Cached=" + (itemCount - count) +
                         ", Count=" + itemCount);
                 }
+                return retval;
             }
             catch (Gravitybox.Datastore.Common.Exceptions.RepositoryNotInitializedException ex)
             {
@@ -363,11 +387,9 @@ namespace Gravitybox.Datastore.Server.Core
             }
             catch (Exception ex)
             {
-                LoggerCQ.LogError(ex, $"RepositoryId={schema.ID}");
-                errorList.Add(ex.ToString());
+                LoggerCQ.LogError(ex, $"DeleteItems failed: RepositoryId={schema.ID}");
+                throw new FaultException(ex.Message);
             }
-            retval.Errors = errorList.ToArray();
-            return retval;
         }
 
         public ActionDiagnostics DeleteData(RepositorySchema schema, DataQuery query)
@@ -441,12 +463,13 @@ namespace Gravitybox.Datastore.Server.Core
                     LoggerCQ.LogDebug("DeleteData: ID=" + schema.ID +
                         $", Elapsed={timer.ElapsedMilliseconds}" +
                         $", LockTime={lockTime}" +
-                        $", WorkTime={(timer.ElapsedMilliseconds - lockTime)}" +
+                        $", WorkTime={CalcWorkTime(timer, lockTime)}" +
                         (waitingLocks > 0 ? ", WaitLocks=" + waitingLocks : string.Empty) +
                         $", Count={count}" +
                         $", QueryString=\"{query.ToString()}\"");
 
                 }
+                return retval;
             }
             catch (Gravitybox.Datastore.Common.Exceptions.RepositoryNotInitializedException ex)
             {
@@ -454,8 +477,8 @@ namespace Gravitybox.Datastore.Server.Core
             }
             catch (Exception ex)
             {
-                LoggerCQ.LogError(ex, $"RepositoryId={schema.ID}");
-                errorList.Add(ex.ToString());
+                LoggerCQ.LogError(ex, $"DeleteData failed: RepositoryId={schema.ID}");
+                throw new FaultException(ex.Message);
             }
             finally
             {
@@ -463,8 +486,6 @@ namespace Gravitybox.Datastore.Server.Core
                 if (timer.ElapsedMilliseconds > TableStatsMaintenace.StatCheckThreshold)
                     _statsMaintenance.MarkRefreshStats(schema.ID);
             }
-            retval.Errors = errorList.ToArray();
-            return retval;
         }
 
         public ActionDiagnostics Clear(Guid repositoryId)
@@ -495,6 +516,10 @@ namespace Gravitybox.Datastore.Server.Core
                         retval.IsSuccess = true;
                     }
                 }
+
+                timer.Stop();
+                retval.ComputeTime = timer.ElapsedMilliseconds;
+                return retval;
             }
             catch (Gravitybox.Datastore.Common.Exceptions.RepositoryNotInitializedException ex)
             {
@@ -502,17 +527,12 @@ namespace Gravitybox.Datastore.Server.Core
             }
             catch (Exception ex)
             {
-                LoggerCQ.LogError(ex, $"RepositoryId={repositoryId}");
-                errorList.Add(ex.ToString());
+                LoggerCQ.LogError(ex, $"Clear failed: RepositoryId={repositoryId}");
+                throw new FaultException(ex.Message);
             }
-
-            timer.Stop();
-            retval.ComputeTime = timer.ElapsedMilliseconds;
-            retval.Errors = errorList.ToArray();
-            return retval;
         }
 
-        private static ConcurrentDictionary<string, DateTime> _runningQueries = new ConcurrentDictionary<string, DateTime>();
+        private static readonly ConcurrentDictionary<string, DateTime> _runningQueries = new ConcurrentDictionary<string, DateTime>();
 
         public DataQueryResults Query(Guid repositoryId, DataQuery query)
         {
@@ -535,25 +555,21 @@ namespace Gravitybox.Datastore.Server.Core
             var queryString = query.ToString();
             var queryKey = $"{queryString}|{repositoryId}";
 
+            #region Log
+            if (!isInternal)
+            {
+                LoggerCQ.LogTrace($"Query begin: ID={repositoryId}" +
+                                  $", PO={query.PageOffset}, RPP={query.RecordsPerPage}" +
+                                  $", QueryString=\"{queryString}\"");
+            }
+            #endregion
+
             var lockTime = 0;
             var timer = Stopwatch.StartNew();
             try
             {
                 //If the exact same query is running then wait until it is cached and then process this one
-                var didWait = false;
-                var waitTime = 0;
-                while (!_runningQueries.TryAdd(queryKey, DateTime.Now))
-                {
-                    didWait = true;
-                    System.Threading.Thread.Sleep(30);
-                }
-
-                //Log if there was a wait.
-                if (didWait)
-                {
-                    waitTime = (int)timer.ElapsedMilliseconds;
-                    LoggerCQ.LogInfo($"Query Wait, ID={repositoryId}, Elapsed={timer.ElapsedMilliseconds}, WaitCount={_runningQueries.Count}");
-                }
+                var runningQueryWaitTime = CheckRunningQuery(repositoryId, query, queryKey);
 
                 var waitingLocks = 0;
                 var readLockCount = 0;
@@ -743,12 +759,12 @@ namespace Gravitybox.Datastore.Server.Core
                             ", CoreHit=" + (isCore ? "1" : "0") +
                             ", Elapsed=" + timer.ElapsedMilliseconds +
                             ", LockTime=" + lockTime +
-                            ", WorkTime=" + (timer.ElapsedMilliseconds - lockTime) +
+                            ", WorkTime=" + CalcWorkTime(timer, lockTime) +
                             (waitingLocks > 0 ? ", WaitLocks=" + waitingLocks : string.Empty) +
                             ", PO=" + query.PageOffset + ", RPP=" + query.RecordsPerPage +
                             ", Count=" + retval.RecordList.Count +
                             ", Total=" + retval.TotalRecordCount +
-                            (didWait ? ", DidWait=1, WaitTime="+ waitTime : string.Empty) +
+                            (runningQueryWaitTime > 0 ? ", WaitTime=" + runningQueryWaitTime : string.Empty) +
                             (recordMultiplier > 0 ? ", RecordMultiplier=" + recordMultiplier : "") +
                             (string.IsNullOrEmpty(executeHistory) ? string.Empty : ", EH=" + executeHistory);
                             logMsg += ", QueryString=\"" + queryString + "\"";
@@ -794,8 +810,11 @@ namespace Gravitybox.Datastore.Server.Core
             }
             catch (Exception ex)
             {
-                LoggerCQ.LogError(ex, $"Query: RepositoryId={repositoryId}, QueryString=\"{query.ToString()}\", Elapsed={timer.ElapsedMilliseconds}");
-                retval.ErrorList = new string[] { ex.ToString() };
+                if (ex is DatastoreException)
+                    LoggerCQ.LogError($"Query failed: RepositoryId={repositoryId}, QueryString=\"{query.ToString()}\", Elapsed={timer.ElapsedMilliseconds}, Error={ex.Message}");
+                else
+                    LoggerCQ.LogError(ex, $"Query failed: RepositoryId={repositoryId}, QueryString=\"{query.ToString()}\", Elapsed={timer.ElapsedMilliseconds}");
+                throw new FaultException(ex.Message);
             }
             finally
             {
@@ -807,7 +826,32 @@ namespace Gravitybox.Datastore.Server.Core
                 if (timer.ElapsedMilliseconds > TableStatsMaintenace.StatCheckThreshold)
                     _statsMaintenance.MarkRefreshStats(repositoryId);
             }
-            return retval;
+
+        }
+
+        /// <summary>
+        /// If the exact same query is running then wait until it is cached and then process this one
+        /// </summary>
+        private int CheckRunningQuery(Guid repositoryId, DataQuery query, string queryKey)
+        {
+            var timer = Stopwatch.StartNew();
+            var waitTime = 0;
+            var waitLoops = 0;
+            while (!_runningQueries.TryAdd(queryKey, DateTime.Now))
+            {
+                if (waitLoops == 0) System.Threading.Thread.Sleep(10);
+                else if (waitLoops == 1) System.Threading.Thread.Sleep(20);
+                else System.Threading.Thread.Sleep(30);
+                waitLoops++;
+            }
+
+            //Log if there was a wait.
+            if (waitTime > 0)
+            {
+                waitTime = (int)timer.ElapsedMilliseconds;
+                LoggerCQ.LogDebug($"Query Wait, ID={repositoryId}, Elapsed={timer.ElapsedMilliseconds}, WaitLoops={waitLoops}, WaitCount={_runningQueries.Count}, Query=\"{query.ToString()}\"");
+            }
+            return waitTime;
         }
 
         public int GetLastTimestamp(Guid repositoryId, DataQuery query)
@@ -850,8 +894,8 @@ namespace Gravitybox.Datastore.Server.Core
             catch (Exception ex)
             {
                 LoggerCQ.LogError(ex, $"RepositoryId={repositoryId}");
+                throw new FaultException(ex.Message);
             }
-            return 0;
         }
 
         public int GetTimestamp()
@@ -876,207 +920,49 @@ namespace Gravitybox.Datastore.Server.Core
             if (!IsServerMaster())
                 throw new NotMasterInstanceException();
 
+            LoggerCQ.LogDebug($"GetItemCount begin: RepositoryId={repositoryId}");
             try
             {
-                using (var context = new DatastoreEntities(ConfigHelper.ConnectionString))
+                using (var q = new AcquireReaderLock(repositoryId, "GetItemCount"))
                 {
-                    using (var q = new AcquireReaderLock(repositoryId, "GetItemCount"))
-                    {
-                        var schema = GetSchema(repositoryId);
-                        if (schema == null) return 0;
-                        return SqlHelper.Count(schema, schema.InternalID, ConfigHelper.ConnectionString);
-                    }
+                    var schema = GetSchema(repositoryId);
+                    if (schema == null) return 0;
+                    return SqlHelper.Count(schema, schema.InternalID, ConfigHelper.ConnectionString);
                 }
             }
             catch (Exception ex)
             {
-                LoggerCQ.LogError(ex, $"RepositoryId={repositoryId}");
-                throw;
+                LoggerCQ.LogError(ex, $"GetItemCount failed: RepositoryId={repositoryId}");
+                throw new FaultException(ex.Message);
             }
         }
 
         internal static void ClearSchemaCache(Guid repositoryId)
         {
-            //Clear the schema cache
-            using (var l3 = new AcquireWriterLock(SchemaCacheID, "SchemaCache"))
-            {
-                var id = 0;
-                if (_schemaCache.ContainsKey(repositoryId))
-                {
-                    var schema = RepositorySchema.CreateFromXml(_schemaCache[repositoryId].Xml);
-                    id = schema.InternalID;
-                    _schemaCache.Remove(repositoryId);
-                }
-                if (_schemaVersionCache.ContainsKey(repositoryId))
-                    _schemaVersionCache.Remove(repositoryId);
-
-                int? v;
-                _schemaParentCache.TryRemove(id, out v);
-            }
+            _schemaCache.ClearSchemaCache(repositoryId);
         }
-
-        internal static long GetSchemaHash(Guid repositoryId, bool clear = false)
+        
+        internal static long GetSchemaHash(Guid repositoryId)
         {
-            try
-            {
-                if (clear) ClearSchemaCache(repositoryId);
-                using (var l3 = new AcquireWriterLock(SchemaCacheID, "SchemaCache"))
-                {
-                    if (_schemaVersionCache.ContainsKey(repositoryId))
-                        return _schemaVersionCache[repositoryId];
-
-                    var schema = GetSchema(repositoryId);
-                    if (schema != null) return schema.VersionHash;
-                    return 0;
-                }
-            }
-            catch (Exception ex)
-            {
-                LoggerCQ.LogError(ex);
-                throw;
-            }
+            return _schemaCache.GetSchemaHash(repositoryId);
         }
 
         internal static int? GetSchemaParentId(int repositoryId)
         {
-            try
-            {
-                return _schemaParentCache.GetOrAdd(repositoryId, (q) =>
-                {
-                    using (var context = new DatastoreEntities())
-                    {
-                        return context.Repository
-                                    .Where(x => x.RepositoryId == repositoryId)
-                                    .Select(x => x.ParentId)
-                                    .FirstOrDefault();
-                    }
-                });
-            }
-            catch (Exception ex)
-            {
-                LoggerCQ.LogError(ex);
-                throw;
-            }
-        }
-
-        private void SetupParentIdCache()
-        {
-            try
-            {
-                using (var context = new DatastoreEntities())
-                {
-                    var list = context.Repository
-                                .Select(x => new { x.RepositoryId, x.ParentId })
-                                .ToList();
-
-                    foreach (var item in list)
-                    {
-                        _schemaParentCache.TryAdd(item.RepositoryId, item.ParentId);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                LoggerCQ.LogError(ex);
-            }
+            return _schemaCache.GetSchemaParentId(repositoryId);
         }
 
         internal static RepositorySchema GetSchema(Guid repositoryId)
         {
-            try
-            {
-                if (!RepositoryExists(repositoryId))
-                {
-                    throw new Exception($"The repository does not exist. RepositoryId={repositoryId}");
-                }
-                else
-                {
-                    return GetSchema(repositoryId, false);
-                }
-            }
-            catch (Exception ex)
-            {
-                LoggerCQ.LogError(ex);
-                throw;
-            }
+            return GetSchema(repositoryId, false) ?? throw new FaultException($"The repository does not exist. RepositoryId={repositoryId}");
         }
 
         internal static RepositorySchema GetSchema(Guid repositoryId, bool clear)
         {
-            const int MaxTry = 4;
-            var tryCount = 0;
-            do
+            using (new PerformanceLogger($"GetSchema: RepositoryId={repositoryId}, Clear={clear}"))
             {
-                //LoggerCQ.LogDebug("GetSchema: Start, ID=" + repositoryId);
-                try
-                {
-                    if (clear) ClearSchemaCache(repositoryId);
-                    using (var l3 = new AcquireWriterLock(SchemaCacheID, "SchemaCache"))
-                    {
-                        if (!_schemaCache.ContainsKey(repositoryId))
-                        {
-                            using (var context = new DatastoreEntities())
-                            {
-                                var r = context.Repository.FirstOrDefault(x => x.UniqueKey == repositoryId && !x.IsDeleted && x.IsInitialized);
-                                if (r == null) return null;
-                                var retval = new RepositorySchema();
-                                retval.LoadXml(r.DefinitionData);
-                                retval.InternalID = r.RepositoryId;
-                                retval.ChangeStamp = r.Changestamp;
-
-                                #region Find parent repository
-                                RepositorySchema parentRepository = null;
-                                if (r.ParentId != null)
-                                {
-                                    var pr = context.Repository.FirstOrDefault(x => x.RepositoryId == r.ParentId);
-                                    if (pr != null)
-                                    {
-                                        parentRepository = new RepositorySchema();
-                                        parentRepository.LoadXml(pr.DefinitionData);
-                                        parentRepository.InternalID = pr.RepositoryId;
-                                        parentRepository.ChangeStamp = pr.Changestamp;
-                                    }
-                                }
-                                #endregion
-
-#if DEBUG
-                                //Ensure the key does not exist (used in debugging)
-                                if (_schemaCache.ContainsKey(repositoryId))
-                                    _schemaCache.Remove(repositoryId);
-#endif
-
-                                _schemaCache.Add(repositoryId, new RepositoryCacheItem
-                                {
-                                    Xml = retval.ToXml(true),
-                                    HasParent = (r.ParentId != null),
-                                });
-
-                                //Cache the version to reduce number of calculations
-                                if (_schemaVersionCache.ContainsKey(repositoryId))
-                                    _schemaVersionCache.Remove(repositoryId);
-                                _schemaVersionCache.Add(repositoryId, retval.VersionHash);
-                            }
-                        }
-
-                        return RepositorySchema.CreateFromXml(_schemaCache[repositoryId].Xml);
-
-                    }
-                }
-                catch (System.Data.SqlClient.SqlException ex)
-                {
-                    if (ex.Message.ToLower().Contains("deadlock"))
-                    {
-                        LoggerCQ.LogWarning(ex, $"GetSchema deadlock {tryCount}: RepositoryId={repositoryId}");
-                        tryCount++;
-                        System.Threading.Thread.Sleep(_rnd.Next(150, 500));
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
-            } while (tryCount < MaxTry);
-            throw new Exception("Cannot complete operation.");
+                return _schemaCache.GetSchema(repositoryId, clear);
+            }
         }
 
         public bool IsValidFormat(Guid repositoryId, DataItem item)
@@ -1095,8 +981,7 @@ namespace Gravitybox.Datastore.Server.Core
                     using (var q = new AcquireReaderLock(repositoryId, "IsValidFormat"))
                     {
                         var schema = GetSchema(repositoryId);
-                        if (item.ItemArray == null) return false;
-                        if (item.ItemArray.Length != schema.FieldList.Count) return false;
+                        if (item.ItemArray?.Length != schema.FieldList.Count) return false;
 
                         var index = 0;
                         foreach (var field in schema.FieldList)
@@ -1139,40 +1024,37 @@ namespace Gravitybox.Datastore.Server.Core
             }
             catch (Exception ex)
             {
-                LoggerCQ.LogError(ex, $"RepositoryId={repositoryId}");
-                throw;
+                LoggerCQ.LogError(ex, $"IsValidFormat failed: RepositoryId={repositoryId}");
+                throw new FaultException(ex.Message);
             }
         }
 
         internal static bool RepositoryExists(Guid repositoryId)
         {
             const int MaxTry = 4;
-            var tryCount = 0;
+            var tryCount = 1;
             var timer = Stopwatch.StartNew();
             do
             {
-                //var cacheHit = false;
                 var theValue = false;
+                var cacheHit = false;
                 try
                 {
                     //Cache whether a repository exists
                     theValue = _repositoryExistCache.Contains(repositoryId);
                     if (theValue)
                     {
-                        //cacheHit = true;
+                        cacheHit = true;
                         return theValue;
                     }
 
                     //If made it here then need to hit database
                     using (var context = new DatastoreEntities(ConfigHelper.ConnectionString))
                     {
-                        //using (var l3 = new AcquireReaderLock(repositoryId, "RepositoryExists2"))
-                        {
-                            theValue = context.Repository.Any(x => x.UniqueKey == repositoryId && !x.IsDeleted && x.IsInitialized);
-                            if (theValue) _repositoryExistCache.Add(repositoryId);
-                            else _repositoryExistCache.Remove(repositoryId);
-                            return theValue;
-                        }
+                        theValue = context.Repository.Any(x => x.UniqueKey == repositoryId && !x.IsDeleted && x.IsInitialized);
+                        if (theValue) _repositoryExistCache.Add(repositoryId);
+                        else _repositoryExistCache.Remove(repositoryId);
+                        return theValue;
                     }
 
                 }
@@ -1181,26 +1063,25 @@ namespace Gravitybox.Datastore.Server.Core
                     if (ex.Message.ToLower().Contains("deadlock"))
                     {
                         LoggerCQ.LogWarning(ex, $"RepositoryExists deadlock {tryCount}: RepositoryId={repositoryId}");
-                        tryCount++;
                     }
                     else
                     {
-                        LoggerCQ.LogError(ex, $"RepositoryId={repositoryId}");
+                        LoggerCQ.LogError(ex, $"RepositoryExists failed: RepositoryId={repositoryId}");
                         throw;
                     }
                     System.Threading.Thread.Sleep(_rnd.Next(150, 500));
                 }
                 catch (Exception ex)
                 {
-                    LoggerCQ.LogError(ex, $"RepositoryId={repositoryId}");
+                    LoggerCQ.LogError(ex, $"RepositoryExists failed: RepositoryId={repositoryId}");
                     throw;
                 }
                 finally
                 {
                     timer.Stop();
-                    //LoggerCQ.LogDebug("RepositoryExists: ID=" + repositoryId + ", CacheHit=" + cacheHit + ", Value=" + theValue + ", Elapsed=" + timer.ElapsedMilliseconds);
+                    LoggerCQ.LogTrace($"RepositoryExists: ID={repositoryId}, CacheHit={cacheHit}, Value={theValue}, TryCount={tryCount}, Elapsed={timer.ElapsedMilliseconds}ms");
                 }
-            } while (tryCount < MaxTry);
+            } while (++tryCount <= MaxTry);
             throw new Exception("Cannot complete operation.");
         }
 
@@ -1226,14 +1107,14 @@ namespace Gravitybox.Datastore.Server.Core
                 return retval;
             }
 
+            LoggerCQ.LogDebug($"UpdateData begin: RepositoryId={schema.ID}");
+            
             var errorList = new List<string>();
             var schema1 = GetSchema(schema.ID);
             if (schema1 == null)
             {
                 LoggerCQ.LogWarning($"Repository not found: {schema.ID}");
-                //throw new Gravitybox.Datastore.Common.Exceptions.RepositoryNotInitializedException(schema.ID);
-                retval.Errors = new string[] { $"Repository not found: {schema.ID}" };
-                return retval;
+                throw new Gravitybox.Datastore.Common.Exceptions.RepositoryNotInitializedException(schema.ID);
             }
             
             var timer = Stopwatch.StartNew();
@@ -1264,7 +1145,7 @@ namespace Gravitybox.Datastore.Server.Core
                             LoggerCQ.LogDebug("UpdateData: ID=" + schema.ID +
                                 ", Elapsed=" + timer.ElapsedMilliseconds +
                                 ", LockTime=" + q.LockTime +
-                                ", WorkTime=" + (timer.ElapsedMilliseconds - q.LockTime) +
+                                ", WorkTime=" + CalcWorkTime(timer, q.LockTime) +
                                 (q.WaitingLocksOnEntry > 0 ? ", WaitLocks=" + q.WaitingLocksOnEntry : string.Empty) +
                                 ", Found=" + results.FountCount +
                                 ", Cached=" + (itemCount - results.AffectedCount) +
@@ -1287,6 +1168,7 @@ namespace Gravitybox.Datastore.Server.Core
                         }
                     }
                 }
+                return retval;
             }
             catch (Gravitybox.Datastore.Common.Exceptions.RepositoryNotInitializedException ex)
             {
@@ -1294,8 +1176,8 @@ namespace Gravitybox.Datastore.Server.Core
             }
             catch (Exception ex)
             {
-                LoggerCQ.LogError(ex, $"RepositoryId={schema.ID}, Elapsed={timer.ElapsedMilliseconds}");
-                errorList.Add(ex.ToString());
+                LoggerCQ.LogError(ex, $"UpdateData failed: RepositoryId={schema.ID}, Elapsed={timer.ElapsedMilliseconds}ms");
+                throw new FaultException(ex.Message);
             }
             finally
             {
@@ -1303,13 +1185,11 @@ namespace Gravitybox.Datastore.Server.Core
                 if (timer.ElapsedMilliseconds > TableStatsMaintenace.StatCheckThreshold)
                     _statsMaintenance.MarkRefreshStats(schema.ID);
             }
-            retval.Errors = errorList.ToArray();
-            return retval;
         }
 
         #region UpdateDataWhereAsync
-        private System.Timers.Timer _timerUpdateDataWhereAsync = null;
-        private System.Collections.Concurrent.ConcurrentQueue<UpdateDataWhereCacheItem> _updateDataWhereQueue = new System.Collections.Concurrent.ConcurrentQueue<UpdateDataWhereCacheItem>();
+        private readonly System.Timers.Timer _timerUpdateDataWhereAsync;
+        private readonly ConcurrentQueue<UpdateDataWhereCacheItem> _updateDataWhereQueue = new ConcurrentQueue<UpdateDataWhereCacheItem>();
         public void UpdateDataWhereAsync(RepositorySchema schema, DataQuery query, IEnumerable<DataFieldUpdate> list)
         {
             if (!IsServerMaster())
@@ -1326,8 +1206,8 @@ namespace Gravitybox.Datastore.Server.Core
             }
             catch (Exception ex)
             {
-                LoggerCQ.LogError(ex);
-                //throw;
+                LoggerCQ.LogError(ex, $"UpdateDataWhereAsync enqueue failed: RepositoryId={schema.ID}, Query=\"{query.ToString()}\"");
+                throw new FaultException(ex.Message);
             }
         }
 
@@ -1352,7 +1232,7 @@ namespace Gravitybox.Datastore.Server.Core
             }
             catch (Exception ex)
             {
-                LoggerCQ.LogError(ex);
+                LoggerCQ.LogError(ex, "UpdateDataWhereAsync timer event failed");
             }
             finally
             {
@@ -1365,7 +1245,7 @@ namespace Gravitybox.Datastore.Server.Core
         {
             if (!IsServerMaster())
                 throw new NotMasterInstanceException();
-
+            
             var retval = new ActionDiagnostics { RepositoryId = schema.ID, IsSuccess = false };
             if (list == null || !list.Any())
             {
@@ -1373,15 +1253,16 @@ namespace Gravitybox.Datastore.Server.Core
                 return retval;
             }
 
+            LoggerCQ.LogDebug($"UpdateDataWhere begin: RepositoryId={schema.ID}, Query=\"{query.ToString()}\"");
+
             var schema1 = GetSchema(schema.ID);
             if (schema1 == null)
             {
                 LoggerCQ.LogWarning($"Repository not found: {schema.ID}");
-                //throw new Gravitybox.Datastore.Common.Exceptions.RepositoryNotInitializedException(schema.ID);
-                retval.Errors = new string[] { $"Repository not found: {schema.ID}" };
-                return retval;
+                throw new Gravitybox.Datastore.Common.Exceptions.RepositoryNotInitializedException(schema.ID);
             }
 
+            var timer = Stopwatch.StartNew();
             var errorList = new List<string>();
             try
             {
@@ -1396,9 +1277,6 @@ namespace Gravitybox.Datastore.Server.Core
                     else
                     {
                         schema = schema1;
-                        var timer = Stopwatch.StartNew();
-                        timer.Start();
-
                         using (var context = new DatastoreEntities(ConfigHelper.ConnectionString))
                         {
                             var id = schema.InternalID;
@@ -1413,7 +1291,7 @@ namespace Gravitybox.Datastore.Server.Core
                             LoggerCQ.LogDebug("UpdateDataWhere: ID=" + schema.ID +
                                 ", Elapsed=" + timer.ElapsedMilliseconds +
                                 ", LockTime=" + q.LockTime +
-                                ", WorkTime=" + (timer.ElapsedMilliseconds - q.LockTime) +
+                                ", WorkTime=" + CalcWorkTime(timer, q.LockTime) +
                                 (q.WaitingLocksOnEntry > 0 ? ", WaitLocks=" + q.WaitingLocksOnEntry : string.Empty) +
                                 ", Count=" + results.AffectedCount +
                                 ", QueryString=\"" + query.ToString() + "\"");
@@ -1433,6 +1311,7 @@ namespace Gravitybox.Datastore.Server.Core
                         }
                     }
                 }
+                return retval;
             }
             catch (Gravitybox.Datastore.Common.Exceptions.RepositoryNotInitializedException ex)
             {
@@ -1440,12 +1319,10 @@ namespace Gravitybox.Datastore.Server.Core
             }
             catch (Exception ex)
             {
-                LoggerCQ.LogError(ex, $"RepositoryId={schema.ID}");
-                errorList.Add(ex.ToString());
+                LoggerCQ.LogError(ex, $"UpdateDataWhere failed: RepositoryId={schema.ID}, Query=\"{query.ToString()}\"");
+                throw new FaultException(ex.Message);
             }
 
-            retval.Errors = errorList.ToArray();
-            return retval;
         }
 
         public ActionDiagnostics UpdateSchema(RepositorySchema newSchema)
@@ -1456,21 +1333,20 @@ namespace Gravitybox.Datastore.Server.Core
             return UpdateSchema(newSchema, false);
         }
 
-        internal ActionDiagnostics UpdateSchema(RepositorySchema newSchema, bool extremeVerify = false)
+        internal ActionDiagnostics UpdateSchema(RepositorySchema newSchema, bool extremeVerify)
         {
             var retval = new ActionDiagnostics { IsSuccess = false };
             if (newSchema == null)
             {
-                retval.Errors = new string[] { "The repository does not exist." };
-                return retval;
+                throw new RepositoryNotInitializedException(Guid.Empty);
             }
             retval.RepositoryId = newSchema.ID;
 
+            LoggerCQ.LogDebug($"UpdateSchema begin: RepositoryId={newSchema.ID}, ExtremeVerify={extremeVerify}");
             var otherLockList = new List<AcquireWriterLock>();
             try
             {
                 var timer = Stopwatch.StartNew();
-                timer.Start();
                 using (var q = new AcquireWriterLock(newSchema.ID, "UpdateSchema"))
                 {
                     //Lock parent if one
@@ -1486,8 +1362,7 @@ namespace Gravitybox.Datastore.Server.Core
 
                     if (!RepositoryExists(newSchema.ID))
                     {
-                        retval.Errors = new string[] { $"The repository does not exist. RepositoryId={newSchema.ID}" };
-                        return retval;
+                        throw new RepositoryNotInitializedException(newSchema.ID);
                     }
                     else
                     {
@@ -1502,8 +1377,7 @@ namespace Gravitybox.Datastore.Server.Core
                             var repository = context.Repository.FirstOrDefault(x => x.UniqueKey == newSchema.ID);
                             if (repository == null)
                             {
-                                retval.Errors = new string[] { $"The repository does not exist. RepositoryId={newSchema.ID}" };
-                                return retval;
+                                throw new RepositoryNotInitializedException(newSchema.ID);
                             }
 
                             //if (retval == null || retval.Length == 0)
@@ -1549,7 +1423,13 @@ namespace Gravitybox.Datastore.Server.Core
                                     }
                                 }
                             }
-                            actionResults = SqlHelper.UpdateSchema(ConfigHelper.ConnectionString, currentSchema, newSchema, extremeVerify);
+
+                            using (new PerformanceLogger(
+                                $"UpdateSchema: updating SQL schema: RepositoryId={newSchema.ID}, ExtremeVerify={extremeVerify}"))
+                            {
+                                actionResults = SqlHelper.UpdateSchema(ConfigHelper.ConnectionString, currentSchema,
+                                    newSchema, extremeVerify);
+                            }
                         }
 
                         #region Create/Delete indexes based on fields
@@ -1561,7 +1441,6 @@ namespace Gravitybox.Datastore.Server.Core
                                                         x.DataType != RepositorySchema.DataTypeConstants.List))
                             {
                                 var dataTable = SqlHelper.GetTableName(newSchema.ID);
-                                var dimension = field as DimensionDefinition;
                                 var useIndex = field.AllowIndex;
                                 if (field.DataType == RepositorySchema.DataTypeConstants.String && ((field.Length <= 0) || (field.Length > 450)))
                                     useIndex = false;
@@ -1595,10 +1474,8 @@ namespace Gravitybox.Datastore.Server.Core
                         // must be in a separate transaction or "DROP FULLTEXT INDEX statement cannot be used inside a user transaction."
                         if (actionResults.FtsChanged)
                         {
-                            using (var context = new DatastoreEntities(ConfigHelper.ConnectionString))
-                            {
-                                SqlHelper.UpdateFTSIndex(ConfigHelper.ConnectionString, newSchema);
-                            }
+                            LoggerCQ.LogTrace($"UpdateSchema: updating full text index: RepositoryId={newSchema.ID}");
+                            SqlHelper.UpdateFTSIndex(ConfigHelper.ConnectionString, newSchema);
                         }
 
                         var isFinish = false;
@@ -1619,7 +1496,7 @@ namespace Gravitybox.Datastore.Server.Core
                                         repository.Changestamp = SqlHelper.GetChangeStamp();
                                         repository.VersionHash = newSchema.VersionHash;
                                         repository.DefinitionData = newSchema.ToXml();
-                                        var c = context.SaveChanges();
+                                        context.SaveChanges();
                                         _queryCache.Clear(repositoryId, newSchema.ID);
                                     }
                                 }
@@ -1683,20 +1560,26 @@ namespace Gravitybox.Datastore.Server.Core
                         retval.IsSuccess = true;
                         retval.Errors = actionResults.Errors.ToArray();
 
-                        LoggerCQ.LogDebug($"UpdateSchema: ID={newSchema.ID}" +
-                            $", Elapsed={timer.ElapsedMilliseconds}" +
-                            $", LockTime={q.LockTime}" +
-                            $", WorkTime={(timer.ElapsedMilliseconds - q.LockTime)}");
+                        var logText = $"UpdateSchema: ID={newSchema.ID}, Elapsed={timer.ElapsedMilliseconds}ms, LockTime={q.LockTime}ms, WorkTime={CalcWorkTime(timer, q.LockTime)}ms";
+                        if (timer.ElapsedMilliseconds > 3000)
+                            LoggerCQ.LogWarning(logText);
+                        else
+                            LoggerCQ.LogDebug(logText);
+
                         ClearSchemaCache(newSchema.ID);
 
                         return retval;
                     }
                 }
             }
+            catch (RepositoryNotInitializedException ex)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
-                LoggerCQ.LogError(ex, $"RepositoryId={newSchema.ID}");
-                throw;
+                LoggerCQ.LogError(ex, $"UpdateSchema failed: RepositoryId={newSchema.ID}");
+                throw new FaultException(ex.Message);
             }
             finally
             {
@@ -1705,7 +1588,7 @@ namespace Gravitybox.Datastore.Server.Core
             }
         }
 
-        private ConcurrentDictionary<Guid, QueryThreaded> _asyncQueryRunning = new ConcurrentDictionary<Guid, QueryThreaded>();
+        private readonly ConcurrentDictionary<Guid, QueryThreaded> _asyncQueryRunning = new ConcurrentDictionary<Guid, QueryThreaded>();
         public Guid QueryAsync(Guid repositoryId, DataQuery query)
         {
             if (!IsServerMaster())
@@ -1715,12 +1598,14 @@ namespace Gravitybox.Datastore.Server.Core
             {
                 if (!Directory.Exists(ConfigHelper.AsyncCachePath)) return Guid.Empty;
 
+                LoggerCQ.LogDebug($"QueryAsync begin: RepositoryId={repositoryId}, QueryString=\"{query.ToString()}\"");
+
                 //Do not call RepositoryExists since this does the same thing
                 var schema = GetSchema(repositoryId);
                 if (schema == null)
                 {
                     LoggerCQ.LogWarning($"Repository not found: {repositoryId}");
-                    throw new Gravitybox.Datastore.Common.Exceptions.RepositoryNotInitializedException(repositoryId);
+                    throw new RepositoryNotInitializedException(repositoryId);
                 }
                 else
                 {
@@ -1732,10 +1617,14 @@ namespace Gravitybox.Datastore.Server.Core
                     return item.Key;
                 }
             }
+            catch(RepositoryNotInitializedException ex)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
-                LoggerCQ.LogError(ex);
-                throw;
+                LoggerCQ.LogError(ex, $"QueryAsync failed: RepositoryId={repositoryId}, Query=\"{query.ToString()}\"");
+                throw new FaultException(ex.Message);
             }
         }
 
@@ -1744,6 +1633,8 @@ namespace Gravitybox.Datastore.Server.Core
             if (!IsServerMaster())
                 throw new NotMasterInstanceException();
 
+            LoggerCQ.LogTrace($"QueryAsyncReady begin: Key={key}");
+            
             try
             {
                 if (!_asyncQueryRunning.TryGetValue(key, out QueryThreaded qthread))
@@ -1753,18 +1644,22 @@ namespace Gravitybox.Datastore.Server.Core
 
                 //TODO: Verify that file is fully written!!!!!
                 if (!Directory.Exists(ConfigHelper.AsyncCachePath)) return false;
-                LoggerCQ.LogDebug($"QueryAsyncReady: Key={key}");
                 var errorFileName = Path.Combine(ConfigHelper.AsyncCachePath, key.ToString() + ".error");
                 if (File.Exists(errorFileName))
+                {
+                    LoggerCQ.LogError($"QueryAsyncReady error: Key={key}");
                     return true;
+                }
 
                 var fileName = Path.Combine(ConfigHelper.AsyncCachePath, key.ToString() + ".zzz");
-                return File.Exists(fileName);
+                var result = File.Exists(fileName);
+                LoggerCQ.LogDebug($"QueryAsyncReady: Key={key}, Result={result}");
+                return result;
             }
             catch (Exception ex)
             {
-                LoggerCQ.LogError(ex);
-                throw;
+                LoggerCQ.LogError(ex, $"QueryAsyncReady failed: Key={key}");
+                throw new FaultException(ex.Message);
             }
         }
 
@@ -1773,11 +1668,14 @@ namespace Gravitybox.Datastore.Server.Core
             if (!IsServerMaster())
                 throw new NotMasterInstanceException();
 
+            LoggerCQ.LogTrace($"QueryAsyncDownload begin: Key={key}, Chunk={chunk}");
+
             if (!_asyncQueryRunning.TryGetValue(key, out QueryThreaded qthread))
                 return null;
             if (!qthread.IsComplete)
                 return null;
 
+            var queryString = qthread.Query.ToString();
             try
             {
                 if (chunk < 0) return null;
@@ -1798,7 +1696,7 @@ namespace Gravitybox.Datastore.Server.Core
                 {
                     if (!File.Exists(fileName))
                     {
-                        LoggerCQ.LogWarning($"QueryAsyncDownload file not found: Key={key}, File={fileName}");
+                        LoggerCQ.LogWarning($"QueryAsyncDownload file not found: Key={key}, File=\"{fileName}\"");
                         _asyncQueryRunning.TryRemove(key, out QueryThreaded z);
                         return null;
                     }
@@ -1826,7 +1724,7 @@ namespace Gravitybox.Datastore.Server.Core
                     }
                     catch (Exception ex)
                     {
-                        LoggerCQ.LogError(ex);
+                        LoggerCQ.LogError(ex, $"QueryAsyncDownload file read failed: Key={key}, Chunk={chunk}, File=\"{fileName}\"");
                         _asyncQueryRunning.TryRemove(key, out QueryThreaded z);
                         return null;
                     }
@@ -1835,12 +1733,12 @@ namespace Gravitybox.Datastore.Server.Core
                     if (bytes != chunkSize)
                     {
                         File.Delete(fileName);
-                        LoggerCQ.LogDebug($"QueryAsyncDownload Complete: Key={key}, Chunk={chunk}, Datasize={buffer.Length}");
+                        LoggerCQ.LogDebug($"QueryAsyncDownload Complete: Key={key}, Chunk={chunk}, Datasize={buffer.Length}, Query=\"{queryString}\"");
                         _asyncQueryRunning.TryRemove(key, out QueryThreaded z);
                     }
                     else
                     {
-                        LoggerCQ.LogDebug($"QueryAsyncDownload Processing: Key={key}, Chunk={chunk}, Datasize={buffer.Length}");
+                        LoggerCQ.LogDebug($"QueryAsyncDownload Processing: Key={key}, Chunk={chunk}, Datasize={buffer.Length}, Query=\"{queryString}\"");
                     }
 
                     return buffer;
@@ -1848,8 +1746,8 @@ namespace Gravitybox.Datastore.Server.Core
             }
             catch (Exception ex)
             {
-                LoggerCQ.LogError(ex);
-                throw;
+                LoggerCQ.LogError(ex, $"QueryAsyncDownload failed: Key={key}, Chunk={chunk}, Query={queryString}");
+                throw new FaultException(ex.Message);
             }
         }
 
@@ -1857,6 +1755,8 @@ namespace Gravitybox.Datastore.Server.Core
         {
             if (!IsServerMaster())
                 throw new NotMasterInstanceException();
+
+            LoggerCQ.LogTrace($"GetDataVersion begin: RepositoryId={repositoryId}");
 
             try
             {
@@ -1876,9 +1776,13 @@ namespace Gravitybox.Datastore.Server.Core
                     }
                 }
             }
+            catch (RepositoryNotInitializedException ex)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
-                LoggerCQ.LogError(ex);
+                LoggerCQ.LogError(ex, $"GetDataVersion failed: RepositoryId={repositoryId}");
                 return 0;
             }
         }
@@ -1912,7 +1816,7 @@ namespace Gravitybox.Datastore.Server.Core
             }
             catch (Exception ex)
             {
-                LoggerCQ.LogError(ex);
+                LoggerCQ.LogError(ex, $"ResetDimensionValue failed: RepositoryId={repositoryId}, dvIdx={dvidx}, Value=\"{value}\"");
                 return false;
             }
         }
@@ -1952,7 +1856,7 @@ namespace Gravitybox.Datastore.Server.Core
             }
             catch (Exception ex)
             {
-                LoggerCQ.LogError(ex);
+                LoggerCQ.LogError(ex, $"DeleteDimensionValue failed: RepositoryId={repositoryId}, dvIdx={dvidx}");
                 return false;
             }
         }
@@ -2014,18 +1918,17 @@ namespace Gravitybox.Datastore.Server.Core
                                 _queryCache.SetSlice(context, slice, id, retval);
                                 timer.Stop();
                             }
-                            LoggerCQ.LogDebug("Slice: ID=" + repositoryId + 
+                            LoggerCQ.LogDebug("CalculateSlice: ID=" + repositoryId + 
                                 ", Cache=" + (cacheHit ? "1" : "0") + 
                                 ", Elapsed=" + timer.ElapsedMilliseconds +
                                 ", LockTime=" + q.LockTime +
-                                ", WorkTime=" + (timer.ElapsedMilliseconds - q.LockTime) +
+                                ", WorkTime=" + CalcWorkTime(timer, q.LockTime) +
                                 ", PO=" + slice.Query.PageOffset +
                                 ", RPP=" + slice.Query.RecordsPerPage +
                                 ", Count=" + retval.RecordList.Count() +
                                 ", QueryString=\"" + slice.Query.ToString() + "\"");
                         }
                     }
-
                     return retval;
                 }
             }
@@ -2035,10 +1938,9 @@ namespace Gravitybox.Datastore.Server.Core
             }
             catch (Exception ex)
             {
-                LoggerCQ.LogError(ex, $"RepositoryId={repositoryId}");
-                //retval.ErrorList = new string[] { ex.ToString() };
-            }
-            return retval;
+                LoggerCQ.LogError(ex, $"CalculateSlice failed: RepositoryId={repositoryId}, Query=\"{slice.Query.ToString()}\"");
+                throw new FaultException(ex.Message);
+            }            
         }
 
         public void AddPermission(Guid repositoryId, IEnumerable<PermissionItem> list)
@@ -2084,8 +1986,8 @@ namespace Gravitybox.Datastore.Server.Core
             }
             catch (Exception ex)
             {
-                LoggerCQ.LogError(ex, $"RepositoryId={repositoryId}");
-                //retval.ErrorList = new string[] { ex.ToString() };
+                LoggerCQ.LogError(ex, $"AddPermission failed: RepositoryId={repositoryId}");
+                throw new FaultException(ex.Message);
             }
         }
 
@@ -2119,8 +2021,8 @@ namespace Gravitybox.Datastore.Server.Core
             }
             catch (Exception ex)
             {
-                LoggerCQ.LogError(ex, $"RepositoryId={repositoryId}");
-                //retval.ErrorList = new string[] { ex.ToString() };
+                LoggerCQ.LogError(ex, $"DeletePermission failed: RepositoryId={repositoryId}");
+                throw new FaultException(ex.Message);
             }
         }
 
@@ -2153,10 +2055,10 @@ namespace Gravitybox.Datastore.Server.Core
                         }
                     }
                     timer.Stop();
-                    //LoggerCQ.LogDebug("ClearPermissions: Elapsed=" + timer.ElapsedMilliseconds +
-                    //    ", LockTime=" + lockTime +
-                    //    ", WorkTime=" + (timer.ElapsedMilliseconds - lockTime) +
-                    //    ", FieldValue=" + fieldValue);
+                    LoggerCQ.LogDebug("ClearPermissions: Elapsed=" + timer.ElapsedMilliseconds +
+                        ", LockTime=" + lockTime +
+                        ", WorkTime=" + CalcWorkTime(timer, lockTime) +
+                        ", FieldValue=" + fieldValue);
                 }
             }
             catch (Gravitybox.Datastore.Common.Exceptions.RepositoryNotInitializedException ex)
@@ -2165,8 +2067,8 @@ namespace Gravitybox.Datastore.Server.Core
             }
             catch (Exception ex)
             {
-                LoggerCQ.LogError(ex, $"RepositoryId={repositoryId}");
-                //retval.ErrorList = new string[] { ex.ToString() };
+                LoggerCQ.LogError(ex, $"ClearPermissions failed: RepositoryId={repositoryId}, FieldValue=\"{fieldValue}\"");
+                throw new FaultException(ex.Message);
             }
         }
 
@@ -2183,7 +2085,6 @@ namespace Gravitybox.Datastore.Server.Core
                 if (schema == null)
                 {
                     LoggerCQ.LogWarning($"Repository not found: {repositoryId}");
-                    //retval.ErrorList = new string[] { "The repository has not been initialized! ID: " + repositoryId };
                     throw new Gravitybox.Datastore.Common.Exceptions.RepositoryNotInitializedException(repositoryId);
                 }
                 else
@@ -2199,10 +2100,6 @@ namespace Gravitybox.Datastore.Server.Core
                         }
                     }
                     timer.Stop();
-                    //LoggerCQ.LogDebug("ClearPermissions: Elapsed=" + timer.ElapsedMilliseconds +
-                    //    ", LockTime=" + lockTime +
-                    //    ", WorkTime=" + (timer.ElapsedMilliseconds - lockTime) +
-                    //    ", FieldValue=" + fieldValue);
                 }
             }
             catch (Gravitybox.Datastore.Common.Exceptions.RepositoryNotInitializedException ex)
@@ -2211,8 +2108,8 @@ namespace Gravitybox.Datastore.Server.Core
             }
             catch (Exception ex)
             {
-                LoggerCQ.LogError(ex, $"RepositoryId={repositoryId}");
-                //retval.ErrorList = new string[] { ex.ToString() };
+                LoggerCQ.LogError(ex, $"ClearUserPermissions failed: RepositoryId={repositoryId}, UserId={userId}");
+                throw new FaultException(ex.Message);
             }
         }
 
@@ -2222,7 +2119,7 @@ namespace Gravitybox.Datastore.Server.Core
         /// <remarks>The return is the instance value of this service</remarks>
         public bool IsServerAlive()
         {
-            return true;
+            return _masterReset;
         }
 
         /// <summary>
@@ -2239,30 +2136,35 @@ namespace Gravitybox.Datastore.Server.Core
         /// </summary>
         public bool ResetMaster()
         {
-            if (IsServerMaster())
+            try
             {
-                //Do Nothing
-            }
-            else
-            {
-                //Try to promote to master
-                if (!ConfigHelper.PromoteMaster())
-                    return false;
-            }
+                if (IsServerMaster())
+                {
+                    //Do Nothing
+                }
+                else
+                {
+                    //Try to promote to master
+                    if (!ConfigHelper.PromoteMaster())
+                        return false;
+                }
 
-            _dimensionCache = new DimensionCache();
-            _queryCache = new QueryCache();
-            _dimensionChangeStampCache = new Dictionary<int, int>();
-            _repositoryChangeStampCache = new Dictionary<Guid, int>();
-            _schemaCache = new Dictionary<Guid, RepositoryCacheItem>();
-            _schemaVersionCache = new Dictionary<Guid, long>();
-            _schemaParentCache = new ConcurrentDictionary<int, int?>();
-            _repositoryExistCache = new ConcurrentHashSet<Guid>();
-            _statsMaintenance = new TableStatsMaintenace();
-            _housekeepingMonitor = new HousekeepingMonitor();
-            SqlHelper.Reset();
-            LoggerCQ.LogInfo("System Reset");
-            return true;
+                _dimensionCache = new DimensionCache();
+                _queryCache = new QueryCache();
+                _dimensionChangeStampCache = new Dictionary<int, int>();
+                _repositoryChangeStampCache = new Dictionary<Guid, int>();
+                _repositoryExistCache = new ConcurrentHashSet<Guid>();
+                _schemaCache.Reset();
+                _statsMaintenance = new TableStatsMaintenace();
+                _housekeepingMonitor = new HousekeepingMonitor();
+                SqlHelper.Reset();
+                LoggerCQ.LogInfo("System Reset");
+                return true;
+            }
+            finally
+            {
+                _masterReset = true;
+            }
         }
 
         internal static List<Guid> GetChildRepositories(Guid repositoryId)
@@ -2313,20 +2215,14 @@ namespace Gravitybox.Datastore.Server.Core
             get { return _queryCache.Count; }
         }
 
-        RepositorySchema Gravitybox.Datastore.Common.IDataModel.GetSchema(Guid repositoryId)
+        RepositorySchema IDataModel.GetSchema(Guid repositoryId)
         {
-            return RepositoryManager.GetSchema(repositoryId);
+            return GetSchema(repositoryId);
         }
 
-        bool Gravitybox.Datastore.Common.IDataModel.RepositoryExists(Guid repositoryId)
+        bool IDataModel.RepositoryExists(Guid repositoryId)
         {
-            return RepositoryManager.RepositoryExists(repositoryId);
-        }
-
-        private class RepositoryCacheItem
-        {
-            public string Xml { get; set; }
-            public bool HasParent { get; set; }
+            return RepositoryExists(repositoryId);
         }
 
         private class UpdateDataWhereCacheItem
@@ -2336,5 +2232,14 @@ namespace Gravitybox.Datastore.Server.Core
             public IEnumerable<DataFieldUpdate> list { get; set; }
         }
 
+        /// <summary>
+        /// Sometimes the lock time > elapsed so just normalize it so that it does not look odd in log
+        /// </summary>
+        private long CalcWorkTime(Stopwatch timer, int lockTime)
+        {
+            var v = timer.ElapsedMilliseconds - lockTime;
+            if (v < 0) v = 0;
+            return v;
+        }
     }
 }

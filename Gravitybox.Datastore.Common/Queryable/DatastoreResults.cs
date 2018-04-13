@@ -246,9 +246,9 @@ namespace Gravitybox.Datastore.Common.Queryable
                 {
                     //If there is a timeout and it is exceeded then throw exception
                     if (timeout > 0 && DateTime.Now.Subtract(startTime).TotalMilliseconds > timeout)
-                        throw new TimeoutException();
+                        throw new TimeoutException($"Time exceeded {timeout}ms");
 
-                    System.Threading.Thread.Sleep(1000);
+                    System.Threading.Thread.Sleep(5000);
                 }
                 #endregion
 

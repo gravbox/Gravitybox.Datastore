@@ -8,18 +8,19 @@ using System.Text;
 using Gravitybox.Datastore.Common;
 using Gravitybox.Datastore.EFDAL;
 using System.Xml;
+using System.Collections.Concurrent;
+using System.Threading.Tasks;
 
 namespace Gravitybox.Datastore.Server.Core
 {
     internal class QueryThreaded
     {
-        private DataQuery _query = null;
         private DimensionCache _dimensionCache;
         private RepositorySchema _schema;
 
         public QueryThreaded(DimensionCache dimensionCache, RepositorySchema schema, DataQuery query)
         {
-            _query = query;
+            this.Query = query;
             _dimensionCache = dimensionCache;
             _schema = schema;
             this.Key = Guid.NewGuid();
@@ -27,6 +28,7 @@ namespace Gravitybox.Datastore.Server.Core
 
         public Guid Key { get; private set; }
         public bool IsComplete { get; private set; } = false;
+        public DataQuery Query { get; private set; }
 
         public void Run()
         {
@@ -42,33 +44,40 @@ namespace Gravitybox.Datastore.Server.Core
 
                 //There is no such thing as a list field that is not a dimension
                 var dataTableFields = _schema.FieldList.Where(x => x.DataType != RepositorySchema.DataTypeConstants.List).ToList();
-                //var normalFields = _schema.FieldList.Where(x => x.FieldType == RepositorySchema.FieldTypeConstants.Field).ToList();
                 var nonListDimensionFields = _schema.DimensionList.Where(x => x.DataType != RepositorySchema.DataTypeConstants.List).ToList();
                 var listDimensionFields = _schema.DimensionList.Where(x => x.DimensionType == RepositorySchema.DimensionTypeConstants.List).ToList();
 
                 var parameters = new List<SqlParameter>();
-                var sql = SqlHelper.QueryAsync(_schema, _schema.InternalID, _query, dimensionList, parameters, ConfigHelper.ConnectionString);
+                var sql = SqlHelper.QueryAsync(_schema, _schema.InternalID, this.Query, dimensionList, parameters, ConfigHelper.ConnectionString);
 
                 #region Get all the list dimensions for those fields
-                var dimensionMapper = new Dictionary<long, Dictionary<long, List<long>>>();
-                foreach (var ditem in listDimensionFields)
-                {
-                    var valueMapper = new Dictionary<long, List<long>>();
-                    dimensionMapper.Add(ditem.DIdx, valueMapper);
-                    var dTable = SqlHelper.GetListTableName(_schema.ID, ditem.DIdx);
-                    var ds = SqlHelper.GetDataset(ConfigHelper.ConnectionString, $"select [{SqlHelper.RecordIdxField}], [DVIdx] from [{dTable}] order by [{SqlHelper.RecordIdxField}], [DVIdx]");
-                    if(ds.Tables.Count == 1)
-                    {
-                        foreach (System.Data.DataRow row in ds.Tables[0].Rows)
-                        {
-                            var recordIndex = (long)row[0];
-                            var dvidx = (long)row[1];
-                            if (!valueMapper.ContainsKey(recordIndex))
-                                valueMapper.Add(recordIndex, new List<long>());
-                            valueMapper[recordIndex].Add(dvidx);
-                        }
-                    }
-                }
+                var dimensionMapper = new ConcurrentDictionary<long, Dictionary<long, List<long>>>();
+                var timerList = Stopwatch.StartNew();
+                Parallel.ForEach(listDimensionFields, new ParallelOptions { MaxDegreeOfParallelism = 4 }, (ditem) =>
+                  {
+                      var valueMapper = new Dictionary<long, List<long>>();
+                      dimensionMapper.TryAdd(ditem.DIdx, valueMapper);
+                      var dTable = SqlHelper.GetListTableName(_schema.ID, ditem.DIdx);
+
+                      //This is the fastest way I could find to load this data
+                      using (var connection = new SqlConnection(ConfigHelper.ConnectionString))
+                      {
+                          connection.Open();
+                          using (var command = new SqlCommand($"SELECT Y.[{SqlHelper.RecordIdxField}], Y.[DVIdx] FROM [{dTable}] Y {SqlHelper.NoLockText()} ORDER BY Y.[{SqlHelper.RecordIdxField}], Y.[DVIdx]", connection))
+                          {
+                              var reader = command.ExecuteReader();
+                              while (reader.Read())
+                              {
+                                  var recordIndex = (long)reader[0];
+                                  var dvidx = (long)reader[1];
+                                  if (!valueMapper.ContainsKey(recordIndex))
+                                      valueMapper.Add(recordIndex, new List<long>());
+                                  valueMapper[recordIndex].Add(dvidx);
+                              }
+                          }
+                      }
+                  });
+                timerList.Stop();
                 #endregion
 
                 var fileName = Path.Combine(ConfigHelper.AsyncCachePath, this.Key.ToString());
@@ -171,7 +180,7 @@ namespace Gravitybox.Datastore.Server.Core
                                                 tempFile.WriteElementString("v", reader.GetInt32(index).ToString());
                                                 break;
                                             case RepositorySchema.DataTypeConstants.String:
-                                                tempFile.WriteElementString("v", reader.GetString(index));
+                                                tempFile.WriteElementString("v", StripNonValidXMLCharacters(reader.GetString(index)));
                                                 break;
                                             default:
                                                 break;
@@ -211,7 +220,7 @@ namespace Gravitybox.Datastore.Server.Core
                 File.Delete(fileName);
                 System.Threading.Thread.Sleep(300);
                 timer.Stop();
-                LoggerCQ.LogInfo($"QueryThreaded Complete: File={outFile}, Size={size}, Count={rowCount}, Elapsed={timer.ElapsedMilliseconds}");
+                LoggerCQ.LogInfo($"QueryThreaded Complete: File={outFile}, Size={size}, Count={rowCount}, ListElapsed={timerList.ElapsedMilliseconds}, Elapsed={timer.ElapsedMilliseconds}");
             }
             catch (Exception ex)
             {
@@ -223,5 +232,40 @@ namespace Gravitybox.Datastore.Server.Core
                 this.IsComplete = true;
             }
         }
+
+        /// <summary>
+        /// Ensure that a string value is valid XML
+        /// </summary>
+        private string StripNonValidXMLCharacters(string textIn)
+        {
+            if (textIn == null || textIn == string.Empty) return string.Empty;
+            try
+            {
+                return XmlConvert.VerifyXmlChars(textIn);
+            }
+            catch
+            {
+                //Do Nothing
+            }
+
+            var textOut = new StringBuilder(); // Used to hold the output.
+            char current; // Used to reference the current character.
+
+            for (int ii = 0; ii < textIn.Length; ii++)
+            {
+                current = textIn[ii];
+                if ((current == 0x9 || current == 0xA || current == 0xD) ||
+                    ((current >= 0x20) && (current <= 0xD7FF)) ||
+                    ((current >= 0xE000) && (current <= 0xFFFD)) ||
+                    ((current >= 0x10000) && (current <= 0x10FFFF)))
+                {
+                    textOut.Append(current);
+                }
+                else
+                    textOut.Append("?");
+            }
+            return textOut.ToString();
+        }
+
     }
 }

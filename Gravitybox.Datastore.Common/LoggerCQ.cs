@@ -8,7 +8,7 @@ namespace Gravitybox.Datastore.Common
     {
         #region Class Members
 
-        private static Logger _logger = null;
+        private static readonly Logger _logger;
 
         #endregion
 
@@ -69,6 +69,11 @@ namespace Gravitybox.Datastore.Common
         public static void LogWarning(Exception exception)
         {
             _logger.Warn(exception);
+        }
+
+        public static void LogTrace(string message)
+        {
+            _logger.Trace(message);
         }
 
         #endregion

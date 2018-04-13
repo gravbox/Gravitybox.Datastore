@@ -12,6 +12,7 @@ using Gravitybox.Datastore.EFDAL;
 using Gravitybox.Datastore.EFDAL.Entity;
 using System.Xml;
 using System.IO.Compression;
+using System.Text;
 
 namespace Gravitybox.Datastore.Server.Core
 {
@@ -66,7 +67,7 @@ namespace Gravitybox.Datastore.Server.Core
         private bool _allowCounters = false;
         private DateTime _lastLogSend;
         private System.Timers.Timer _timer = null;
-        private bool _isSystemReady = false;
+        private bool _isSystemInit = false;
         private Stopwatch _startupTimer = Stopwatch.StartNew();
         public static long LastMemoryUsage = 0;
 
@@ -202,6 +203,8 @@ namespace Gravitybox.Datastore.Server.Core
         {
             try
             {
+                InitFTS();
+
                 #region Apply Fixes
                 LoggerCQ.LogInfo("Apply fixes begin");
 
@@ -261,7 +264,7 @@ namespace Gravitybox.Datastore.Server.Core
                     PatchApply(currentGuid, "Dimension Tables");
                 }
 
-                currentGuid = new Guid("180315CB-C94A-4FC5-8DD2-A897F0035F83");
+                currentGuid = new Guid("180315CB-C94A-4FC5-8DD2-A897F0035F84");
                 if (!IsPatchApplied(currentGuid))
                 {
                     LoggerCQ.LogInfo("Applying fix: Add Timestamp");
@@ -336,7 +339,7 @@ namespace Gravitybox.Datastore.Server.Core
                     }
                 }
 
-                currentGuid = new Guid("77d35001-1900-4FC5-77a4-A897F0035F83");
+                currentGuid = new Guid("77d35001-1900-4FC5-77a4-A897F0035F86");
                 if (!IsPatchApplied(currentGuid))
                 {
                     LoggerCQ.LogInfo("Applying fix: AddZHash");
@@ -366,7 +369,7 @@ namespace Gravitybox.Datastore.Server.Core
                 SqlHelper.VerifyTablesExists(ConfigHelper.ConnectionString);
 
                 //The system is now ready to be used
-                _isSystemReady = true;
+                _isSystemInit = true;
 
                 _startupTimer.Stop();
                 LoggerCQ.LogInfo("Core initialize complete: Elapsed=" + _startupTimer.ElapsedMilliseconds);
@@ -399,6 +402,21 @@ namespace Gravitybox.Datastore.Server.Core
                     });
                     context.SaveChanges();
                 }
+            }
+        }
+
+        private static void InitFTS()
+        {
+            try
+            {
+                var sb = new StringBuilder();
+                sb.AppendLine("if not exists(SELECT fulltext_catalog_id, name FROM sys.fulltext_catalogs where name = 'DatastoreFTS')");
+                sb.AppendLine("CREATE FULLTEXT CATALOG [DatastoreFTS] ON FILEGROUP [PRIMARY] WITH ACCENT_SENSITIVITY = OFF;");
+                SqlHelper.ExecuteSql(ConfigHelper.ConnectionString, sb.ToString(), null, false, false);
+            }
+            catch (Exception ex)
+            {
+                LoggerCQ.LogWarning("Failed setup of FTS");
             }
         }
 
@@ -800,6 +818,8 @@ namespace Gravitybox.Datastore.Server.Core
 
         #region Properties
 
+        //public bool IsSystemLoad { get; set; }
+
         public int GetRepositoryCount(PagingInfo paging)
         {
             try
@@ -1173,7 +1193,7 @@ namespace Gravitybox.Datastore.Server.Core
 
         public bool IsSystemReady()
         {
-            return _isSystemReady;
+            return _isSystemInit && _manager.IsServerAlive();
         }
 
         #endregion

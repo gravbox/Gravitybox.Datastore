@@ -128,17 +128,11 @@ namespace Gravitybox.Datastore.Common
         /// <summary />
         public static RepositorySchema CreateFromXml(string xml)
         {
-            try
-            {
-                var retval = new RepositorySchema();
-                retval.LoadXml(xml);
-                return retval;
-            }
-            catch (Exception ex)
-            {
-                LoggerCQ.LogError(ex);
-                throw;
-            }
+            if (string.IsNullOrEmpty(xml)) return null;
+            
+            var retval = new RepositorySchema();
+            retval.LoadXml(xml);
+            return retval;
         }
 
         /// <summary />

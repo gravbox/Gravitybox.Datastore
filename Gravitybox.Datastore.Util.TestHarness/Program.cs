@@ -8,6 +8,10 @@ using System.Linq.Expressions;
 using System.IO;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using System.Xml;
+using System.Xml.Linq;
+using System.Reflection;
+using System.Threading;
 
 namespace Gravitybox.Datastore.Util.TestHarness
 {
@@ -27,14 +31,16 @@ namespace Gravitybox.Datastore.Util.TestHarness
                 return;
             }
 
+            //GetItems();
+
             try
             {
                 #region Wait for datastore to be ready
-                //while (!IsDatastoreReady())
-                //{
-                //    Console.WriteLine("Waiting for Datastore ready...");
-                //    System.Threading.Thread.Sleep(1000);
-                //}
+                while (!IsDatastoreReady())
+                {
+                    Console.WriteLine("Waiting for Datastore ready...");
+                    System.Threading.Thread.Sleep(1000);
+                }
                 #endregion
 
                 //CreateRepo();
@@ -43,10 +49,14 @@ namespace Gravitybox.Datastore.Util.TestHarness
                 //TestDerivedFields();
                 //HitHard();
                 //Test12();
-                //Test44();
+                //TestAllDimensions();
+                Test44();
                 //TestSchema();
                 //TestAlive();
-                TestFailover();
+                //TestFailover();
+                //TestQueryAsync();
+                //TestThreading();
+                ///TestManyConnections();
             }
             catch (Exception ex)
             {
@@ -105,6 +115,17 @@ namespace Gravitybox.Datastore.Util.TestHarness
                         Field1 = "V-" + (rnd.Next() % 5),
                         ID = ii,
                         MyList = new string[] { "aa", "bb" },
+                        CreatedDate = DateTime.Now.AddMinutes(-_rnd.Next(0, 10000)),
+                        Dim2 = "Dim2-" + (rnd.Next() % 10),
+                        MyBool = (rnd.Next(100) % 2 == 0) ? true : false,
+                        MyFloat = rnd.Next(1, 10000),
+                        MyGeo = new GeoCode { Latitude = rnd.Next(-90, 90), Longitude = rnd.Next(-90, 90) },
+                        MyBool2 = (rnd.Next(100) % 2 == 0) ? true : false,
+                        MyFloat2 = 2,
+                        MyFloat3 = 4,
+                        SomeInt2 = 5,
+                        //MyByte = 40,
+                        //MyShort = 99,
                     };
 
                     newItem.Dim2 = dimValues[rnd.Next(0, dimValues.Count)];
@@ -114,22 +135,17 @@ namespace Gravitybox.Datastore.Util.TestHarness
                     repo.InsertOrUpdate(newItem);
                     //repo.Delete.Where(x => x.ID == ii).Commit();
                     //repo.Delete.Where(x => x.ID == 999).Commit();
+
+                    Console.WriteLine($"Added Item {ii}");
                 }
 
-
-                //repo.Delete.Where(x=>x.ID == -1).Commit();
-                //var diagnostics = repo.Update
-                //    .Field(x => x.Project, "")
-                //    .Field(x => x.Field1, "q")
-                //    .Where(x => x.ID == 1)
-                //    .Commit();
-
-                //var pp = 0;
-                //if (1 == pp)
-                //{
-                //    repo.Delete.Where(x => x.__Timestamp < startTimestamp && x.ID == 5).Commit();
-                //}
-
+                //Add with some text
+                var newItem2 = new MyItem
+                {
+                    Project = "John Doe was here",
+                    ID = 1000,
+                };
+                repo.InsertOrUpdate(newItem2);
             }
         }
 
@@ -216,13 +232,27 @@ namespace Gravitybox.Datastore.Util.TestHarness
                         //.Where(x => startDate <= x.CreatedDate)
                         //.Where(x => x.CreatedDate < endDate)
                         //.OrderByDescending(x => x.CreatedDate)
-                        .RecordsPerPage(20)
-                        .SkipDimension(1)
-                        .SkipDimension(2);
+                        .RecordsPerPage(20);
 
                     var results = query.Results();
                     var dlist = query.DimensionsOnly();
                     var url = query.ToUrl();
+                }
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
+
+        private static void TestAllDimensions()
+        {
+            try
+            {
+                FailoverConfiguration.Servers.Add(new ServerConfig { Server = SERVER });
+                using (var repo = new DatastoreRepository<MyItem>(repoID, "@config"))
+                {
+                    var q = repo.Query.AllDimensions();
                 }
             }
             catch (Exception ex)
@@ -274,6 +304,36 @@ namespace Gravitybox.Datastore.Util.TestHarness
             } while (ii == 0);
         }
 
+        private static void TestQueryAsync()
+        {
+            try
+            {
+                using (var repo = new DatastoreRepository<MyItem>(repoID, SERVER, PORT))
+                {
+                    //var results = repo.Query.Results();
+                    //using (var pinger = repo.Query.Where(x=>x.Field1 == "V-2").ResultsAsync())
+                    using (var pinger = repo.Query.ResultsAsync())
+                    {
+                        var startTime = DateTime.Now;
+                        pinger.WaitUntilReady();
+                        Console.WriteLine($"Time: {DateTime.Now.Subtract(startTime).TotalMilliseconds}");
+                        var file = pinger.OutputFile;
+
+                        List<MyItem> rr = null;
+                        do
+                        {
+                            rr = pinger.GetItems(99);
+                            Console.WriteLine($"Count={rr.Count}");
+                        } while (rr.Any());
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
+
         private static void Test44()
         {
             try
@@ -281,22 +341,63 @@ namespace Gravitybox.Datastore.Util.TestHarness
                 var ticks = DateTime.Now.Ticks;
                 using (var repo = new DatastoreRepository<MyItem>(repoID, SERVER, PORT))
                 {
-                    for (var ii = 0; ii < 100; ii++)
+                    for (var ii = 0; ii < 1000; ii++)
                     {
-                        var r6 = repo.Query
-                            .WhereUrl("?q=" + ticks++)
-                            .Results();
+                        var query = new DataQuery { PageName = "q" };
+                        query.FieldFilters.Add(new FieldFilter { Name = "Project", Value= "Hello2^Hello29", Comparer = ComparisonConstants.ContainsAny });
 
-                        foreach (var ritem in r6.AllDimensions.SelectMany(x => x.RefinementList))
-                        {
-                            var r7 = repo.Query
-                                .WhereUrl("?q=" + ticks++)
-                                .WhereDimensionValue(ritem.DVIdx)
-                                .Results();
-                        }
+                        var r6 = repo.Query
+                            .WhereUrl(query.ToString())
+                            .Results();
+                        Console.WriteLine($"Index={ii}");
 
                     }
                 }
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
+
+        private static void TestManyConnections()
+        {
+            try
+            {
+                //using (var repo = new DatastoreRepository<MyItem>(repoID, SERVER, PORT))
+                //{
+                //    var r6 = repo.Query.WhereUrl($"?q={0}").Results();
+                //}
+
+
+                var ticks = DateTime.Now.Ticks;
+                //for (var ii = 0; ii < 1000000; ii++)
+                Parallel.For(0, 1000, new ParallelOptions { MaxDegreeOfParallelism=12 }, (ii) =>
+                   {
+                       var timer = Stopwatch.StartNew();
+                       using (var repo = new DatastoreRepository<MyItem>(repoID, SERVER, PORT))
+                       {
+                           try
+                           {
+                               //var v = ii;
+                               var v = ii % 100;
+                               //var v = 2;
+                               var timer5 = Stopwatch.StartNew();
+                               var r6 = repo.Query.WhereUrl($"?q={v}").Results();
+                               timer5.Stop();
+                               Console.WriteLine($"Index={ii}, Elapsed={r6.Diagnostics.ComputeTime}, Elapsed={timer5.ElapsedMilliseconds}");
+                           }
+                           catch (Exception ex)
+                           {
+                               timer.Stop();
+                               if (ex.InnerException != null)
+                                   Console.WriteLine($"Index={ii}, Elapsed={timer.ElapsedMilliseconds}, Error={ex.InnerException.Message}");
+                               else
+                                   Console.WriteLine($"Index={ii}, Elapsed={timer.ElapsedMilliseconds}, Error={ex.Message}");
+                           }
+                       }
+                   }
+                );
             }
             catch (Exception ex)
             {
@@ -317,6 +418,60 @@ namespace Gravitybox.Datastore.Util.TestHarness
 
         }
 
+        #region TestThreading
+        //private static void TestThreading()
+        //{
+        //    try
+        //    {
+        //        //using (var repo = new DatastoreRepository<MyItem>(repoID, SERVER, PORT))
+        //        //{
+        //        //    var schema = repo.GetSchema();
+        //        //    repo.UpdateSchema(schema);
+        //        //}
+
+        //        var timer = Stopwatch.StartNew();
+        //        var COUNTER = 0;
+        //        var tasks = new List<Task>();
+
+        //        for (var ii = 0; ii < 20000; ii++)
+        //        {
+        //            var t = Task.Factory.StartNew(() =>
+        //            {
+        //                try
+        //                {
+        //                    using (var factory = SystemCoreInteractDomain.GetRepositoryFactory(SERVER, PORT))
+        //                    {
+        //                        var service = factory.CreateChannel();
+        //                        Interlocked.Increment(ref COUNTER);
+        //                        var timer2 = Stopwatch.StartNew();
+        //                        service.TestHit();
+        //                        timer2.Stop();
+        //                        Interlocked.Decrement(ref COUNTER);
+        //                        Console.WriteLine($"COUNTER={COUNTER}, Elapsed={timer2.ElapsedMilliseconds}");
+        //                    }
+        //                }
+        //                catch (Exception ex)
+        //                {
+        //                    Console.WriteLine(ex.ToString());
+        //                }
+        //            });
+        //            tasks.Add(t);
+
+        //        }//);
+
+        //        Console.WriteLine("Loaded Tasks");
+        //        Task.WaitAll(tasks.ToArray());
+        //        timer.Stop();
+
+        //        Console.WriteLine($"Elapsed={timer.ElapsedMilliseconds}");
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        throw;
+        //    }
+        //}
+        #endregion
+
         public static bool IsDatastoreReady()
         {
             try
@@ -330,6 +485,141 @@ namespace Gravitybox.Datastore.Util.TestHarness
             catch (Exception ex)
             {
                 return false;
+            }
+        }
+
+        public static List<MyItem> GetItems()
+        {
+            var _headers = new List<DimensionItem>();
+            var _dimensions = new List<DimensionItem>();
+            const string FILE = @"C:\Users\DB-Server\AppData\Local\Temp\c6827c93-db6a-465c-a3f9-a1112971487c";
+            using (var reader = XmlReader.Create(FILE))
+            {
+                var inHeaders = false;
+                while (reader.Read())
+                {
+                    if (inHeaders && reader.Name == "h")
+                    {
+                        _headers.Add(new DimensionItem
+                        {
+                            DIdx = Convert.ToInt64("0" + reader.GetAttribute("didx")),
+                            Name = reader.ReadInnerXml(),
+                        });
+                    }
+                    if (reader.Name == "headers") inHeaders = true;
+                    if (reader.Name == "dimensions") break;
+                }
+
+                DimensionItem currentD = null;
+                while (reader.Read())
+                {
+                    if (reader.Name == "d")
+                    {
+                        currentD = new DimensionItem { Name = reader.GetAttribute("name"), DIdx = Convert.ToInt64(reader.GetAttribute("didx")) };
+                        _dimensions.Add(currentD);
+                    }
+                    else if (reader.Name == "r")
+                    {
+                        currentD.RefinementList.Add(new RefinementItem
+                        {
+                            DIdx = currentD.DIdx,
+                            DVIdx = Convert.ToInt64(reader.GetAttribute("dvidx")),
+                            FieldValue = reader.ReadElementContentAsString(),
+                        });
+                    }
+                    if (reader.Name == "items") break;
+                }
+
+                _dimensions.RemoveAll(x => x.DIdx == 0);
+            }
+
+            try
+            {
+                var retval = new List<MyItem>();
+                var ordinalPosition = 0;
+                using (var reader = XmlReader.Create(FILE))
+                {
+                    while (reader.Read())
+                    {
+                        var isNewItem = false;
+                        var newItem = new MyItem();
+                        if (reader.Name == "i")
+                        {
+                            isNewItem = true;
+                            long.TryParse(reader.GetAttribute("ri"), out long ri);
+                            int.TryParse( reader.GetAttribute("ts"), out int ts);
+
+                            //Setup static values
+                            newItem.__RecordIndex = ri;
+                            newItem.__Timestamp = ts;
+                            newItem.__OrdinalPosition = ordinalPosition++;
+
+                            //Loop through all properties for this new item
+                            var elementXml = reader.ReadOuterXml();
+                            var doc = XDocument.Parse(elementXml);
+                            var fieldIndex = 0;
+                            foreach (var n in doc.Descendants().Where(x => x.Name == "v"))
+                            {
+                                var prop = newItem.GetType().GetProperty(_headers[fieldIndex].Name);
+                                var isNull = n.Value == "~■!N";
+                                if (isNull)
+                                {
+                                    prop.SetValue(newItem, null, null);
+                                }
+                                else if (prop.PropertyType == typeof(int?) || prop.PropertyType == typeof(int))
+                                {
+                                    prop.SetValue(newItem, int.Parse(n.Value), null);
+                                }
+                                else if (prop.PropertyType == typeof(DateTime?) || prop.PropertyType == typeof(DateTime))
+                                {
+                                    var dt = new DateTime(Convert.ToInt64(n.Value));
+                                    prop.SetValue(newItem, dt, null);
+                                }
+                                else if (prop.PropertyType == typeof(bool?) || prop.PropertyType == typeof(bool))
+                                {
+                                    prop.SetValue(newItem, n.Value == "1", null);
+                                }
+                                else if (prop.PropertyType == typeof(Single?) || prop.PropertyType == typeof(Single))
+                                {
+                                    prop.SetValue(newItem, Convert.ToSingle(n.Value), null);
+                                }
+                                else if (prop.PropertyType == typeof(GeoCode))
+                                {
+                                    var geoArr = n.Value.Split('|');
+                                    var geo = new GeoCode { Latitude = Convert.ToDouble(geoArr[0]), Longitude = Convert.ToDouble(geoArr[1]) };
+                                    prop.SetValue(newItem, geo, null);
+                                }
+                                else if (prop.PropertyType == typeof(string))
+                                {
+                                    prop.SetValue(newItem, n.Value, null);
+                                }
+                                else if (prop.PropertyType == typeof(string[]))
+                                {
+                                    //Get real values
+                                    var d = _dimensions.FirstOrDefault(x => x.DIdx == _headers[fieldIndex].DIdx);
+                                    if (d != null)
+                                    {
+                                        var varr = n.Value.Split('|').Select(x => Convert.ToInt64(x)).ToList();
+                                        var v = d.RefinementList.Where(x => varr.Contains(x.DVIdx)).Select(x => x.FieldValue).ToArray();
+                                        prop.SetValue(newItem, v, null);
+                                    }
+                                }
+                                else
+                                {
+                                    //TODO
+                                }
+
+                                fieldIndex++;
+                            }
+                        }
+                        if (isNewItem) retval.Add(newItem);
+                    }
+                }
+                return retval;
+            }
+            catch (Exception ex)
+            {
+                throw;
             }
         }
 

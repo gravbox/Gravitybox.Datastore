@@ -81,6 +81,7 @@
     <Compile Include="Housekeeping\IHousekeepingTask.cs" />
     <Compile Include="InternalResults.cs" />
     <Compile Include="PatchesDomain.cs" />
+    <Compile Include="PerformanceLogger.cs" />
     <Compile Include="QueryBuilders\AggregateBuilder.cs" />
     <Compile Include="QueryBuilders\CountBuilder.cs" />
     <Compile Include="QueryBuilders\DataQueryGroupedResults.cs" />
@@ -96,8 +97,10 @@
     <Compile Include="QueryCache.cs" />
     <Compile Include="QueryLogManager.cs" />
     <Compile Include="QueryThreaded.cs" />
+    <Compile Include="RepositoryCacheItem.cs" />
     <Compile Include="RepositoryManager.cs" />
     <Compile Include="RetryHelper.cs" />
+    <Compile Include="SchemaCache.cs" />
     <Compile Include="ServerUtilities.cs" />
     <Compile Include="SqlHelper.cs" />
     <Compile Include="LockLogger.cs" />

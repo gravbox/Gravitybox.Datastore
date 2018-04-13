@@ -7,7 +7,7 @@ namespace Gravitybox.Datastore.Common.Exceptions
 {
     /// <summary />
     [Serializable]
-    public class RepositoryNotInitializedException : System.Exception
+    public class RepositoryNotInitializedException : System.ServiceModel.FaultException
     {
         /// <summary />
         public RepositoryNotInitializedException(Guid repositoryId) : base()
@@ -21,7 +21,7 @@ namespace Gravitybox.Datastore.Common.Exceptions
         /// <summary />
         public override string ToString()
         {
-            return "The repository '" + this.RepositoryId + "' was not initialized.";
+            return $"The repository '{this.RepositoryId}' was not initialized.";
         }
     }
 

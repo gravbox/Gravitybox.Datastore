@@ -90,10 +90,6 @@ namespace Gravitybox.Datastore.Common
 
         /// <summary />
         [DataMember]
-        public string[] ErrorList;
-
-        /// <summary />
-        [DataMember]
         public long VersionHash { get; set; }
 
         /// <summary />

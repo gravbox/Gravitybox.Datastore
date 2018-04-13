@@ -12,6 +12,9 @@ namespace Gravitybox.Datastore.Common.Exceptions
         /// <summary />
         public FailoverException() : base("The system has triggered a fail over.") { }
 
+        /// <summary />
+        public FailoverException(string serverInfo) : base($"The system has triggered a fail over. (Server={serverInfo})") { }
+
     }
 
 }

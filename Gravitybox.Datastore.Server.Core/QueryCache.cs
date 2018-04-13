@@ -133,7 +133,7 @@ namespace Gravitybox.Datastore.Server.Core
 
                 //Log it if too long
                 if (timer.ElapsedMilliseconds > 2000)
-                    LoggerCQ.LogWarning("QueryCache housekeeping: Elapsed=" + timer.ElapsedMilliseconds + ", Removed=" + count);
+                    LoggerCQ.LogWarning($"QueryCache housekeeping: Elapsed={timer.ElapsedMilliseconds}, Removed={count}");
             }
             catch (Exception ex)
             {
@@ -153,7 +153,7 @@ namespace Gravitybox.Datastore.Server.Core
             if (!ConfigHelper.AllowCaching)
                 return null;
 
-            var lockTime = 0;
+            long lockTime = 0;
             int queryHash = 0;
             int coreHash = 0;
             int changeStamp = 0;
@@ -222,6 +222,7 @@ namespace Gravitybox.Datastore.Server.Core
 
             var timer = Stopwatch.StartNew();
             var cache = RepositoryCacheManager.GetCache(id, RepositoryManager.GetSchemaParentId(repositoryId));
+            long lockTime = 0;
             try
             {
                 //Some queries should be cached a long time
@@ -235,8 +236,10 @@ namespace Gravitybox.Datastore.Server.Core
                 var queryHash = 0;
                 var coreHash = 0;
                 CacheResultsQuery item;
+
                 using (var q = new AcquireReaderLock(ServerUtilities.RandomizeGuid(cache.ID, RSeed), "QueryCache"))
                 {
+                    lockTime += q.LockTime;
                     queryHash = query.GetHashCode();
                     if (!query.ExcludeCount && query.IncludeDimensions && !query.IncludeEmptyDimensions)
                         coreHash = query.CoreHashCode();
@@ -254,6 +257,8 @@ namespace Gravitybox.Datastore.Server.Core
 
                 using (var q = new AcquireWriterLock(ServerUtilities.RandomizeGuid(cache.ID, RSeed), "QueryCache"))
                 {
+                    lockTime += q.LockTime;
+
                     //Remove previous cache
                     cache.RemoveAll(x => x.QueryHash == queryHash);
 
@@ -271,18 +276,19 @@ namespace Gravitybox.Datastore.Server.Core
                     };
                     cache.Add(item);
                 }
+
             }
             catch (Exception ex)
             {
                 timer.Stop();
-                LoggerCQ.LogError(ex, $"RepositoryId={id}, Elapsed={timer.ElapsedMilliseconds}, ID={id}, Count={cache.Count}");
+                LoggerCQ.LogError(ex, $"RepositoryId={id}, Elapsed={timer.ElapsedMilliseconds}, ID={id}, LockTime={lockTime}, Count={cache.Count}");
                 throw;
             }
             finally
             {
                 timer.Stop();
                 if (timer.ElapsedMilliseconds > 50)
-                    LoggerCQ.LogWarning($"Slow cache set: Elapsed={timer.ElapsedMilliseconds}, ID={id}, Count={cache.Count}");
+                    LoggerCQ.LogWarning($"Slow cache set: Elapsed={timer.ElapsedMilliseconds}, LockTime={lockTime}, Count={cache.Count}, ID={id}, Query=\"{query.ToString()}\"");
             }
         }
 
@@ -360,7 +366,8 @@ namespace Gravitybox.Datastore.Server.Core
         {
             var count = 0;
             var cache = RepositoryCacheManager.GetCache(id, RepositoryManager.GetSchemaParentId(repositoryId));
-            using (var q = new AcquireReaderLock(ServerUtilities.RandomizeGuid(cache.ID, RSeed), "QueryCache"))
+
+            using (var q = new AcquireWriterLock(ServerUtilities.RandomizeGuid(cache.ID, RSeed), "QueryCache"))
             {
                 count += cache.Count;
                 cache.Clear();
@@ -370,7 +377,7 @@ namespace Gravitybox.Datastore.Server.Core
             var parentCaches = RepositoryCacheManager.All.Where(x => x.ParentId == repositoryId);
             foreach (var pcache in parentCaches)
             {
-                using (var q = new AcquireReaderLock(ServerUtilities.RandomizeGuid(pcache.ID, RSeed), "QueryCache"))
+                using (var q = new AcquireWriterLock(ServerUtilities.RandomizeGuid(pcache.ID, RSeed), "QueryCache"))
                 {
                     count += pcache.Count;
                     pcache.Clear();

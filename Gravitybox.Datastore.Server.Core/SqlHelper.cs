@@ -17,9 +17,15 @@ namespace Gravitybox.Datastore.Server.Core
 {
     internal static class SqlHelper
     {
+        private static string ToParameterName(this FieldDefinition field, int parameterIndex)
+        {
+            return $"@__ff{Utilities.CodeTokenize(field.Name)}{parameterIndex}";
+        }
+
         #region Members
 
         private const int UpdateStatsThreshold = 15;
+        private const int DeleteBlockSize = 10000;
         private const string WITHNOLOCK_TEXT = "WITH (READUNCOMMITTED)";
         internal const string TimestampField = "__Timestamp";
         internal const string RecordIdxField = "__RecordIdx";
@@ -72,11 +78,11 @@ namespace Gravitybox.Datastore.Server.Core
             _queryCache = new QueryCache();
         }
 
-    #endregion
+        #endregion
 
-    #region Timer_Elapsed
+        #region Timer_Elapsed
 
-    private static void _timerUpdateChildTables_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
+        private static void _timerUpdateChildTables_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
             try
             {
@@ -580,6 +586,7 @@ namespace Gravitybox.Datastore.Server.Core
                     var pkIndexName = "PK_" + dataTable.ToUpper();
                     indexList.Add(pkIndexName);
                     sb.AppendLine($"if not exists(select * from sys.indexes where name = '" + pkIndexName + "')");
+                    sb.AppendLine("BEGIN");
 
                     var clustered = "CLUSTERED";
 
@@ -588,15 +595,14 @@ namespace Gravitybox.Datastore.Server.Core
                         clustered = "NONCLUSTERED";
 
                     sb.AppendLine($"ALTER TABLE [{dataTable}] WITH NOCHECK ADD CONSTRAINT [" + pkIndexName + "] PRIMARY KEY " + clustered + " ([" + RecordIdxField + "]);");
-                    sb.AppendLine();
 
                     //If PK is non clustered then compress this index
                     if (hasDataGrouping && ConfigHelper.SupportsCompression)
                     {
                         sb.AppendLine($"ALTER INDEX [{pkIndexName}] ON [{dataTable}] REBUILD WITH (DATA_COMPRESSION = PAGE);");
-                        sb.AppendLine();
                     }
 
+                    sb.AppendLine("END");
                 }
                 #endregion
 
@@ -615,6 +621,23 @@ namespace Gravitybox.Datastore.Server.Core
                     sb.AppendLine($"if not exists(select * from sys.indexes where name = '{indexName}')");
                     sb.AppendLine($"CREATE CLUSTERED INDEX [{indexName}] ON [{dataTable}] ({string.Join(",", pkFields)});");
                     sb.AppendLine();
+                }
+                #endregion
+
+                #region Add internally managed indexes
+                //Add Hash index
+                {
+                    var indexName = SqlHelper.GetIndexName(new FieldDefinition { Name = SqlHelper.HashField }, dataTable);
+                    sb.AppendLine($"CREATE NONCLUSTERED INDEX [{indexName}] ON [{dataTable}] ([{SqlHelper.HashField}] ASC);");
+                    if (ConfigHelper.SupportsCompression)
+                        sb.AppendLine($"ALTER INDEX [{indexName}] ON [{dataTable}] REBUILD WITH (DATA_COMPRESSION = PAGE);");
+                }
+                //Add Timestamp index
+                {
+                    var indexName = SqlHelper.GetIndexName(new FieldDefinition { Name = SqlHelper.TimestampField }, dataTable);
+                    sb.AppendLine($"CREATE NONCLUSTERED INDEX [{indexName}] ON [{dataTable}] ([{SqlHelper.TimestampField}] ASC);");
+                    if (ConfigHelper.SupportsCompression)
+                        sb.AppendLine($"ALTER INDEX [{indexName}] ON [{dataTable}] REBUILD WITH (DATA_COMPRESSION = PAGE);");
                 }
                 #endregion
 
@@ -705,7 +728,12 @@ namespace Gravitybox.Datastore.Server.Core
             indexList = indexList.ToList(); //Clone
             indexList.Add("DATAGROUP_" + GetTableName(schema)); //Include the datagrouping is exists
 
-            var dataTable = GetTableName(schema);
+            var dataTable = SqlHelper.GetTableName(schema);
+
+            //Add indexes for timestamp, hash so do not remove
+            indexList.Add(SqlHelper.GetIndexName(new FieldDefinition { Name = SqlHelper.TimestampField }, dataTable));
+            indexList.Add(SqlHelper.GetIndexName(new FieldDefinition { Name = SqlHelper.HashField }, dataTable));
+
             var sb = new StringBuilder();
             sb.AppendLine("select name from sys.indexes where object_id = (");
             sb.AppendLine($"select top 1 object_id from sys.objects where name = '{dataTable}' and type = 'U'");
@@ -1117,7 +1145,7 @@ namespace Gravitybox.Datastore.Server.Core
                 if (retval.HasChanged)
                 {
                     var childTables = new List<Guid>();
-                    
+
                     //Remove FTS
                     if (retval.FtsChanged)
                         ExecuteSql(connectionString, GetSqlRemoveFTS(GetTableName(newSchema)), null, false);
@@ -1253,14 +1281,11 @@ namespace Gravitybox.Datastore.Server.Core
 
                 timer.Stop();
 
-                //Write this out if it takes too long
-                if (timer.ElapsedMilliseconds > 3000)
-                    LoggerCQ.LogWarning($"UpdateSchema: ID={newSchema.ID}, Elapsed={timer.ElapsedMilliseconds}");
                 return retval;
             }
             catch (Exception ex)
             {
-                LoggerCQ.LogError(ex);
+                LoggerCQ.LogError(ex, $"UpdateSchema failed: RepositoryId={newSchema.ID}");
                 throw;
             }
         }
@@ -2064,7 +2089,9 @@ namespace Gravitybox.Datastore.Server.Core
 
                         MarkUpdated(schema.ID);
                     }
-                    RepositoryHealthMonitor.HealthCheck(schema.ID);
+
+                    // TODO: Confirm why we need to do a schema health check after a *successful* update
+                    //RepositoryHealthMonitor.HealthCheck(schema.ID);
                     return retval;
                 }
                 catch (SqlException ex)
@@ -2254,9 +2281,9 @@ namespace Gravitybox.Datastore.Server.Core
                 }
 
                 #region Check if specified ALL refinements in a dimension
-                    //Check if specified ALL refinements in a dimension and if so remove all 
-                    //since this is functionally eq to specifing none (having no dimension filter)
-                    if (query.DimensionValueList.Count > 2) //Do not bother to check unless >2 items in list
+                //Check if specified ALL refinements in a dimension and if so remove all 
+                //since this is functionally eq to specifing none (having no dimension filter)
+                if (query.DimensionValueList.Count > 2) //Do not bother to check unless >2 items in list
                 {
                     var timer2 = Stopwatch.StartNew();
                     var checkDims = dimensionList
@@ -2344,12 +2371,12 @@ namespace Gravitybox.Datastore.Server.Core
                                     configuration.orderByFields.Add(field);
 
                                     #region Log warning for no index if need be
-                                    if (!field.AllowIndex && 
+                                    if (!field.AllowIndex &&
                                         field.DataType != RepositorySchema.DataTypeConstants.GeoCode &&
                                         field.DataType != RepositorySchema.DataTypeConstants.List &&
                                         field.Name != HashField &&
                                         field.Name != TimestampField)
-                                        LoggerCQ.LogWarning($"OrderField NoIndex: ID={schema.ID}, Field={field.Name}");
+                                        LoggerCQ.LogTrace($"OrderField NoIndex: ID={schema.ID}, Field={field.Name}");
                                     #endregion
 
                                 }
@@ -2373,7 +2400,7 @@ namespace Gravitybox.Datastore.Server.Core
                     .ToList();
 
                 //No matter value of IncludeDimensions, you have to query these for the actual records
-                if (listDimensions.Count > 0 && configuration.usingCustomSelect != ObjectConfiguration.SelectionMode.Grouping) 
+                if (listDimensions.Count > 0 && configuration.usingCustomSelect != ObjectConfiguration.SelectionMode.Grouping)
                 {
                     //TODO: this takes too long, there is a lot of looping
                     foreach (var newDimension in schema.DimensionList
@@ -2403,7 +2430,7 @@ namespace Gravitybox.Datastore.Server.Core
                 threadSuccess &= taskRB.GenerateSql().Wait(SqlHelper.ThreadTimeout);
                 threadSuccess &= taskDNL.GenerateSql().Wait(SqlHelper.ThreadTimeout);
                 if (!threadSuccess)
-                    throw new Exception("Error 0x2290");
+                    throw new DatastoreException("0x2290");
 
                 //Other SQL can be multi-threaded
                 var taskList = new List<Task>();
@@ -2413,7 +2440,7 @@ namespace Gravitybox.Datastore.Server.Core
                     taskList.Add(item.GenerateSql());
                 threadSuccess &= Task.WaitAll(taskList.ToArray(), SqlHelper.ThreadTimeout);
                 if (!threadSuccess)
-                    throw new Exception("Error 0x2291");
+                    throw new DatastoreException("0x2291");
 
                 //Execution can be done simultaneously
                 taskList.Clear();
@@ -2425,12 +2452,12 @@ namespace Gravitybox.Datastore.Server.Core
                     taskList.Add(item.Execute());
                 threadSuccess &= Task.WaitAll(taskList.ToArray(), SqlHelper.ThreadTimeout);
                 if (!threadSuccess)
-                    throw new Exception("Error 0x2292");
+                    throw new DatastoreException("0x2292");
 
                 //Loading can be done simultaneously
                 threadSuccess &= taskRB.Load().Wait(SqlHelper.ThreadTimeout); //must be loaded first
                 if (!threadSuccess)
-                    throw new Exception("Error 0x2293");
+                    throw new DatastoreException("0x2293");
 
                 taskList.Clear();
                 taskList.Add(taskDNL.Load());
@@ -2441,7 +2468,7 @@ namespace Gravitybox.Datastore.Server.Core
                 threadSuccess &= Task.WaitAll(taskList.ToArray(), SqlHelper.ThreadTimeout);
 
                 if (!threadSuccess)
-                    throw new Exception("Error 0x2294");
+                    throw new DatastoreException("0x2294");
 
                 #region Setup Dimension Parents
 
@@ -2509,7 +2536,7 @@ namespace Gravitybox.Datastore.Server.Core
                     {
                         dimension = ((ICloneable)dimension).Clone() as DimensionItem;
                         if (dimension == null)
-                            throw new Exception("The dimension is null");
+                            throw new DatastoreException("The dimension is null");
 
                         //Remove all refinements that are not this specific filter
                         dimension.RefinementList.RemoveAll(x => x.DVIdx != dvidx);
@@ -2595,7 +2622,6 @@ namespace Gravitybox.Datastore.Server.Core
             }
             catch (Exception ex)
             {
-                //LoggerCQ.LogError(ex, "Query: RepositoryId=" + schema.ID + ", QueryString=\"" + query.ToString() + "\"");
                 throw;
             }
         }
@@ -2917,11 +2943,11 @@ namespace Gravitybox.Datastore.Server.Core
                         {
                             case ComparisonConstants.LessThan:
                             case ComparisonConstants.LessThanOrEq:
-                                sb.Append("[Z].[" + field.TokenName + "].STDistance(geography::Point(" + geo.Latitude + ", " + geo.Longitude + ", 4326)) <= " + (geo.Radius * 1609.344));
+                                sb.Append($"[Z].[{field.TokenName}].STDistance(geography::Point(" + geo.Latitude + ", " + geo.Longitude + ", 4326)) <= " + (geo.Radius * 1609.344));
                                 break;
                             case ComparisonConstants.GreaterThan:
                             case ComparisonConstants.GreaterThanOrEq:
-                                sb.Append("[Z].[" + field.TokenName + "].STDistance(geography::Point(" + geo.Latitude + ", " + geo.Longitude + ", 4326)) >= " + (geo.Radius * 1609.344));
+                                sb.Append($"[Z].[{field.TokenName}].STDistance(geography::Point(" + geo.Latitude + ", " + geo.Longitude + ", 4326)) >= " + (geo.Radius * 1609.344));
                                 break;
                             case ComparisonConstants.Equals:
                                 //+-25 METERS
@@ -2950,27 +2976,27 @@ namespace Gravitybox.Datastore.Server.Core
                             filterParam = new SqlParameter
                             {
                                 DbType = DbType.Boolean,
-                                ParameterName = "@__ff" + Utilities.CodeTokenize(field.Name) + parameterIndex,
+                                ParameterName = field.ToParameterName(parameterIndex),
                                 Value = input,
                             };
                             parameters.Add(filterParam);
                             if (ff.Value == null)
-                                sb.Append("[Z].[" + field.TokenName + "] IS " + filterParam.ParameterName);
+                                sb.Append($"[Z].[{field.TokenName}] IS {filterParam.ParameterName}");
                             else
-                                sb.Append("[Z].[" + field.TokenName + "] = " + filterParam.ParameterName);
+                                sb.Append($"[Z].[{field.TokenName}] = {filterParam.ParameterName}");
                             break;
                         case ComparisonConstants.NotEqual:
                             filterParam = new SqlParameter
                             {
                                 DbType = DbType.Boolean,
-                                ParameterName = "@__ff" + Utilities.CodeTokenize(field.Name) + parameterIndex,
+                                ParameterName = field.ToParameterName(parameterIndex),
                                 Value = input,
                             };
                             parameters.Add(filterParam);
                             if (ff.Value == null)
-                                sb.Append("[Z].[" + field.TokenName + "] IS NOT " + filterParam.ParameterName);
+                                sb.Append($"[Z].[{field.TokenName}] IS NOT {filterParam.ParameterName}");
                             else
-                                sb.Append("[Z].[" + field.TokenName + "] <> " + filterParam.ParameterName);
+                                sb.Append($"[Z].[{field.TokenName}] <> {filterParam.ParameterName}");
                             break;
                         default:
                             throw new Exception("This operation is not supported!");
@@ -2990,67 +3016,67 @@ namespace Gravitybox.Datastore.Server.Core
                             filterParam = new SqlParameter
                             {
                                 DbType = DbType.DateTime,
-                                ParameterName = "@__ff" + Utilities.CodeTokenize(field.Name) + parameterIndex,
+                                ParameterName = field.ToParameterName(parameterIndex),
                                 Value = input,
                             };
                             parameters.Add(filterParam);
-                            sb.Append("[Z].[" + field.TokenName + "] < " + filterParam.ParameterName);
+                            sb.Append($"[Z].[{field.TokenName}] < {filterParam.ParameterName}");
                             break;
                         case ComparisonConstants.LessThanOrEq:
                             filterParam = new SqlParameter
                             {
                                 DbType = DbType.DateTime,
-                                ParameterName = "@__ff" + Utilities.CodeTokenize(field.Name) + parameterIndex,
+                                ParameterName = field.ToParameterName(parameterIndex),
                                 Value = input,
                             };
                             parameters.Add(filterParam);
-                            sb.Append("[Z].[" + field.TokenName + "] <= " + filterParam.ParameterName);
+                            sb.Append($"[Z].[{field.TokenName}] <= {filterParam.ParameterName}");
                             break;
                         case ComparisonConstants.GreaterThan:
                             filterParam = new SqlParameter
                             {
                                 DbType = DbType.DateTime,
-                                ParameterName = "@__ff" + Utilities.CodeTokenize(field.Name) + parameterIndex,
+                                ParameterName = field.ToParameterName(parameterIndex),
                                 Value = input,
                             };
                             parameters.Add(filterParam);
-                            sb.Append("[Z].[" + field.TokenName + "] > " + filterParam.ParameterName);
+                            sb.Append($"[Z].[{field.TokenName}] > {filterParam.ParameterName}");
                             break;
                         case ComparisonConstants.GreaterThanOrEq:
                             filterParam = new SqlParameter
                             {
                                 DbType = DbType.DateTime,
-                                ParameterName = "@__ff" + Utilities.CodeTokenize(field.Name) + parameterIndex,
+                                ParameterName = field.ToParameterName(parameterIndex),
                                 Value = input,
                             };
                             parameters.Add(filterParam);
-                            sb.Append("[Z].[" + field.TokenName + "] >= " + filterParam.ParameterName);
+                            sb.Append($"[Z].[{field.TokenName}] >= {filterParam.ParameterName}");
                             break;
                         case ComparisonConstants.Equals:
                             filterParam = new SqlParameter
                             {
                                 DbType = DbType.DateTime,
-                                ParameterName = "@__ff" + Utilities.CodeTokenize(field.Name) + parameterIndex,
+                                ParameterName = field.ToParameterName(parameterIndex),
                                 Value = input,
                             };
                             parameters.Add(filterParam);
                             if (ff.Value == null)
-                                sb.Append("[Z].[" + field.TokenName + "] IS NULL");
+                                sb.Append($"[Z].[{field.TokenName}] IS NULL");
                             else
-                                sb.Append("[Z].[" + field.TokenName + "] = " + filterParam.ParameterName);
+                                sb.Append($"[Z].[{field.TokenName}] = {filterParam.ParameterName}");
                             break;
                         case ComparisonConstants.NotEqual:
                             filterParam = new SqlParameter
                             {
                                 DbType = DbType.DateTime,
-                                ParameterName = "@__ff" + Utilities.CodeTokenize(field.Name) + parameterIndex,
+                                ParameterName = field.ToParameterName(parameterIndex),
                                 Value = input,
                             };
                             parameters.Add(filterParam);
                             if (ff.Value == null)
-                                sb.Append("[Z].[" + field.TokenName + "] IS NOT NULL");
+                                sb.Append($"[Z].[{field.TokenName}] IS NOT NULL");
                             else
-                                sb.Append("[Z].[" + field.TokenName + "] <> " + filterParam.ParameterName);
+                                sb.Append($"[Z].[{field.TokenName}] <> {filterParam.ParameterName}");
                             break;
                         default:
                             throw new Exception("This operation is not supported!");
@@ -3070,67 +3096,67 @@ namespace Gravitybox.Datastore.Server.Core
                             filterParam = new SqlParameter
                             {
                                 DbType = DbType.Double,
-                                ParameterName = "@__ff" + Utilities.CodeTokenize(field.Name) + parameterIndex,
+                                ParameterName = field.ToParameterName(parameterIndex),
                                 Value = input,
                             };
                             parameters.Add(filterParam);
-                            sb.Append("[Z].[" + field.TokenName + "] < " + filterParam.ParameterName);
+                            sb.Append($"[Z].[{field.TokenName}] < {filterParam.ParameterName}");
                             break;
                         case ComparisonConstants.LessThanOrEq:
                             filterParam = new SqlParameter
                             {
                                 DbType = DbType.Double,
-                                ParameterName = "@__ff" + Utilities.CodeTokenize(field.Name) + parameterIndex,
+                                ParameterName = field.ToParameterName(parameterIndex),
                                 Value = input,
                             };
                             parameters.Add(filterParam);
-                            sb.Append("[Z].[" + field.TokenName + "] <= " + filterParam.ParameterName);
+                            sb.Append($"[Z].[{field.TokenName}] <= {filterParam.ParameterName}");
                             break;
                         case ComparisonConstants.GreaterThan:
                             filterParam = new SqlParameter
                             {
                                 DbType = DbType.Double,
-                                ParameterName = "@__ff" + Utilities.CodeTokenize(field.Name) + parameterIndex,
+                                ParameterName = field.ToParameterName(parameterIndex),
                                 Value = input,
                             };
                             parameters.Add(filterParam);
-                            sb.Append("[Z].[" + field.TokenName + "] > " + filterParam.ParameterName);
+                            sb.Append($"[Z].[{field.TokenName}] > {filterParam.ParameterName}");
                             break;
                         case ComparisonConstants.GreaterThanOrEq:
                             filterParam = new SqlParameter
                             {
                                 DbType = DbType.Double,
-                                ParameterName = "@__ff" + Utilities.CodeTokenize(field.Name) + parameterIndex,
+                                ParameterName = field.ToParameterName(parameterIndex),
                                 Value = input,
                             };
                             parameters.Add(filterParam);
-                            sb.Append("[Z].[" + field.TokenName + "] >= " + filterParam.ParameterName);
+                            sb.Append($"[Z].[{field.TokenName}] >= {filterParam.ParameterName}");
                             break;
                         case ComparisonConstants.Equals:
                             filterParam = new SqlParameter
                             {
                                 DbType = DbType.Double,
-                                ParameterName = "@__ff" + Utilities.CodeTokenize(field.Name) + parameterIndex,
+                                ParameterName = field.ToParameterName(parameterIndex),
                                 Value = input,
                             };
                             parameters.Add(filterParam);
                             if (ff.Value == null)
-                                sb.Append("[Z].[" + field.TokenName + "] IS NULL");
+                                sb.Append($"[Z].[{field.TokenName}] IS NULL");
                             else
-                                sb.Append("[Z].[" + field.TokenName + "] = " + filterParam.ParameterName);
+                                sb.Append($"[Z].[{field.TokenName}] = {filterParam.ParameterName}");
                             break;
                         case ComparisonConstants.NotEqual:
                             filterParam = new SqlParameter
                             {
                                 DbType = DbType.Double,
-                                ParameterName = "@__ff" + Utilities.CodeTokenize(field.Name) + parameterIndex,
+                                ParameterName = field.ToParameterName(parameterIndex),
                                 Value = input,
                             };
                             parameters.Add(filterParam);
                             if (ff.Value == null)
-                                sb.Append("[Z].[" + field.TokenName + "] IS NOT NULL");
+                                sb.Append($"[Z].[{field.TokenName}] IS NOT NULL");
                             else
-                                sb.Append("[Z].[" + field.TokenName + "] <> " + filterParam.ParameterName);
+                                sb.Append($"[Z].[{field.TokenName}] <> {filterParam.ParameterName}");
                             break;
                         default:
                             throw new Exception("This operation is not supported!");
@@ -3155,67 +3181,67 @@ namespace Gravitybox.Datastore.Server.Core
                             filterParam = new SqlParameter
                             {
                                 DbType = dataType,
-                                ParameterName = "@__ff" + Utilities.CodeTokenize(field.Name) + parameterIndex,
+                                ParameterName = field.ToParameterName(parameterIndex),
                                 Value = input,
                             };
                             parameters.Add(filterParam);
-                            sb.Append("[Z].[" + field.TokenName + "] < " + filterParam.ParameterName);
+                            sb.Append($"[Z].[{field.TokenName}] < {filterParam.ParameterName}");
                             break;
                         case ComparisonConstants.LessThanOrEq:
                             filterParam = new SqlParameter
                             {
                                 DbType = dataType,
-                                ParameterName = "@__ff" + Utilities.CodeTokenize(field.Name) + parameterIndex,
+                                ParameterName = field.ToParameterName(parameterIndex),
                                 Value = input,
                             };
                             parameters.Add(filterParam);
-                            sb.Append("[Z].[" + field.TokenName + "] => " + filterParam.ParameterName);
+                            sb.Append($"[Z].[{field.TokenName}] => " + filterParam.ParameterName);
                             break;
                         case ComparisonConstants.GreaterThan:
                             filterParam = new SqlParameter
                             {
                                 DbType = dataType,
-                                ParameterName = "@__ff" + Utilities.CodeTokenize(field.Name) + parameterIndex,
+                                ParameterName = field.ToParameterName(parameterIndex),
                                 Value = input,
                             };
                             parameters.Add(filterParam);
-                            sb.Append("[Z].[" + field.TokenName + "] > " + filterParam.ParameterName);
+                            sb.Append($"[Z].[{field.TokenName}] > {filterParam.ParameterName}");
                             break;
                         case ComparisonConstants.GreaterThanOrEq:
                             filterParam = new SqlParameter
                             {
                                 DbType = dataType,
-                                ParameterName = "@__ff" + Utilities.CodeTokenize(field.Name) + parameterIndex,
+                                ParameterName = field.ToParameterName(parameterIndex),
                                 Value = input,
                             };
                             parameters.Add(filterParam);
-                            sb.Append("[Z].[" + field.TokenName + "] >= " + filterParam.ParameterName);
+                            sb.Append($"[Z].[{field.TokenName}] >= {filterParam.ParameterName}");
                             break;
                         case ComparisonConstants.Equals:
                             filterParam = new SqlParameter
                             {
                                 DbType = dataType,
-                                ParameterName = "@__ff" + Utilities.CodeTokenize(field.Name) + parameterIndex,
+                                ParameterName = field.ToParameterName(parameterIndex),
                                 Value = input,
                             };
                             parameters.Add(filterParam);
                             if (ff.Value == null)
-                                sb.Append("[Z].[" + field.TokenName + "] IS NULL");
+                                sb.Append($"[Z].[{field.TokenName}] IS NULL");
                             else
-                                sb.Append("[Z].[" + field.TokenName + "] = " + filterParam.ParameterName);
+                                sb.Append($"[Z].[{field.TokenName}] = {filterParam.ParameterName}");
                             break;
                         case ComparisonConstants.NotEqual:
                             filterParam = new SqlParameter
                             {
                                 DbType = dataType,
-                                ParameterName = "@__ff" + Utilities.CodeTokenize(field.Name) + parameterIndex,
+                                ParameterName = field.ToParameterName(parameterIndex),
                                 Value = input,
                             };
                             parameters.Add(filterParam);
                             if (ff.Value == null)
-                                sb.Append("[Z].[" + field.TokenName + "] IS NOT NULL");
+                                sb.Append($"[Z].[{field.TokenName}] IS NOT NULL");
                             else
-                                sb.Append("[Z].[" + field.TokenName + "] <> " + filterParam.ParameterName);
+                                sb.Append($"[Z].[{field.TokenName}] <> {filterParam.ParameterName}");
                             break;
                         default:
                             throw new Exception("This operation is not supported!");
@@ -3237,77 +3263,125 @@ namespace Gravitybox.Datastore.Server.Core
                             filterParam = new SqlParameter
                             {
                                 DbType = DbType.String,
-                                ParameterName = "@__ff" + Utilities.CodeTokenize(field.Name) + parameterIndex,
+                                ParameterName = field.ToParameterName(parameterIndex),
                                 Value = ffValue
                             };
                             parameters.Add(filterParam);
-                            sb.Append("[Z].[" + field.TokenName + "] < " + filterParam.ParameterName);
+                            sb.Append($"[Z].[{field.TokenName}] < {filterParam.ParameterName}");
                             break;
                         case ComparisonConstants.LessThanOrEq:
                             filterParam = new SqlParameter
                             {
                                 DbType = DbType.String,
-                                ParameterName = "@__ff" + Utilities.CodeTokenize(field.Name) + parameterIndex,
+                                ParameterName = field.ToParameterName(parameterIndex),
                                 Value = ffValue
                             };
                             parameters.Add(filterParam);
-                            sb.Append("[Z].[" + field.TokenName + "] <= " + filterParam.ParameterName);
+                            sb.Append($"[Z].[{field.TokenName}] <= {filterParam.ParameterName}");
                             break;
                         case ComparisonConstants.GreaterThan:
                             filterParam = new SqlParameter
                             {
                                 DbType = DbType.String,
-                                ParameterName = "@__ff" + Utilities.CodeTokenize(field.Name) + parameterIndex,
+                                ParameterName = field.ToParameterName(parameterIndex),
                                 Value = ffValue
                             };
                             parameters.Add(filterParam);
-                            sb.Append("[Z].[" + field.TokenName + "] > " + filterParam.ParameterName);
+                            sb.Append($"[Z].[{field.TokenName}] > {filterParam.ParameterName}");
                             break;
                         case ComparisonConstants.GreaterThanOrEq:
                             filterParam = new SqlParameter
                             {
                                 DbType = DbType.String,
-                                ParameterName = "@__ff" + Utilities.CodeTokenize(field.Name) + parameterIndex,
+                                ParameterName = field.ToParameterName(parameterIndex),
                                 Value = ffValue
                             };
                             parameters.Add(filterParam);
-                            sb.Append("[Z].[" + field.TokenName + "] >= " + filterParam.ParameterName);
+                            sb.Append($"[Z].[{field.TokenName}] >= {filterParam.ParameterName}");
                             break;
                         case ComparisonConstants.Equals:
                             filterParam = new SqlParameter
                             {
                                 DbType = DbType.String,
-                                ParameterName = "@__ff" + Utilities.CodeTokenize(field.Name) + parameterIndex,
+                                ParameterName = field.ToParameterName(parameterIndex),
                                 Value = ffValue
                             };
                             parameters.Add(filterParam);
                             if (ffValue == null)
-                                sb.Append("[Z].[" + field.TokenName + "] IS NULL");
+                                sb.Append($"[Z].[{field.TokenName}] IS NULL");
                             else
-                                sb.Append("[Z].[" + field.TokenName + "] = " + filterParam.ParameterName);
+                                sb.Append($"[Z].[{field.TokenName}] = {filterParam.ParameterName}");
                             break;
                         case ComparisonConstants.NotEqual:
                             filterParam = new SqlParameter
                             {
                                 DbType = DbType.String,
-                                ParameterName = "@__ff" + Utilities.CodeTokenize(field.Name) + parameterIndex,
+                                ParameterName = field.ToParameterName(parameterIndex),
                                 Value = ffValue
                             };
                             parameters.Add(filterParam);
                             if (ffValue == null)
-                                sb.Append("[Z].[" + field.TokenName + "] IS NOT NULL");
+                                sb.Append($"[Z].[{field.TokenName}] IS NOT NULL");
                             else
-                                sb.Append("[Z].[" + field.TokenName + "] <> " + filterParam.ParameterName);
+                                sb.Append($"[Z].[{field.TokenName}] <> {filterParam.ParameterName}");
                             break;
                         case ComparisonConstants.Like:
                             filterParam = new SqlParameter
                             {
                                 DbType = DbType.String,
-                                ParameterName = "@__ff" + Utilities.CodeTokenize(field.Name) + parameterIndex,
+                                ParameterName = field.ToParameterName(parameterIndex),
                                 Value = ffValue?.Replace("*", "%"),
                             };
                             parameters.Add(filterParam);
-                            sb.Append("[Z].[" + field.TokenName + "] LIKE " + filterParam.ParameterName);
+                            sb.Append($"[Z].[{field.TokenName}] LIKE {filterParam.ParameterName}");
+                            break;
+                        case ComparisonConstants.ContainsAny:
+                            if (ffValue != null)
+                            {
+                                var words = ffValue.Replace("*", string.Empty).Replace("%", string.Empty).Split(new char[] { '^' }, StringSplitOptions.RemoveEmptyEntries);
+                                if (words.Any())
+                                {
+                                    var subSqlList = new List<string>();
+                                    var subIndex = 0;
+                                    foreach (var word in words)
+                                    {
+                                        filterParam = new SqlParameter
+                                        {
+                                            DbType = DbType.String,
+                                            ParameterName = $"@__ff{Utilities.CodeTokenize(field.Name)}{parameterIndex}a{subIndex}",
+                                            Value = $"%{word}%",
+                                        };
+                                        parameters.Add(filterParam);
+                                        subSqlList.Add($"[Z].[{field.TokenName}] LIKE {filterParam.ParameterName}");
+                                        subIndex++;
+                                    }
+                                    sb.Append($"({string.Join(" OR ", subSqlList)})");
+                                }
+                            }
+                            break;
+                        case ComparisonConstants.ContainsAll:
+                            if (ffValue != null)
+                            {
+                                var words = ffValue.Replace("*", string.Empty).Replace("%", string.Empty).Split(new char[] { '^' }, StringSplitOptions.RemoveEmptyEntries);
+                                if (words.Any())
+                                {
+                                    var subSqlList = new List<string>();
+                                    var subIndex = 0;
+                                    foreach (var word in words)
+                                    {
+                                        filterParam = new SqlParameter
+                                        {
+                                            DbType = DbType.String,
+                                            ParameterName = $"@__ff{Utilities.CodeTokenize(field.Name)}{parameterIndex}a{subIndex}",
+                                            Value = $"%{word}%",
+                                        };
+                                        parameters.Add(filterParam);
+                                        subSqlList.Add($"[Z].[{field.TokenName}] LIKE {filterParam.ParameterName}");
+                                        subIndex++;
+                                    }
+                                    sb.Append($"({string.Join(" AND ", subSqlList)})");
+                                }
+                            }
                             break;
                         default:
                             throw new Exception("This operation is not supported!");
@@ -3406,7 +3480,7 @@ namespace Gravitybox.Datastore.Server.Core
                     field.DataType != RepositorySchema.DataTypeConstants.List &&
                     field.Name != HashField &&
                     field.Name != TimestampField)
-                    LoggerCQ.LogWarning($"WhereField NoIndex: ID={schema.ID}, Field={field.Name}");
+                    LoggerCQ.LogTrace($"WhereField NoIndex: ID={schema.ID}, Field={field.Name}");
                 #endregion
 
             }
@@ -3487,7 +3561,7 @@ namespace Gravitybox.Datastore.Server.Core
             //If supports OFFSET/FETCH then use it
             //No paging...this is faster
             sbSql.AppendLine($"SELECT {fieldSql}");
-            sbSql.AppendLine($"FROM [{dataTable}] Z " + NoLockText());
+            sbSql.AppendLine($"FROM [{dataTable}] Z {NoLockText()} {innerJoinClause}");
             sbSql.AppendLine($"WHERE {whereClause}");
             sbSql.AppendLine($"ORDER BY {orderByClause}");
             sbSql.AppendLine();
@@ -3597,7 +3671,7 @@ namespace Gravitybox.Datastore.Server.Core
                     sb = new StringBuilder();
                     sb.AppendLine($"if exists(select * from sys.objects where name = '{viewName}' and type = 'V')");
                     sb.AppendLine("BEGIN");
-                    sb.AppendLine("SET ROWCOUNT 10000");
+                    sb.AppendLine($"SET ROWCOUNT {DeleteBlockSize}");
                     sb.AppendLine($"delete from [{dataTable}];");
                     sb.AppendLine($"select count(*) from [{dataTable}]");
                     sb.AppendLine("END");
@@ -4408,7 +4482,7 @@ namespace Gravitybox.Datastore.Server.Core
         {
             if (SystemCore.LastProcessor >= SystemCore.ProcessorThreshold)
             {
-                LoggerCQ.LogDebug("CleanLogs Skipped: Processor=" + SystemCore.LastProcessor);
+                LoggerCQ.LogDebug($"CleanLogs Skipped: Processor={SystemCore.LastProcessor}");
                 return;
             }
 
@@ -4417,14 +4491,14 @@ namespace Gravitybox.Datastore.Server.Core
             var count = 0;
             try
             {
-                LoggerCQ.LogDebug("CleanLogs Start: Processor=" + SystemCore.LastProcessor);
+                LoggerCQ.LogDebug($"CleanLogs Start: Processor={SystemCore.LastProcessor}");
 
                 //Keep 14 days of logs
                 var pivotDate = DateTime.Now.Date.AddDays(-14).ToString("yyyy-MM-dd");
 
                 var sb = new StringBuilder();
-                sb.AppendLine("SET ROWCOUNT 10000");
-                sb.AppendLine("DELETE FROM [RepositoryLog] WHERE [CreatedDate] < '" + pivotDate + "'");
+                sb.AppendLine($"SET ROWCOUNT {DeleteBlockSize}");
+                sb.AppendLine($"DELETE FROM [RepositoryLog] WHERE [CreatedDate] < '{pivotDate}'");
                 var tempCount = -1;
                 while (tempCount != 0)
                 {
@@ -4438,8 +4512,8 @@ namespace Gravitybox.Datastore.Server.Core
 
                 tempCount = -1;
                 sb = new StringBuilder();
-                sb.AppendLine("SET ROWCOUNT 10000");
-                sb.AppendLine("DELETE FROM [RepositoryStat] WHERE [CreatedDate] < '" + pivotDate + "'");
+                sb.AppendLine($"SET ROWCOUNT {DeleteBlockSize}");
+                sb.AppendLine($"DELETE FROM [RepositoryStat] WHERE [CreatedDate] < '{pivotDate}'");
                 while (tempCount != 0)
                 {
                     RetryHelper.DefaultRetryPolicy(5)
@@ -4452,8 +4526,8 @@ namespace Gravitybox.Datastore.Server.Core
 
                 tempCount = -1;
                 sb = new StringBuilder();
-                sb.AppendLine("SET ROWCOUNT 10000");
-                sb.AppendLine("DELETE FROM [ServerStat] WHERE [AddedDate] < '" + pivotDate + "'");
+                sb.AppendLine($"SET ROWCOUNT {DeleteBlockSize}");
+                sb.AppendLine($"DELETE FROM [ServerStat] WHERE [AddedDate] < '{pivotDate}'");
                 while (tempCount != 0)
                 {
                     RetryHelper.DefaultRetryPolicy(5)
@@ -4466,8 +4540,8 @@ namespace Gravitybox.Datastore.Server.Core
 
                 tempCount = -1;
                 sb = new StringBuilder();
-                sb.AppendLine("SET ROWCOUNT 5000");
-                sb.AppendLine("DELETE FROM [CacheInvalidate] WHERE [AddedDate] < '" + pivotDate + "'");
+                sb.AppendLine($"SET ROWCOUNT 5000");
+                sb.AppendLine($"DELETE FROM [CacheInvalidate] WHERE [AddedDate] < '{pivotDate}'");
                 while (tempCount != 0)
                 {
                     RetryHelper.DefaultRetryPolicy(5)
@@ -4486,7 +4560,7 @@ namespace Gravitybox.Datastore.Server.Core
             finally
             {
                 timer.Stop();
-                LoggerCQ.LogDebug("CleanLogs: Count=" + count + ", Processor=" + SystemCore.LastProcessor + ", Elapsed=" + timer.ElapsedMilliseconds);
+                LoggerCQ.LogDebug($"CleanLogs: Count={count}, Processor={SystemCore.LastProcessor}, Elapsed={timer.ElapsedMilliseconds}");
                 _isDefragging = false;
             }
         }
@@ -4965,6 +5039,7 @@ namespace Gravitybox.Datastore.Server.Core
             var sb = new StringBuilder();
 
             sb.AppendLine($"if not exists(select * from sys.objects where name = '{dimensionTable}' and type = 'U')");
+            sb.AppendLine("BEGIN");
             sb.AppendLine($"CREATE TABLE [{dimensionTable}] (");
             sb.AppendLine($"[DVIdx] BIGINT NOT NULL, [{RecordIdxField}] BIGINT NOT NULL,");
             sb.AppendLine($"CONSTRAINT [PK_{dimensionTable}] PRIMARY KEY CLUSTERED ([{RecordIdxField}], [DVIdx])");
@@ -4980,6 +5055,8 @@ namespace Gravitybox.Datastore.Server.Core
             {
                 sb.AppendLine($"ALTER TABLE [{dimensionTable}] REBUILD PARTITION = ALL WITH (DATA_COMPRESSION = PAGE);");
             }
+
+            sb.AppendLine("END");
 
             //Create '__RecordIdx' index for speed (makes big difference)
             var indexName = $"IDX_{dimensionTable}_RecordIdx";
@@ -5326,6 +5403,15 @@ namespace Gravitybox.Datastore.Server.Core
 
         #endregion
 
+    }
+
+    internal class DatastoreException : System.Exception
+    {
+        /// <summary />
+        public DatastoreException() : base() { }
+
+        /// <summary />
+        public DatastoreException(string message) : base(message) { }
     }
 
 }

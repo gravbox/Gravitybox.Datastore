@@ -48,14 +48,14 @@ namespace Gravitybox.Datastore.Common
         /// <summary />
         public static ChannelFactory<ISystemCore> GetCoreFactory(string serverName, int port)
         {
-            var myBinding = new NetTcpBinding() { MaxBufferSize = MaxItemSize, MaxReceivedMessageSize = MaxItemSize, MaxBufferPoolSize = 0 };
+            var myBinding = new NetTcpBinding() { MaxBufferSize = MaxItemSize, MaxReceivedMessageSize = MaxItemSize, MaxBufferPoolSize = 0, MaxConnections = 1000 };
             myBinding.ReaderQuotas.MaxStringContentLength = MaxItemSize;
             myBinding.ReaderQuotas.MaxBytesPerRead = MaxItemSize;
             myBinding.ReaderQuotas.MaxArrayLength = MaxItemSize;
             myBinding.ReaderQuotas.MaxDepth = MaxItemSize;
             myBinding.ReaderQuotas.MaxNameTableCharCount = MaxItemSize;
             myBinding.Security.Mode = SecurityMode.None;
-            var myEndpoint = new EndpointAddress("net.tcp://" + serverName + ":" + port + "/__datastore_core");
+            var myEndpoint = new EndpointAddress($"net.tcp://{serverName}:{port}/__datastore_core");
             return new ChannelFactory<ISystemCore>(myBinding, myEndpoint);
         }
 
@@ -68,14 +68,14 @@ namespace Gravitybox.Datastore.Common
         /// <summary />
         public static ChannelFactory<IDataModel> GetRepositoryFactory(string serverName, int port)
         {
-            var myBinding = new NetTcpBinding() { MaxBufferSize = MaxItemSize, MaxReceivedMessageSize = MaxItemSize, MaxBufferPoolSize = 0 };
+            var myBinding = new NetTcpBinding() { MaxBufferSize = MaxItemSize, MaxReceivedMessageSize = MaxItemSize, MaxBufferPoolSize = 0, MaxConnections = 1000 };
             myBinding.ReaderQuotas.MaxStringContentLength = MaxItemSize;
             myBinding.ReaderQuotas.MaxBytesPerRead = MaxItemSize;
             myBinding.ReaderQuotas.MaxArrayLength = MaxItemSize;
             myBinding.ReaderQuotas.MaxDepth = MaxItemSize;
             myBinding.ReaderQuotas.MaxNameTableCharCount = MaxItemSize;
             myBinding.Security.Mode = SecurityMode.None;
-            var myEndpoint = new EndpointAddress("net.tcp://" + serverName + ":" + port + "/__datastore_engine");
+            var myEndpoint = new EndpointAddress($"net.tcp://{serverName}:{port}/__datastore_engine");
             return new ChannelFactory<IDataModel>(myBinding, myEndpoint);
         }
 

@@ -17,6 +17,10 @@ namespace Gravitybox.Datastore.Common
         Like,
         /// <summary />
         NotEqual,
+        /// <summary />
+        ContainsAny,
+        /// <summary />
+        ContainsAll,
     }
 
     /// <summary />
