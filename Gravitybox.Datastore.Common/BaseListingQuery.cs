@@ -28,7 +28,7 @@ namespace Gravitybox.Datastore.Common
             : this()
         {
             if (string.IsNullOrEmpty(url)) return;
-            //if (url.Contains("%")) url = System.Web.HttpUtility.UrlDecode(url);
+            if (url.Contains("%")) url = System.Web.HttpUtility.UrlDecode(url);
             var originalUrl = url;
 
             var pageBreak = url.IndexOf('?');

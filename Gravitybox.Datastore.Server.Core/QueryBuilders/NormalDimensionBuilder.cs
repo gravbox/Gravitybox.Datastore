@@ -180,13 +180,20 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
                                         {
                                             var v = allRefinements[dvidx];
                                             var newDimension = _configuration.retval.DimensionList[(ii * GBSize) + jj - 1];
-                                            newDimension.RefinementList.Add(new RefinementItem
+                                            var rItem = new RefinementItem
                                             {
                                                 DVIdx = dvidx,
                                                 FieldValue = v.FieldValue,
                                                 Count = count,
-                                                DIdx = newDimension.DIdx
-                                            });
+                                                DIdx = newDimension.DIdx,
+                                            };
+
+                                            if (newDimension.NumericBreak != null)
+                                            {
+                                                rItem.MinValue = rItem.FieldValue.ToInt64();
+                                                rItem.MaxValue = rItem.MinValue + newDimension.NumericBreak;
+                                            }
+                                            newDimension.RefinementList.Add(rItem);
                                             wasFound = true;
                                         }
                                     }

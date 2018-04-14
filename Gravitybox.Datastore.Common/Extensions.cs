@@ -492,6 +492,15 @@ namespace Gravitybox.Datastore.Common
         }
 
         /// <summary />
+        public static long ToInt64(this string v)
+        {
+            if (string.IsNullOrEmpty(v)) return 0;
+            long parsed;
+            long.TryParse(v, out parsed);
+            return parsed;
+        }
+
+        /// <summary />
         public static double ToDouble(this string v)
         {
             double parsed;

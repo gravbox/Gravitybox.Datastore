@@ -64,6 +64,8 @@ namespace Gravitybox.Datastore.Common
             dest.DVIdx = this.DVIdx;
             dest.DIdx = this.DIdx;
             dest.FieldValue = this.FieldValue;
+            dest.MinValue = this.MinValue;
+            dest.MaxValue = this.MaxValue;
             return dest;
         }
 
