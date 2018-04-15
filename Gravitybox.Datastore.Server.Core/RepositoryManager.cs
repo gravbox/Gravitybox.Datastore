@@ -1107,7 +1107,7 @@ namespace Gravitybox.Datastore.Server.Core
                 return retval;
             }
 
-            LoggerCQ.LogDebug($"UpdateData begin: RepositoryId={schema.ID}");
+            LoggerCQ.LogTrace($"UpdateData begin: RepositoryId={schema.ID}");
             
             var errorList = new List<string>();
             var schema1 = GetSchema(schema.ID);

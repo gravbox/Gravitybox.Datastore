@@ -313,11 +313,11 @@ namespace Gravitybox.Datastore.Common.Queryable
                 throw new Exception("The type must be set");
 
             if (!dsType.GetInterfaces().Any(x => x.Name == typeof(IDatastoreItem).Name))
-                throw new Exception("The item must implement " + typeof(IDatastoreItem).Name + ".");
+                throw new Exception($"The item must implement {typeof(IDatastoreItem).Name}.");
 
             var dsRepositoryAttribute = dsType.GetCustomAttributes().FirstOrDefault(x => x is DatastoreRepositoryAttribute) as DatastoreRepositoryAttribute;
             if (dsRepositoryAttribute == null)
-                throw new InvalidOperationException("Cannot create repository for the specified type.  Missing DataStoreRepositoryAttribute.");
+                throw new InvalidOperationException("Cannot create repository for the specified type. Missing DataStoreRepositoryAttribute.");
 
             var schema = new RepositorySchema();
             schema.Name = dsRepositoryAttribute.Name;
@@ -526,10 +526,23 @@ namespace Gravitybox.Datastore.Common.Queryable
             if (schema.ParentID != null && !inheritedFieldList)
             {
                 if (!dsType.BaseType.GetInterfaces().Any(x => x.Name == typeof(IDatastoreItem).Name))
-                    throw new Exception("The item base must implement " + typeof(IDatastoreItem).Name + ".");
+                    throw new Exception($"The item base must implement {typeof(IDatastoreItem).Name}.");
                 var parentSchema = LoadSchemaForType(dsType.BaseType);
                 schema = schema.Subtract(parentSchema);
             }
+
+            foreach (var ditem in schema.DimensionList.Where(x => !string.IsNullOrEmpty(x.Parent)).ToList())
+            {
+                //Verify that no parent dimension is self-referential
+                if (ditem.Parent.Match(ditem.Name))
+                    throw new Exception($"The dimension '{ditem.Name}' cannot be its own parent.");
+
+                //Error check that parent dimension actually exists
+                if (!schema.DimensionList.Any(x => x.Name == ditem.Parent))
+                    throw new Exception($"The dimension '{ditem.Name}' defines a non-existent parent.");
+            }
+
+            //TODO: Verify that no parent dimensions cause a cycle (A->B->A)
 
             return schema;
         }

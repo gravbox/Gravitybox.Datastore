@@ -43,20 +43,20 @@ namespace Gravitybox.Datastore.Util.TestHarness
                 }
                 #endregion
 
-                //CreateRepo();
-                //AddData();
+                CreateRepo();
+                AddData();
                 //DuplicateFilters();
                 //TestDerivedFields();
                 //HitHard();
                 //Test12();
                 //TestAllDimensions();
-                Test44();
+                //Test44();
                 //TestSchema();
                 //TestAlive();
                 //TestFailover();
                 //TestQueryAsync();
                 //TestThreading();
-                ///TestManyConnections();
+                //TestManyConnections();
             }
             catch (Exception ex)
             {
@@ -139,13 +139,20 @@ namespace Gravitybox.Datastore.Util.TestHarness
                     Console.WriteLine($"Added Item {ii}");
                 }
 
-                //Add with some text
-                var newItem2 = new MyItem
-                {
-                    Project = "John Doe was here",
-                    ID = 1000,
-                };
-                repo.InsertOrUpdate(newItem2);
+
+                //repo.Delete.Where(x=>x.ID == -1).Commit();
+                //var diagnostics = repo.Update
+                //    .Field(x => x.Project, "")
+                //    .Field(x => x.Field1, "q")
+                //    .Where(x => x.ID == 1)
+                //    .Commit();
+
+                //var pp = 0;
+                //if (1 == pp)
+                //{
+                //    repo.Delete.Where(x => x.__Timestamp < startTimestamp && x.ID == 5).Commit();
+                //}
+
             }
         }
 
@@ -343,13 +350,18 @@ namespace Gravitybox.Datastore.Util.TestHarness
                 {
                     for (var ii = 0; ii < 1000; ii++)
                     {
-                        var query = new DataQuery { PageName = "q" };
-                        query.FieldFilters.Add(new FieldFilter { Name = "Project", Value= "Hello2^Hello29", Comparer = ComparisonConstants.ContainsAny });
-
                         var r6 = repo.Query
-                            .WhereUrl(query.ToString())
+                            .WhereUrl($"?q={ii}")
                             .Results();
                         Console.WriteLine($"Index={ii}");
+
+                        //foreach (var ritem in r6.AllDimensions.SelectMany(x => x.RefinementList))
+                        //{
+                        //    var r7 = repo.Query
+                        //        .WhereUrl("?q=" + ticks++)
+                        //        .WhereDimensionValue(ritem.DVIdx)
+                        //        .Results();
+                        //}
 
                     }
                 }
@@ -407,14 +419,19 @@ namespace Gravitybox.Datastore.Util.TestHarness
 
         private static void TestSchema()
         {
-            var q1 = RepositorySchema.CreateFromXml(File.ReadAllText(@"c:\temp\a.xml"));
-            var q2 = RepositorySchema.CreateFromXml(File.ReadAllText(@"c:\temp\b.xml"));
+            //var q1 = RepositorySchema.CreateFromXml(File.ReadAllText(@"c:\temp\a.xml"));
+            //var q2 = RepositorySchema.CreateFromXml(File.ReadAllText(@"c:\temp\b.xml"));
 
-            var v1 = q1.GetHashCode();
-            var v2 = q2.GetHashCode();
+            //var v1 = q1.GetHashCode();
+            //var v2 = q2.GetHashCode();
 
-            var c1 = q1.FieldList.Where(x => x.AllowIndex).Count();
-            var c2 = q2.FieldList.Where(x => x.AllowIndex).Count();
+            //var c1 = q1.FieldList.Where(x => x.AllowIndex).Count();
+            //var c2 = q2.FieldList.Where(x => x.AllowIndex).Count();
+
+            using (var repo = new DatastoreRepository<MyItem>(repoID, SERVER, PORT))
+            {
+                repo.GetSchema();
+            }
 
         }
 

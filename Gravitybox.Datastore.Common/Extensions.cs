@@ -499,7 +499,7 @@ namespace Gravitybox.Datastore.Common
             long.TryParse(v, out parsed);
             return parsed;
         }
-
+        
         /// <summary />
         public static double ToDouble(this string v)
         {

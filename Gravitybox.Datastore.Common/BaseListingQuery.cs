@@ -28,6 +28,7 @@ namespace Gravitybox.Datastore.Common
             : this()
         {
             if (string.IsNullOrEmpty(url)) return;
+            //The URL comes in sometimes encoded, hack
             if (url.Contains("%")) url = System.Web.HttpUtility.UrlDecode(url);
             var originalUrl = url;
 

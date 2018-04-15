@@ -17,9 +17,12 @@ namespace Gravitybox.Datastore.Server.Core
 {
     internal static class SqlHelper
     {
-        private static string ToParameterName(this FieldDefinition field, int parameterIndex)
+        private static string ToParameterName(this FieldDefinition field, int parameterIndex, int? subIndex = null)
         {
-            return $"@__ff{Utilities.CodeTokenize(field.Name)}{parameterIndex}";
+            if (subIndex == null)
+                return $"@__ff{Utilities.CodeTokenize(field.Name)}{parameterIndex}";
+            else
+                return $"@__ff{Utilities.CodeTokenize(field.Name)}{parameterIndex}a{subIndex}";
         }
 
         #region Members
@@ -2943,19 +2946,19 @@ namespace Gravitybox.Datastore.Server.Core
                         {
                             case ComparisonConstants.LessThan:
                             case ComparisonConstants.LessThanOrEq:
-                                sb.Append($"[Z].[{field.TokenName}].STDistance(geography::Point(" + geo.Latitude + ", " + geo.Longitude + ", 4326)) <= " + (geo.Radius * 1609.344));
+                                sb.Append($"[Z].[{field.TokenName}].STDistance(geography::Point({geo.Latitude}, {geo.Longitude}, 4326)) <= " + (geo.Radius * 1609.344));
                                 break;
                             case ComparisonConstants.GreaterThan:
                             case ComparisonConstants.GreaterThanOrEq:
-                                sb.Append($"[Z].[{field.TokenName}].STDistance(geography::Point(" + geo.Latitude + ", " + geo.Longitude + ", 4326)) >= " + (geo.Radius * 1609.344));
+                                sb.Append($"[Z].[{field.TokenName}].STDistance(geography::Point({geo.Latitude}, {geo.Longitude}, 4326)) >= " + (geo.Radius * 1609.344));
                                 break;
                             case ComparisonConstants.Equals:
                                 //+-25 METERS
-                                sb.Append(((geo.Radius * 1609.344) - 25) + " <= [Z].[" + field.TokenName + "].STDistance(geography::Point(" + geo.Latitude + ", " + geo.Longitude + ", 4326)) AND [Z].[" + field.TokenName + "].STDistance(geography::Point(" + geo.Latitude + ", " + geo.Longitude + ", 4326)) <= " + ((geo.Radius * 1609.344) + 25));
+                                sb.Append(((geo.Radius * 1609.344) - 25) + $" <= [Z].[{field.TokenName}].STDistance(geography::Point({geo.Latitude}, {geo.Longitude}, 4326)) AND [Z].[{field.TokenName}].STDistance(geography::Point({geo.Latitude}, {geo.Longitude}, 4326)) <= " + ((geo.Radius * 1609.344) + 25));
                                 break;
                             case ComparisonConstants.NotEqual:
                                 //+-25 METERS
-                                sb.Append("(" + ((geo.Radius * 1609.344) - 25) + " > [Z].[" + field.TokenName + "].STDistance(geography::Point(" + geo.Latitude + ", " + geo.Longitude + ", 4326)) OR [Z].[" + field.TokenName + "].STDistance(geography::Point(" + geo.Latitude + ", " + geo.Longitude + ", 4326)) > " + ((geo.Radius * 1609.344) + 25) + ")");
+                                sb.Append("(" + ((geo.Radius * 1609.344) - 25) + $" > [Z].[{field.TokenName}].STDistance(geography::Point({geo.Latitude}, {geo.Longitude}, 4326)) OR [Z].[{field.TokenName}].STDistance(geography::Point({geo.Latitude}, {geo.Longitude}, 4326)) > " + ((geo.Radius * 1609.344) + 25) + ")");
                                 break;
                             default:
                                 throw new Exception("This operation is not supported!");
@@ -3348,7 +3351,7 @@ namespace Gravitybox.Datastore.Server.Core
                                         filterParam = new SqlParameter
                                         {
                                             DbType = DbType.String,
-                                            ParameterName = $"@__ff{Utilities.CodeTokenize(field.Name)}{parameterIndex}a{subIndex}",
+                                            ParameterName = field.ToParameterName(parameterIndex, subIndex),
                                             Value = $"%{word}%",
                                         };
                                         parameters.Add(filterParam);
@@ -3372,11 +3375,35 @@ namespace Gravitybox.Datastore.Server.Core
                                         filterParam = new SqlParameter
                                         {
                                             DbType = DbType.String,
-                                            ParameterName = $"@__ff{Utilities.CodeTokenize(field.Name)}{parameterIndex}a{subIndex}",
+                                            ParameterName = field.ToParameterName(parameterIndex, subIndex),
                                             Value = $"%{word}%",
                                         };
                                         parameters.Add(filterParam);
                                         subSqlList.Add($"[Z].[{field.TokenName}] LIKE {filterParam.ParameterName}");
+                                        subIndex++;
+                                    }
+                                    sb.Append($"({string.Join(" AND ", subSqlList)})");
+                                }
+                            }
+                            break;
+                        case ComparisonConstants.ContainsNone:
+                            if (ffValue != null)
+                            {
+                                var words = ffValue.Replace("*", string.Empty).Replace("%", string.Empty).Split(new char[] { '^' }, StringSplitOptions.RemoveEmptyEntries);
+                                if (words.Any())
+                                {
+                                    var subSqlList = new List<string>();
+                                    var subIndex = 0;
+                                    foreach (var word in words)
+                                    {
+                                        filterParam = new SqlParameter
+                                        {
+                                            DbType = DbType.String,
+                                            ParameterName = field.ToParameterName(parameterIndex, subIndex),
+                                            Value = $"%{word}%",
+                                        };
+                                        parameters.Add(filterParam);
+                                        subSqlList.Add($"([Z].[{field.TokenName}] NOT LIKE {filterParam.ParameterName})");
                                         subIndex++;
                                     }
                                     sb.Append($"({string.Join(" AND ", subSqlList)})");

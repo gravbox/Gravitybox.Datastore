@@ -1,4 +1,5 @@
 RD /S /Q "C:\publish\Datastore"
+timeout 2
 mkdir "C:\publish\Datastore"
 
 "C:\Program Files (x86)\Microsoft Visual Studio\2017\BuildTools\MSBuild\15.0\Bin\msbuild.exe" "..\Gravitybox.Datastore.sln" /p:Configuration=Release /t:Rebuild

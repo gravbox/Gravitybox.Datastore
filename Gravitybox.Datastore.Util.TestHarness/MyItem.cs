@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Gravitybox.Datastore.Common.Queryable;
 using Gravitybox.Datastore.Common;
+using static Gravitybox.Datastore.Common.RepositorySchema;
 
 namespace Gravitybox.Datastore.Util.TestHarness
 {
@@ -24,10 +25,10 @@ namespace Gravitybox.Datastore.Util.TestHarness
         [DatastoreField()]
         public DateTime? CreatedDate { get; set; }
 
-        [DatastoreField(FieldType = Gravitybox.Datastore.Common.RepositorySchema.FieldTypeConstants.Dimension, DimensionType = Gravitybox.Datastore.Common.RepositorySchema.DimensionTypeConstants.Normal)]
+        [DatastoreField(FieldType = FieldTypeConstants.Dimension, DimensionType = DimensionTypeConstants.Normal)]
         public string[] MyList { get; set; }
 
-        [DatastoreField(FieldType = Gravitybox.Datastore.Common.RepositorySchema.FieldTypeConstants.Dimension, DimensionType = Gravitybox.Datastore.Common.RepositorySchema.DimensionTypeConstants.Normal)]
+        [DatastoreField(FieldType = FieldTypeConstants.Dimension, DimensionType = DimensionTypeConstants.Normal)]
         public string Dim2 { get; set; }
 
         [DatastoreField()]

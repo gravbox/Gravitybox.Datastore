@@ -21,6 +21,8 @@ namespace Gravitybox.Datastore.Common
         ContainsAny,
         /// <summary />
         ContainsAll,
+        /// <summary />
+        ContainsNone,
     }
 
     /// <summary />
