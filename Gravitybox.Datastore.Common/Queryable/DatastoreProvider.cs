@@ -572,10 +572,16 @@ namespace Gravitybox.Datastore.Common.Queryable
                         var property = itemType.GetProperty(fieldset.Name);
                         if (property != null && property.CanWrite)
                         {
-                            if (value ==null)
+                            if (value == null)
                                 property.SetValue(obj, null);
                             else if (property.PropertyType == typeof(Single?) || property.PropertyType == typeof(Single))
                                 property.SetValue(obj, Convert.ToSingle(value));
+                            else if (property.PropertyType == typeof(decimal?) || property.PropertyType == typeof(decimal))
+                                property.SetValue(obj, Convert.ToDecimal(value));
+                            else if (property.PropertyType == typeof(byte?) || property.PropertyType == typeof(byte))
+                                property.SetValue(obj, Convert.ToByte(value));
+                            else if (property.PropertyType == typeof(short?) || property.PropertyType == typeof(short))
+                                property.SetValue(obj, Convert.ToInt16(value));
                             else
                                 property.SetValue(obj, value);
                         }

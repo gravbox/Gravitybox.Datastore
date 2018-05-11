@@ -1602,7 +1602,7 @@ namespace Gravitybox.Datastore.Server.Core
                                 }
                                 else
                                 {
-                                    if (dimension.DataType == RepositorySchema.DataTypeConstants.Int && dimension.NumericBreak != null && dimension.NumericBreak > 0)
+                                    if ((dimension.DataType == RepositorySchema.DataTypeConstants.Int || dimension.DataType == RepositorySchema.DataTypeConstants.Int64) && dimension.NumericBreak != null && dimension.NumericBreak > 0)
                                     {
                                         var tv = Convert.ToInt64(item.ItemArray[fieldIndex]);
                                         var scaled = ((tv / dimension.NumericBreak) * dimension.NumericBreak).ToString();
@@ -2208,6 +2208,16 @@ namespace Gravitybox.Datastore.Server.Core
                             };
                             if (field.AllowNull && objectValue == null) newParam.Value = null;
                             else newParam.Value = Convert.ToInt32(objectValue);
+                            break;
+                        case RepositorySchema.DataTypeConstants.Int64:
+                            newParam = new SqlParameter
+                            {
+                                DbType = DbType.Int64,
+                                IsNullable = field.AllowNull,
+                                ParameterName = paramName,
+                            };
+                            if (field.AllowNull && objectValue == null) newParam.Value = null;
+                            else newParam.Value = Convert.ToInt64(objectValue);
                             break;
                         case RepositorySchema.DataTypeConstants.String:
                             newParam = new SqlParameter
@@ -3266,6 +3276,91 @@ namespace Gravitybox.Datastore.Server.Core
                 }
                 #endregion
 
+                #region Int64
+                else if (field.DataType == RepositorySchema.DataTypeConstants.Int64)
+                {
+                    var input = GetValueInt64(ff.Value);
+                    if (ff.Value != null && input == null) return;
+                    filterFound = true;
+                    var dataType = DbType.Int64;
+
+                    //This is sort of a hack but if it is the Hash field then strong type to Int64
+                    if (ff.Name == HashField) dataType = DbType.Int64;
+
+                    switch (ff.Comparer)
+                    {
+                        case ComparisonConstants.LessThan:
+                            filterParam = new SqlParameter
+                            {
+                                DbType = dataType,
+                                ParameterName = field.ToParameterName(parameterIndex),
+                                Value = input,
+                            };
+                            parameters.Add(filterParam);
+                            sb.Append($"[Z].[{field.TokenName}] < {filterParam.ParameterName}");
+                            break;
+                        case ComparisonConstants.LessThanOrEq:
+                            filterParam = new SqlParameter
+                            {
+                                DbType = dataType,
+                                ParameterName = field.ToParameterName(parameterIndex),
+                                Value = input,
+                            };
+                            parameters.Add(filterParam);
+                            sb.Append($"[Z].[{field.TokenName}] => " + filterParam.ParameterName);
+                            break;
+                        case ComparisonConstants.GreaterThan:
+                            filterParam = new SqlParameter
+                            {
+                                DbType = dataType,
+                                ParameterName = field.ToParameterName(parameterIndex),
+                                Value = input,
+                            };
+                            parameters.Add(filterParam);
+                            sb.Append($"[Z].[{field.TokenName}] > {filterParam.ParameterName}");
+                            break;
+                        case ComparisonConstants.GreaterThanOrEq:
+                            filterParam = new SqlParameter
+                            {
+                                DbType = dataType,
+                                ParameterName = field.ToParameterName(parameterIndex),
+                                Value = input,
+                            };
+                            parameters.Add(filterParam);
+                            sb.Append($"[Z].[{field.TokenName}] >= {filterParam.ParameterName}");
+                            break;
+                        case ComparisonConstants.Equals:
+                            filterParam = new SqlParameter
+                            {
+                                DbType = dataType,
+                                ParameterName = field.ToParameterName(parameterIndex),
+                                Value = input,
+                            };
+                            parameters.Add(filterParam);
+                            if (ff.Value == null)
+                                sb.Append($"[Z].[{field.TokenName}] IS NULL");
+                            else
+                                sb.Append($"[Z].[{field.TokenName}] = {filterParam.ParameterName}");
+                            break;
+                        case ComparisonConstants.NotEqual:
+                            filterParam = new SqlParameter
+                            {
+                                DbType = dataType,
+                                ParameterName = field.ToParameterName(parameterIndex),
+                                Value = input,
+                            };
+                            parameters.Add(filterParam);
+                            if (ff.Value == null)
+                                sb.Append($"[Z].[{field.TokenName}] IS NOT NULL");
+                            else
+                                sb.Append($"[Z].[{field.TokenName}] <> {filterParam.ParameterName}");
+                            break;
+                        default:
+                            throw new Exception("This operation is not supported!");
+                    }
+                }
+                #endregion
+
                 #region String
                 else if (field.DataType == RepositorySchema.DataTypeConstants.String)
                 {
@@ -3789,6 +3884,15 @@ namespace Gravitybox.Datastore.Server.Core
                                 Value = (int?)item.ItemArray[pkIndex]
                             };
                             break;
+                        case RepositorySchema.DataTypeConstants.Int64:
+                            newParam = new SqlParameter
+                            {
+                                DbType = DbType.Int64,
+                                IsNullable = true,
+                                ParameterName = "@pk",
+                                Value = (long?)item.ItemArray[pkIndex]
+                            };
+                            break;
                         case RepositorySchema.DataTypeConstants.String:
                             newParam = new SqlParameter
                             {
@@ -4021,6 +4125,9 @@ namespace Gravitybox.Datastore.Server.Core
                         break;
                     case RepositorySchema.DataTypeConstants.Int:
                         retval = ((int)v).ToString();
+                        break;
+                    case RepositorySchema.DataTypeConstants.Int64:
+                        retval = ((long)v).ToString();
                         break;
                     case RepositorySchema.DataTypeConstants.String:
                         retval = (string)v;
@@ -4886,6 +4993,9 @@ namespace Gravitybox.Datastore.Server.Core
                             case RepositorySchema.DataTypeConstants.Int:
                                 record.FieldValues.Add(((int)dr[f.Name]).ToString());
                                 break;
+                            case RepositorySchema.DataTypeConstants.Int64:
+                                record.FieldValues.Add(((long)dr[f.Name]).ToString());
+                                break;
                             case RepositorySchema.DataTypeConstants.List:
                                 //Not supported
                                 break;
@@ -5068,6 +5178,24 @@ namespace Gravitybox.Datastore.Server.Core
                 {
                     var v = ((string)o + string.Empty).ToLower();
                     if (int.TryParse(v, out int d))
+                        return d;
+                    else return null;
+                }
+            }
+            catch (Exception ex) { }
+            return null;
+        }
+
+        private static long? GetValueInt64(object o)
+        {
+            try
+            {
+                if (o is int?) return (long?)o;
+                else if (o is long?) return (long?)o;
+                else if (o is string)
+                {
+                    var v = ((string)o + string.Empty).ToLower();
+                    if (long.TryParse(v, out long d))
                         return d;
                     else return null;
                 }
@@ -5323,6 +5451,12 @@ namespace Gravitybox.Datastore.Server.Core
                             throw new Exception("Cannot convert data");
                         parameters.Add(new SqlParameter { DbType = DbType.Int32, IsNullable = false, ParameterName = "@Field" + index, Value = v });
                     }
+                    else if (schema.UserPermissionField.DataType == RepositorySchema.DataTypeConstants.Int64)
+                    {
+                        if (!long.TryParse(item.FieldValue, out long v))
+                            throw new Exception("Cannot convert data");
+                        parameters.Add(new SqlParameter { DbType = DbType.Int64, IsNullable = false, ParameterName = "@Field" + index, Value = v });
+                    }
                     else if (schema.UserPermissionField.DataType == RepositorySchema.DataTypeConstants.String)
                         parameters.Add(new SqlParameter { DbType = DbType.String, IsNullable = false, ParameterName = "@Field" + index, Value = item.FieldValue });
                     else
@@ -5353,6 +5487,12 @@ namespace Gravitybox.Datastore.Server.Core
                         if (!int.TryParse(item.FieldValue, out int v))
                             throw new Exception("Connot convert data");
                         parameters.Add(new SqlParameter { DbType = DbType.Int32, IsNullable = false, ParameterName = "@Field" + index, Value = v });
+                    }
+                    else if (schema.UserPermissionField.DataType == RepositorySchema.DataTypeConstants.Int64)
+                    {
+                        if (!long.TryParse(item.FieldValue, out long v))
+                            throw new Exception("Connot convert data");
+                        parameters.Add(new SqlParameter { DbType = DbType.Int64, IsNullable = false, ParameterName = "@Field" + index, Value = v });
                     }
                     else if (schema.UserPermissionField.DataType == RepositorySchema.DataTypeConstants.String)
                         parameters.Add(new SqlParameter { DbType = DbType.String, IsNullable = false, ParameterName = "@Field" + index, Value = item.FieldValue });
@@ -5397,6 +5537,12 @@ namespace Gravitybox.Datastore.Server.Core
                     if (!int.TryParse(fieldValue, out int v))
                         throw new Exception("Cannot convert data");
                     parameters.Add(new SqlParameter { DbType = DbType.Int32, IsNullable = false, ParameterName = $"@{FKFieldField}", Value = v });
+                }
+                else if (schema.UserPermissionField.DataType == RepositorySchema.DataTypeConstants.Int64)
+                {
+                    if (!long.TryParse(fieldValue, out long v))
+                        throw new Exception("Cannot convert data");
+                    parameters.Add(new SqlParameter { DbType = DbType.Int64, IsNullable = false, ParameterName = $"@{FKFieldField}", Value = v });
                 }
                 else if (schema.UserPermissionField.DataType == RepositorySchema.DataTypeConstants.String)
                     parameters.Add(new SqlParameter { DbType = DbType.String, IsNullable = false, ParameterName = $"@{FKFieldField}", Value = fieldValue });

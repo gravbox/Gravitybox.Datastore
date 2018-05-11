@@ -381,7 +381,7 @@ namespace Gravitybox.Datastore.Common.Queryable
                             defFieldType = RepositorySchema.DataTypeConstants.Int;
                             break;
                         case "Int64":
-                            //Not handled
+                            defFieldType = RepositorySchema.DataTypeConstants.Int64;
                             break;
                         case "Bool":
                         case "Boolean":
@@ -467,6 +467,7 @@ namespace Gravitybox.Datastore.Common.Queryable
                             case RepositorySchema.DataTypeConstants.String:
                             case RepositorySchema.DataTypeConstants.List:
                             case RepositorySchema.DataTypeConstants.Int:
+                            case RepositorySchema.DataTypeConstants.Int64:
                             case RepositorySchema.DataTypeConstants.DateTime:
                                 break;
                             default:
@@ -487,7 +488,7 @@ namespace Gravitybox.Datastore.Common.Queryable
                         dimension.Parent = GetAttributeValue<string>(field, "Parent", String.Empty);
                         dimension.DimensionType = GetAttributeValue<RepositorySchema.DimensionTypeConstants>(field, "DimensionType", RepositorySchema.DimensionTypeConstants.Normal);
                         var numericBreak = GetAttributeValue<long?>(field, "NumericBreak", null);
-                        if (dimension.DataType == RepositorySchema.DataTypeConstants.Int && numericBreak.HasValue)
+                        if ((dimension.DataType == RepositorySchema.DataTypeConstants.Int || dimension.DataType == RepositorySchema.DataTypeConstants.Int64) && numericBreak.HasValue)
                         {
                             dimension.NumericBreak = numericBreak.Value;
                         }

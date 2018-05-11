@@ -45,11 +45,20 @@ namespace Gravitybox.Datastore.Util.TestHarness
         [DatastoreField()]
         public double MyFloat3 { get; set; }
 
-        //[DatastoreField()]
-        //public byte MyByte { get; set; }
+        [DatastoreField()]
+        public byte MyByte { get; set; }
 
-        //[DatastoreField()]
-        //public short MyShort { get; set; }
+        [DatastoreField()]
+        public short MyShort { get; set; }
+
+        [DatastoreField()]
+        public decimal MyDecimal { get; set; }
+
+        [DatastoreField()]
+        public decimal? MyDecimal2 { get; set; }
+
+        [DatastoreField()]
+        public long MyLong { get; set; }
 
         [DatastoreField()]
         public GeoCode MyGeo { get; set; }

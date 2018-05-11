@@ -285,7 +285,7 @@ namespace Gravitybox.Datastore.Server.Core
                                             }
                                             else
                                             {
-                                                if (dimension.DataType == RepositorySchema.DataTypeConstants.Int && dimension.NumericBreak != null && dimension.NumericBreak > 0)
+                                                if ((dimension.DataType == RepositorySchema.DataTypeConstants.Int || dimension.DataType == RepositorySchema.DataTypeConstants.Int64) && dimension.NumericBreak != null && dimension.NumericBreak > 0)
                                                 {
                                                     var v = Convert.ToInt64(item.ItemArray[index]);
                                                     var scaled = ((v / dimension.NumericBreak) * dimension.NumericBreak).ToString();
@@ -510,7 +510,7 @@ namespace Gravitybox.Datastore.Server.Core
                                 }
                                 else
                                 {
-                                    if (dimension.DataType == RepositorySchema.DataTypeConstants.Int && dimension.NumericBreak != null && dimension.NumericBreak > 0)
+                                    if ((dimension.DataType == RepositorySchema.DataTypeConstants.Int || dimension.DataType == RepositorySchema.DataTypeConstants.Int64) && dimension.NumericBreak != null && dimension.NumericBreak > 0)
                                     {
                                         var v = Convert.ToInt64(item.FieldValue);
                                         var scaled = ((v / dimension.NumericBreak) * dimension.NumericBreak).ToString();

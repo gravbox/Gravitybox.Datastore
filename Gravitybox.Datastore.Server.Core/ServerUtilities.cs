@@ -228,6 +228,8 @@ namespace Gravitybox.Datastore.Server.Core
                     return "GEOGRAPHY";
                 case RepositorySchema.DataTypeConstants.Int:
                     return "INT";
+                case RepositorySchema.DataTypeConstants.Int64:
+                    return "BIGINT";
                 case RepositorySchema.DataTypeConstants.String:
                     return "NVARCHAR";
                 default:

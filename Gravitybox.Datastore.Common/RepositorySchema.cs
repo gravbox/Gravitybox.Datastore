@@ -44,6 +44,8 @@ namespace Gravitybox.Datastore.Common
             /// <summary />
             [EnumMember]
             List,
+            [EnumMember]
+            Int64,
         }
 
         /// <summary />
@@ -245,7 +247,7 @@ namespace Gravitybox.Datastore.Common
                                 dimension.DimensionType = dtype;
 
                             //Process this only for Int data types
-                            if (dimension.DataType == DataTypeConstants.Int && XmlHelper.AttributeExists(node, "numericbreak"))
+                            if ((dimension.DataType == DataTypeConstants.Int || dimension.DataType == DataTypeConstants.Int64) && XmlHelper.AttributeExists(node, "numericbreak"))
                             {
                                 var nb = XmlHelper.GetAttribute(node, "numericbreak", -1);
                                 if (nb > 0) dimension.NumericBreak = nb;
@@ -332,7 +334,7 @@ namespace Gravitybox.Datastore.Common
                             XmlHelper.AddAttribute(fieldNode, "searchasc", field.SearchAsc);
                     }
 
-                    if (dimensionDef != null && dimensionDef.DataType == DataTypeConstants.Int && dimensionDef.NumericBreak != null)
+                    if (dimensionDef != null && (dimensionDef.DataType == DataTypeConstants.Int || dimensionDef.DataType == DataTypeConstants.Int64) && dimensionDef.NumericBreak != null)
                     {
                         XmlHelper.AddAttribute(fieldNode, "numericbreak", dimensionDef.NumericBreak.Value.ToString());
                     }

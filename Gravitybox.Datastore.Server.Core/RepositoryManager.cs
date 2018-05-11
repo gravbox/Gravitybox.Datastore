@@ -1013,6 +1013,9 @@ namespace Gravitybox.Datastore.Server.Core
                                     case RepositorySchema.DataTypeConstants.Int:
                                         if (!(item.ItemArray[index] is int)) return false;
                                         break;
+                                    case RepositorySchema.DataTypeConstants.Int64:
+                                        if (!(item.ItemArray[index] is long)) return false;
+                                        break;
                                     case RepositorySchema.DataTypeConstants.String:
                                         if (!(item.ItemArray[index] is string)) return false;
                                         break;

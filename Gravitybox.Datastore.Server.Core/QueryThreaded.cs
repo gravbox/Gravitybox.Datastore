@@ -179,6 +179,9 @@ namespace Gravitybox.Datastore.Server.Core
                                             case RepositorySchema.DataTypeConstants.Int:
                                                 tempFile.WriteElementString("v", reader.GetInt32(index).ToString());
                                                 break;
+                                            case RepositorySchema.DataTypeConstants.Int64:
+                                                tempFile.WriteElementString("v", reader.GetInt64(index).ToString());
+                                                break;
                                             case RepositorySchema.DataTypeConstants.String:
                                                 tempFile.WriteElementString("v", StripNonValidXMLCharacters(reader.GetString(index)));
                                                 break;

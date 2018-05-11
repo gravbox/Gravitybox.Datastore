@@ -48,7 +48,7 @@ namespace Gravitybox.Datastore.Util.TestHarness
                 //DuplicateFilters();
                 //TestDerivedFields();
                 //HitHard();
-                //Test12();
+                Test12();
                 //TestAllDimensions();
                 //Test44();
                 //TestSchema();
@@ -107,7 +107,7 @@ namespace Gravitybox.Datastore.Util.TestHarness
 
                 var q = repo.Query.Results();
 
-                for (var ii = 0; ii < 500; ii++)
+                for (var ii = 0; ii < 50; ii++)
                 {
                     var newItem = new MyItem
                     {
@@ -124,8 +124,11 @@ namespace Gravitybox.Datastore.Util.TestHarness
                         MyFloat2 = 2,
                         MyFloat3 = 4,
                         SomeInt2 = 5,
-                        //MyByte = 40,
-                        //MyShort = 99,
+                        MyByte = 40,
+                        MyShort = 99,
+                        MyDecimal = 66,
+                        MyDecimal2 = 33,
+                        MyLong = 17626,
                     };
 
                     newItem.Dim2 = dimValues[rnd.Next(0, dimValues.Count)];
@@ -230,17 +233,9 @@ namespace Gravitybox.Datastore.Util.TestHarness
         {
             try
             {
-                var startDate = DateTime.Now.AddDays(-4).Date;
-                var endDate = DateTime.Now.AddDays(-3).Date;
                 using (var repo = new DatastoreRepository<MyItem>(repoID, SERVER, PORT))
                 {
-                    var query = repo.Query
-                        //.WhereUrl("?d=1800000")
-                        //.Where(x => startDate <= x.CreatedDate)
-                        //.Where(x => x.CreatedDate < endDate)
-                        //.OrderByDescending(x => x.CreatedDate)
-                        .RecordsPerPage(20);
-
+                    var query = repo.Query.RecordsPerPage(20);
                     var results = query.Results();
                     var dlist = query.DimensionsOnly();
                     var url = query.ToUrl();
