@@ -191,7 +191,7 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 		/// <summary>
 		/// The property that maps back to the database 'RepositoryLog.Query' field.
 		/// </summary>
-		/// <remarks>Field: [RepositoryLog].[Query], Field Length: 500, Nullable</remarks>
+		/// <remarks>Field: [RepositoryLog].[Query], Field Length: 1000, Nullable</remarks>
 		[DataMember]
 		[System.ComponentModel.Browsable(true)]
 		[System.ComponentModel.DisplayName("Query")]
@@ -356,7 +356,7 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 				case Gravitybox.Datastore.EFDAL.Entity.RepositoryLog.FieldNameConstants.LockTime:
 					return 0;
 				case Gravitybox.Datastore.EFDAL.Entity.RepositoryLog.FieldNameConstants.Query:
-					return 500;
+					return 1000;
 				case Gravitybox.Datastore.EFDAL.Entity.RepositoryLog.FieldNameConstants.QueryId:
 					return 0;
 				case Gravitybox.Datastore.EFDAL.Entity.RepositoryLog.FieldNameConstants.RepositoryId:
@@ -1067,7 +1067,7 @@ namespace Gravitybox.Datastore.EFDAL.Entity.Metadata
 		/// <summary>
 		/// Metadata information for the 'Query' parameter
 		/// </summary>
-		[System.ComponentModel.DataAnnotations.StringLength(500, ErrorMessage = "The property 'Query' has a maximum length of 500")]
+		[System.ComponentModel.DataAnnotations.StringLength(1000, ErrorMessage = "The property 'Query' has a maximum length of 1000")]
 		[System.ComponentModel.DataAnnotations.Display(Description = "", Name = "Query", AutoGenerateField = true)]
 		public object Query;
 

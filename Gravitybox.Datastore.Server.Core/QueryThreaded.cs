@@ -195,7 +195,7 @@ namespace Gravitybox.Datastore.Server.Core
                                 {
                                     if (dimensionMapper.ContainsKey(field.DIdx) && dimensionMapper[field.DIdx].ContainsKey(recordIndex))
                                     {
-                                        tempFile.WriteElementString("v", string.Join("|", dimensionMapper[field.DIdx][recordIndex].ToList()));
+                                        tempFile.WriteElementString("v", dimensionMapper[field.DIdx][recordIndex].ToList().ToStringList("|"));
                                     }
                                 }
                                 #endregion
@@ -224,7 +224,7 @@ namespace Gravitybox.Datastore.Server.Core
             }
             catch (Exception ex)
             {
-                LoggerCQ.LogError(ex);
+                LoggerCQ.LogError(ex, $"ID={_schema.ID}, Query=\"{this.Query.ToString()}\"");
                 File.WriteAllText(Path.Combine(ConfigHelper.AsyncCachePath, this.Key.ToString() + ".error"), "error");
             }
             finally

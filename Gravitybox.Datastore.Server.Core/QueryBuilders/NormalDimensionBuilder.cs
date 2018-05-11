@@ -125,7 +125,7 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
                     {
                         RepositoryHealthMonitor.HealthCheck(_configuration.schema.ID);
                         DataManager.AddSkipItem(_configuration.schema.ID);
-                        LoggerCQ.LogError(ex, $"NormalDimensionBuilder: ID={_configuration.schema.ID}, Error={ex.Message}");
+                        LoggerCQ.LogError(ex, $"NormalDimensionBuilder: ID={_configuration.schema.ID}, Query=\"{_configuration.query.ToString()}\", Error={ex.Message}");
                     }
                 }
                 //Console.WriteLine("NormalDimensionBuilder:Execute:Complete");
@@ -191,7 +191,8 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
                                             if (newDimension.NumericBreak != null)
                                             {
                                                 rItem.MinValue = rItem.FieldValue.ToInt64();
-                                                rItem.MaxValue = rItem.MinValue + newDimension.NumericBreak;
+                                                if (rItem.MinValue != null)
+                                                    rItem.MaxValue = rItem.MinValue + newDimension.NumericBreak;
                                             }
                                             newDimension.RefinementList.Add(rItem);
                                             wasFound = true;

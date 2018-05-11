@@ -76,6 +76,7 @@
     <Compile Include="EmailDomain.cs" />
     <Compile Include="EmailSettings.cs" />
     <Compile Include="Extensions.cs" />
+    <Compile Include="FTSReadyCache.cs" />
     <Compile Include="Housekeeping\HkClearRepositoryLog.cs" />
     <Compile Include="Housekeeping\HousekeepingMonitor.cs" />
     <Compile Include="Housekeeping\IHousekeepingTask.cs" />
@@ -102,6 +103,7 @@
     <Compile Include="RetryHelper.cs" />
     <Compile Include="SchemaCache.cs" />
     <Compile Include="ServerUtilities.cs" />
+    <Compile Include="SetupConfig.cs" />
     <Compile Include="SqlHelper.cs" />
     <Compile Include="LockLogger.cs" />
     <Compile Include="StatLogger.cs" />

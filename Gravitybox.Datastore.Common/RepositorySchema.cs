@@ -148,7 +148,7 @@ namespace Gravitybox.Datastore.Common
 
                 try
                 {
-                    this.CreatedDate = DateTime.ParseExact(XmlHelper.GetNodeValue(document.DocumentElement, "createddate", "2010-01-01"), "yyyy-MM-dd HH:mm:ss", null);
+                    this.CreatedDate = DateTime.ParseExact(XmlHelper.GetNodeValue(document.DocumentElement, "createddate", "2010-01-01"), DimensionItem.DateTimeFormat, null);
                 }
                 catch (Exception ex)
                 {
@@ -288,7 +288,7 @@ namespace Gravitybox.Datastore.Common
                 document.LoadXml("<repository></repository>");
                 XmlHelper.AddElement(document.DocumentElement, "name", this.Name);
                 XmlHelper.AddElement(document.DocumentElement, "objectalias", this.ObjectAlias);
-                XmlHelper.AddElement(document.DocumentElement, "createddate", this.CreatedDate.ToString("yyyy-MM-dd HH:mm:ss"));
+                XmlHelper.AddElement(document.DocumentElement, "createddate", this.CreatedDate.ToString(DimensionItem.DateTimeFormat));
                 XmlHelper.AddElement(document.DocumentElement, "id", this.ID.ToString());
                 if (this.ParentID.HasValue)
                     XmlHelper.AddElement(document.DocumentElement, "parentid", this.ParentID.Value.ToString());

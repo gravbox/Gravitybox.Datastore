@@ -22,7 +22,7 @@ namespace Gravitybox.Datastore.Server.Core
             if (_timer.IsRunning)
             {
                 _timer.Stop();
-                LoggerCQ.LogTrace($"END {_message}: Elapsed={_timer.ElapsedMilliseconds}ms");
+                LoggerCQ.LogTrace($"END {_message}: Elapsed={_timer.ElapsedMilliseconds}");
             }
         }
     }

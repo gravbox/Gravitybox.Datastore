@@ -201,7 +201,7 @@ namespace Gravitybox.Datastore.Server.Core
 
         private static void SetValue(string name, DateTime value)
         {
-            SetValue(name, value.ToString("yyyy-MM-dd HH:mm:ss").ToLower());
+            SetValue(name, value.ToString(DimensionItem.DateTimeFormat).ToLower());
         }
 
         #endregion
@@ -307,9 +307,39 @@ namespace Gravitybox.Datastore.Server.Core
 
         public static bool AllowQueryCacheClearing => GetValue("AllowQueryCacheClearing", true);
 
-        public static bool MemOpt => false;
+        //public static bool MemOpt => false;
 
         public static bool AllowCacheWithKeyword => GetValue("AllowCacheWithKeyword", false);
+
+        public static int LogHistoryDays => GetValue("LogHistoryDays", 30);
+
+        private static SetupConfig _setupConfig = null;
+        public static SetupConfig SetupConfig
+        {
+            get
+            {
+                if (_setupConfig == null)
+                {
+                    try
+                    {
+                        _setupConfig = ServerUtilities.DeserializeObject<SetupConfig>(Convert.FromBase64String(GetValue("SetupConfig", string.Empty)));
+                    }
+                    catch
+                    {
+                        _setupConfig = new SetupConfig();
+                    }
+                }
+                return _setupConfig;
+            }
+            set
+            {
+                _setupConfig = value;
+                if (_setupConfig == null)
+                    SetValue("SetupConfig", string.Empty);
+                else
+                    SetValue("SetupConfig", Convert.ToBase64String(ServerUtilities.SerializeObject(_setupConfig)));
+            }
+        }
 
         #endregion
 

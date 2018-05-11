@@ -65,6 +65,10 @@ namespace Gravitybox.Datastore.Common.Queryable
             {
                 HandleIncludeDimensionsExpression(node.Arguments);
             }
+            else if (node.Method.Name == "IncludeAllDimensions")
+            {
+                HandleIncludeAllDimensionsExpression(node.Arguments);
+            }
             else if (node.Method.Name == "IncludeRecords")
             {
                 HandleIncludeRecordsExpression(node.Arguments);
@@ -768,6 +772,20 @@ namespace Gravitybox.Datastore.Common.Queryable
                     return; // Success
                 }
                 throw new InvalidOperationException("Invalid IncludeDimensions expression arguments.");
+            }
+        }
+
+        private void HandleIncludeAllDimensionsExpression(ReadOnlyCollection<Expression> arguments)
+        {
+            if (arguments.Count == 2)
+            {
+                var constantExpr = arguments[1] as ConstantExpression;
+                if (constantExpr != null)
+                {
+                    this.Query.IncludeAllDimensions = (bool)constantExpr.Value;
+                    return; // Success
+                }
+                throw new InvalidOperationException("Invalid HandleIncludeAllDimensionsExpression expression arguments.");
             }
         }
 

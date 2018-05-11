@@ -32,7 +32,7 @@ namespace Gravitybox.Datastore.Common.Queryable
                 var index = _nameIndexes[memberName];
                 if (node.Type == typeof(string))
                 {
-                    return Expression.Constant(_itemData[index]);
+                    return Expression.Constant(_itemData[index], typeof(string));
                 }
 
                 if (node.Type.GenericTypeArguments.Length == 1)

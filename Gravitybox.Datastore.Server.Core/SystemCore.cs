@@ -106,8 +106,8 @@ namespace Gravitybox.Datastore.Server.Core
             LoggerCQ.LogInfo("Core initialize: Server=" + Environment.MachineName + ", Mode=x" + (Environment.Is64BitProcess ? "64" : "32") + ", Port=" + ConfigHelper.Port);
             LoggerCQ.LogInfo($"Machine: {Environment.MachineName}");
             LoggerCQ.LogInfo($"Timezone: {TimeZone.CurrentTimeZone.StandardName}");
-            LoggerCQ.LogInfo($"Local Time: {DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")}");
-            LoggerCQ.LogInfo($"UTC Time: {DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss")}");
+            LoggerCQ.LogInfo($"Local Time: {DateTime.Now.ToString(DimensionItem.DateTimeFormat)}");
+            LoggerCQ.LogInfo($"UTC Time: {DateTime.UtcNow.ToString(DimensionItem.DateTimeFormat)}");
             LoggerCQ.LogInfo($"IP: {Utilities.LocalIPAddress()}");
             LoggerCQ.LogInfo($"SqlVersion: {ConfigHelper.SqlVersion}");
             LoggerCQ.LogInfo($"SupportsRowsFetch: {ConfigHelper.SupportsRowsFetch}");
@@ -168,7 +168,7 @@ namespace Gravitybox.Datastore.Server.Core
                 var a = System.Reflection.Assembly.GetExecutingAssembly();
                 var version = a.GetName().Version;
                 var d = System.IO.File.GetLastWriteTime(a.Location);
-                LoggerCQ.LogInfo("Manager Started: Version=" + version.ToString() + ", Compiled=" + d.ToString("yyyy-MM-dd HH:mm:ss"));
+                LoggerCQ.LogInfo($"Manager Started: Version={version.ToString()}, Compiled=" + d.ToString(DimensionItem.DateTimeFormat));
             }
 
             _cpuCounter = new System.Diagnostics.PerformanceCounter();
@@ -578,7 +578,7 @@ namespace Gravitybox.Datastore.Server.Core
             try
             {
                 _lastServerStatWrite = DateTime.Now;
-                _lastServerStatWrite = _lastServerStatWrite.AddSeconds(-_lastServerStatWrite.Second).AddMilliseconds(-_lastServerStatWrite.Millisecond);
+                _lastServerStatWrite = new DateTime(_lastServerStatWrite.Year, _lastServerStatWrite.Month, _lastServerStatWrite.Day, _lastServerStatWrite.Hour, _lastServerStatWrite.Minute, 0);
 
                 #region CPU
 
@@ -600,7 +600,6 @@ namespace Gravitybox.Datastore.Server.Core
                 #region Write stat
                 var timer = Stopwatch.StartNew();
                 timer.Start();
-                //using (var q = new AcquireWriterLock(_manager.SyncObject, "_timerStats_Elapsed"))
                 {
                     var newItem = new RealtimeStats
                     {
@@ -682,7 +681,6 @@ namespace Gravitybox.Datastore.Server.Core
 
                 }
                 timer.Stop();
-                //LoggerCQ.LogDebug("_timerStats_Elapsed: Elapsed=" + timer.ElapsedMilliseconds);
                 #endregion
 
                 //If we have not sent the log today then send it

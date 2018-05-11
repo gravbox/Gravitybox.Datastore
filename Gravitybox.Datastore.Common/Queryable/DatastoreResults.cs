@@ -405,7 +405,7 @@ namespace Gravitybox.Datastore.Common.Queryable
                         foreach (var n in doc.Descendants().Where(x => x.Name == "v"))
                         {
                             var prop = newItem.GetType().GetProperty(_headers[fieldIndex].Name);
-                            if (prop != null)
+                            if (prop != null && prop.CanWrite && prop.GetSetMethod(true) != null)
                             {
                                 var isNull = n.Value == "~■!N";
                                 if (isNull)
@@ -467,6 +467,10 @@ namespace Gravitybox.Datastore.Common.Queryable
                                     //Should never hit this if all types are handled
                                 }
                             } //property exists
+                            if (prop != null && (!prop.CanWrite || prop.GetSetMethod(true) == null))
+                            {
+                                //Do Nothing : Found property but it is not writable so there is nothing that we can do
+                            }
                             else
                             {
                                 //Metadata

@@ -116,7 +116,7 @@ namespace Gravitybox.Datastore.EFDAL
 		private static Dictionary<string, SequentialIdGenerator> _sequentialIdGeneratorCache = new Dictionary<string, SequentialIdGenerator>();
 		private static object _seqCacheLock = new object();
 
-		private const string _version = "2.1.0.0.64";
+		private const string _version = "2.1.0.0.65";
 		private const string _modelKey = "c4808261-57ef-4c4b-9c5c-b199c70e73ae";
 
 		/// <summary />
@@ -355,7 +355,7 @@ namespace Gravitybox.Datastore.EFDAL
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.RepositoryLog>().Property(d => d.ElapsedTime).IsRequired();
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.RepositoryLog>().Property(d => d.IPAddress).IsRequired().HasMaxLength(50).HasColumnType("VARCHAR");
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.RepositoryLog>().Property(d => d.LockTime).IsRequired();
-			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.RepositoryLog>().Property(d => d.Query).IsOptional().HasMaxLength(500);
+			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.RepositoryLog>().Property(d => d.Query).IsOptional().HasMaxLength(1000);
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.RepositoryLog>().Property(d => d.QueryId).IsRequired();
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.RepositoryLog>().Property(d => d.RepositoryId).IsRequired();
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.RepositoryLog>().Property(d => d.RepositoryLogId).IsRequired().HasDatabaseGeneratedOption(System.ComponentModel.DataAnnotations.Schema.DatabaseGeneratedOption.Identity);

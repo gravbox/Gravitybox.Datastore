@@ -168,6 +168,7 @@
       <DependentUpon>NLog.config</DependentUpon>
     </None>
     <None Include="packages.config" />
+    <None Include="_setup.config" />
     <None Include="UninstallService.bat">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

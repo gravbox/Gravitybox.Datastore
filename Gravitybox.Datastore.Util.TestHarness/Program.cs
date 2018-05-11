@@ -56,7 +56,7 @@ namespace Gravitybox.Datastore.Util.TestHarness
                 //TestFailover();
                 //TestQueryAsync();
                 //TestThreading();
-                //TestManyConnections();
+                TestManyConnections();
             }
             catch (Exception ex)
             {
@@ -419,19 +419,14 @@ namespace Gravitybox.Datastore.Util.TestHarness
 
         private static void TestSchema()
         {
-            //var q1 = RepositorySchema.CreateFromXml(File.ReadAllText(@"c:\temp\a.xml"));
-            //var q2 = RepositorySchema.CreateFromXml(File.ReadAllText(@"c:\temp\b.xml"));
+            var q1 = RepositorySchema.CreateFromXml(File.ReadAllText(@"c:\temp\a.xml"));
+            var q2 = RepositorySchema.CreateFromXml(File.ReadAllText(@"c:\temp\b.xml"));
 
-            //var v1 = q1.GetHashCode();
-            //var v2 = q2.GetHashCode();
+            var v1 = q1.GetHashCode();
+            var v2 = q2.GetHashCode();
 
-            //var c1 = q1.FieldList.Where(x => x.AllowIndex).Count();
-            //var c2 = q2.FieldList.Where(x => x.AllowIndex).Count();
-
-            using (var repo = new DatastoreRepository<MyItem>(repoID, SERVER, PORT))
-            {
-                repo.GetSchema();
-            }
+            var c1 = q1.FieldList.Where(x => x.AllowIndex).Count();
+            var c2 = q2.FieldList.Where(x => x.AllowIndex).Count();
 
         }
 

@@ -1,6 +1,7 @@
 using System;
 using System.Configuration;
 using System.Data.SqlClient;
+using System.IO;
 using System.Linq;
 using System.ServiceModel;
 using System.ServiceModel.Description;
@@ -119,6 +120,7 @@ namespace Gravitybox.Datastore.WinService
 
         private static void StartupEndpoint()
         {
+            var config = new SetupConfig();
             try
             {
                 LoggerCQ.LogInfo("Attempting to upgrade database.");
@@ -165,6 +167,34 @@ namespace Gravitybox.Datastore.WinService
                     {
                         LoggerCQ.LogWarning("New database could not split data files.");
                     }
+
+                    try
+                    {
+                        var configFile = Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), "setup.config");
+                        if (File.Exists(configFile))
+                        {
+                            var barr = File.ReadAllBytes(configFile);
+                            config = ServerUtilities.DeserializeObject<SetupConfig>(barr);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new Exception($"Setup configuration file is not valid.");
+                    }
+
+                    if (config != null)
+                    {
+                        if (!string.IsNullOrEmpty(config.ListDataPath) && !Directory.Exists(config.ListDataPath))
+                            throw new Exception("The setup configuration file value 'ListDataPath' is not valid");
+                        if (!string.IsNullOrEmpty(config.IndexPath) && !Directory.Exists(config.IndexPath))
+                            throw new Exception("The setup configuration file value 'IndexPath' is not valid");
+
+                        //Create a file group for List tables
+                        config.ListDataPath = DbMaintenanceHelper.CreateFileGroup(connectionStringSettings.ConnectionString, config.ListDataPath, SetupConfig.YFileGroup);
+
+                        //Create a file group for Indexes
+                        config.IndexPath = DbMaintenanceHelper.CreateFileGroup(connectionStringSettings.ConnectionString, config.IndexPath, SetupConfig.IndexFileGroup);
+                    }
                 }
 
             }
@@ -180,6 +210,8 @@ namespace Gravitybox.Datastore.WinService
                 #region Primary Endpoint
 
                 var service = new Gravitybox.Datastore.Server.Core.SystemCore(ConfigurationManager.ConnectionStrings["DatastoreEntities"].ConnectionString);
+                if (config != null)
+                    ConfigHelper.SetupConfig = config;
 
                 #region Determine if configured port is free
                 var isPortFree = false;
@@ -228,6 +260,7 @@ namespace Gravitybox.Datastore.WinService
                 var primaryEndpoint = new EndpointAddress(primaryHost.BaseAddresses.First().AbsoluteUri);
                 var primaryClient = new ChannelFactory<Gravitybox.Datastore.Common.ISystemCore>(netTcpBinding, primaryEndpoint);
                 _core = primaryClient.CreateChannel();
+                (_core as IContextChannel).OperationTimeout = new TimeSpan(0, 0, 120); //Timeout=2m
 
                 #endregion
 

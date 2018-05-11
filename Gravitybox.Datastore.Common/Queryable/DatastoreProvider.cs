@@ -118,6 +118,7 @@ namespace Gravitybox.Datastore.Common.Queryable
             dataQuery.NonParsedFieldList = parser.Query.NonParsedFieldList;
 
             dataQuery.IncludeDimensions = parser.Query.IncludeDimensions;
+            dataQuery.IncludeAllDimensions = parser.Query.IncludeAllDimensions;
             dataQuery.IncludeRecords = parser.Query.IncludeRecords;
             dataQuery.ExcludeCount = parser.Query.ExcludeCount;
             dataQuery.IncludeEmptyDimensions = parser.Query.IncludeEmptyDimensions;
@@ -221,6 +222,7 @@ namespace Gravitybox.Datastore.Common.Queryable
 
             var dataQuery = BuildDataQueryFromParser(parser);
             dataQuery.IncludeDimensions = false;
+            dataQuery.IncludeAllDimensions = false;
             dataQuery.IncludeRecords = true;
             dataQuery.ExcludeCount = false;
 
@@ -241,6 +243,7 @@ namespace Gravitybox.Datastore.Common.Queryable
 
             var dataQuery = BuildDataQueryFromParser(parser);
             dataQuery.IncludeDimensions = false;
+            dataQuery.IncludeAllDimensions = false;
             dataQuery.IncludeRecords = true;
             dataQuery.ExcludeCount = false;
 
@@ -268,6 +271,7 @@ namespace Gravitybox.Datastore.Common.Queryable
 
             var dataQuery = BuildDataQueryFromParser(parser);
             dataQuery.IncludeDimensions = false;
+            dataQuery.IncludeAllDimensions = false;
             dataQuery.IncludeRecords = true;
             dataQuery.ExcludeCount = false;
             dataQuery.FieldSelects = null;
@@ -335,6 +339,7 @@ namespace Gravitybox.Datastore.Common.Queryable
 
             var dataQuery = BuildDataQueryFromParser(parser);
             dataQuery.IncludeDimensions = false;
+            dataQuery.IncludeAllDimensions = false;
             dataQuery.IncludeRecords = false;
             dataQuery.ExcludeCount = false;
 
@@ -355,6 +360,7 @@ namespace Gravitybox.Datastore.Common.Queryable
 
             var dataQuery = BuildDataQueryFromParser(parser);
             dataQuery.IncludeDimensions = true;
+            dataQuery.IncludeAllDimensions = false;
             dataQuery.IncludeRecords = false;
             dataQuery.ExcludeCount = true;
             var results = dsService.Query(dataQuery);

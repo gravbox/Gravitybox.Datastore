@@ -290,6 +290,21 @@ namespace Gravitybox.Datastore.Common.Queryable
         }
 
         /// <summary />
+        public static IDatastoreQueryable<TSourceType> IncludeAllDimensions<TSourceType>(this IDatastoreQueryable<TSourceType> source, bool value)
+            where TSourceType : IDatastoreItem
+        {
+            if (source == null)
+                throw new ArgumentNullException(ERROR_SOURCE);
+
+            return source.Provider.CreateQuery<TSourceType>(
+                Expression.Call(
+                    null,
+                    GetMethodInfo(DatastoreExtensions.IncludeAllDimensions<TSourceType>, source, value),
+                    new Expression[] { source.Expression, Expression.Constant(value) }
+                ));
+        }
+
+        /// <summary />
         public static IDatastoreQueryable<TSourceType> IncludeRecords<TSourceType>(this IDatastoreQueryable<TSourceType> source, bool value)
             where TSourceType : IDatastoreItem
         {

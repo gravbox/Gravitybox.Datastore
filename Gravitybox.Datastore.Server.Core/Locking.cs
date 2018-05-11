@@ -162,7 +162,7 @@ namespace Gravitybox.Datastore.Server.Core
             this.ReadLockCount = m_Lock.CurrentReadCount;
             this.WaitingLocksOnEntry = m_Lock.WaitingWriteCount;
             if (this.WaitingLocksOnEntry > 10)
-                LoggerCQ.LogWarning($"AcquireWriterLock Waiting Writer Locks: Count=" + this.WaitingLocksOnEntry + ", RepositoryId=" + id + ", TraceInfo=" + traceInfo);
+                LoggerCQ.LogWarning($"AcquireWriterLock Waiting Writer Locks: Count={this.WaitingLocksOnEntry}, RepositoryId={id}, TraceInfo={traceInfo}");
 
             //If there is another write lock held then wait to enter and give the read locks to run
             //This is a hack to address the issue with the lock object: it prioritizes writes and starves reads

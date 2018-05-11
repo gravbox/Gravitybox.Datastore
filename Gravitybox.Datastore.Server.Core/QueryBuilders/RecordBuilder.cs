@@ -51,13 +51,6 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
             {
                 var fieldListSql = new List<string>();
                 var fields = _configuration.schema.FieldList;
-                if (_configuration.IsGrouped)
-                {
-                    //fields = fields.Where(x => _configuration.query.DerivedFieldList.Select(z => z.Field).Contains(x.Name)).ToList();
-                    //if (fields.Count != _configuration.query.DerivedFieldList.Count)
-                    //    throw new Exception("Unknown fields in explicit select.");
-                    _configuration.usingCustomSelect = ObjectConfiguration.SelectionMode.Grouping;
-                }
 
                 //Only supports 1 group by field for now
                 foreach (var gItem in _configuration.query.GroupFields)
@@ -192,7 +185,6 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
                     throw new Exception("Unknown fields in explicit select.");
                 if (!fields.Contains(_configuration.schema.PrimaryKey))
                     fields.Add(_configuration.schema.PrimaryKey);
-                _configuration.usingCustomSelect = ObjectConfiguration.SelectionMode.Custom;
             }
 
             foreach (var field in fields)
@@ -303,7 +295,7 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
                 {
                     RepositoryHealthMonitor.HealthCheck(_configuration.schema.ID);
                     DataManager.AddSkipItem(_configuration.schema.ID);
-                    LoggerCQ.LogError(ex, $"RecordBuilder: ID={_configuration.schema.ID}, Error={ex.Message}");
+                    LoggerCQ.LogError(ex, $"RecordBuilder: ID={_configuration.schema.ID}, Query=\"{_configuration.query.ToString()}\", Error={ex.Message}");
                 }
             });
         }

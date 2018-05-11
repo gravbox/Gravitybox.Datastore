@@ -127,7 +127,7 @@
 								<c key="8197ef09-bf93-4cac-8787-20fdd0dd7af1" name="ProcessorUsage" dataFieldSortOrder="10" id="1857284586" type="8" allowNull="0">
 										<pt key="9fe58257-9f30-46fb-8e06-dc7681dd72de" ref="1285279716" refType="1" />
 								</c>
-								<c key="196b8762-a020-4909-a633-2e64d1c003b6" name="Query" dataFieldSortOrder="8" length="500" id="1093834435" type="12">
+								<c key="196b8762-a020-4909-a633-2e64d1c003b6" name="Query" dataFieldSortOrder="8" length="1000" id="1093834435" type="12">
 										<pt key="af302cbc-51e3-4aad-9ad9-7f2009313ce0" ref="476818358" refType="1" />
 								</c>
 								<c key="61ae955b-eac8-418e-a0aa-1d994fd4db1b" name="QueryId" dataFieldSortOrder="7" id="943629947" type="14" allowNull="0">
@@ -667,7 +667,7 @@
 						<customstoredprocedures key="00000000-0000-0000-0000-000000000000" />
 				</database>
 				<versionHistoryList>
-						<version createdDate="2018-02-09 10:43:32" version="2.1.0.0" />
+						<version createdDate="2018-04-16 15:39:56" version="2.1.0.0" />
 				</versionHistoryList>
 		</ModelRoot>
 </modelRoot>

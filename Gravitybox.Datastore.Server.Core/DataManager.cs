@@ -159,7 +159,7 @@ namespace Gravitybox.Datastore.Server.Core
                                 else
                                     System.Threading.Thread.Sleep(WaitTime);
 
-                            } while (results.RecordList.Count == BlockCount && results.ComputeTime < 5000);
+                            } while (results.RecordList?.Count == BlockCount && results.ComputeTime < 5000);
                         }
                     }
                 }
@@ -199,7 +199,7 @@ namespace Gravitybox.Datastore.Server.Core
                 if (list == null) return;
                 if (schema == null) return;
 
-                var l = list.Where(x => x.__Hash == 0).ToList();
+                var l = list.Where(x => x.__Hash == 0 && x.__RecordIndex > 0).ToList();
                 if (!l.Any()) return;
 
                 var dataTable = SqlHelper.GetTableName(schema.ID);
@@ -212,7 +212,7 @@ namespace Gravitybox.Datastore.Server.Core
                     {
                         DbType = DbType.Int64,
                         IsNullable = false,
-                        ParameterName = "@" + SqlHelper.HashField,
+                        ParameterName = $"@{SqlHelper.HashField}",
                         Value = item.Hash(),
                     });
 
@@ -220,11 +220,11 @@ namespace Gravitybox.Datastore.Server.Core
                     {
                         DbType = DbType.Int64,
                         IsNullable = false,
-                        ParameterName = "@" + SqlHelper.RecordIdxField,
+                        ParameterName = $"@{SqlHelper.RecordIdxField}",
                         Value = item.__RecordIndex,
                     });
 
-                    sb.AppendLine("UPDATE [" + dataTable + "] SET [" + SqlHelper.HashField + "] = @" + SqlHelper.HashField + " WHERE [" + SqlHelper.RecordIdxField + "] = @" + SqlHelper.RecordIdxField + " AND [" + SqlHelper.HashField + "] = 0");
+                    sb.AppendLine($"UPDATE [{dataTable}] SET [{SqlHelper.HashField}] = @{SqlHelper.HashField} WHERE [{SqlHelper.RecordIdxField}] = @{SqlHelper.RecordIdxField} AND [{SqlHelper.HashField}] = 0");
                     SqlHelper.ExecuteSql(ConfigHelper.ConnectionString, sb.ToString(), parameters, false, false);
                     Interlocked.Increment(ref _counter);
                 }

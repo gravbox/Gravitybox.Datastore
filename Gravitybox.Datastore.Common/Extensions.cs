@@ -483,7 +483,7 @@ namespace Gravitybox.Datastore.Common
         }
 
         /// <summary />
-        public static int ToInt(this string v)
+        internal static int ToInt(this string v)
         {
             if (string.IsNullOrEmpty(v)) return 0;
             int parsed;
@@ -492,16 +492,7 @@ namespace Gravitybox.Datastore.Common
         }
 
         /// <summary />
-        public static long ToInt64(this string v)
-        {
-            if (string.IsNullOrEmpty(v)) return 0;
-            long parsed;
-            long.TryParse(v, out parsed);
-            return parsed;
-        }
-        
-        /// <summary />
-        public static double ToDouble(this string v)
+        internal static double ToDouble(this string v)
         {
             double parsed;
             double.TryParse(v, out parsed);
@@ -509,48 +500,11 @@ namespace Gravitybox.Datastore.Common
         }
 
         /// <summary />
-        public static string ToXmlValue(this string str)
+        internal static string ToXmlValue(this string str)
         {
             if (string.IsNullOrEmpty(str)) return str;
             if (!str.Contains(",") && !str.Contains("\"")) return str;
             return string.Format("\"{0}\"", str.Replace("\"", "\"\""));
-        }
-
-        /// <summary>
-        /// Given a DataItem object this will generate a repeatable has for its state
-        /// </summary>
-        public static long Hash(this DataItem item)
-        {
-            if (item == null || item.ItemArray == null) return 0;
-            var sb = new StringBuilder();
-            foreach (var o in item.ItemArray)
-            {
-                if (o == null)
-                    sb.Append("~~NULL|");
-                else if (o is string)
-                    sb.Append((string)o);
-                else if (o is DateTime)
-                    sb.Append(((DateTime)o).Ticks);
-                else if (o is GeoCode)
-                {
-                    var g = o as GeoCode;
-                    sb.Append(g.Latitude + "*" + g.Longitude);
-                }
-                else
-                    sb.Append(o.ToString());
-            }
-            string data = sb.ToString();
-
-            UInt64 hashedValue = 3074457345618258791ul;
-            for (int i = 0; i < data.Length; i++)
-            {
-                hashedValue += data[i];
-                hashedValue *= 3074457345618258799ul;
-            }
-
-            //Convert to long as it is just a hash.
-            //We do not care what the actual value is as long as it is unique
-            return (long)hashedValue;
         }
 
         internal static int IndexOf<T>(this IEnumerable<T> source, Func<T, bool> predicate)

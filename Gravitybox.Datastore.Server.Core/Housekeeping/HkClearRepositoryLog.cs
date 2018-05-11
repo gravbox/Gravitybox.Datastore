@@ -25,9 +25,9 @@ namespace Gravitybox.Datastore.Server.Core.Housekeeping
                 var sb = new StringBuilder();
                 sb.AppendLine("SET ROWCOUNT 5000");
                 if (this.PivotDate == null)
-                    sb.AppendLine("DELETE FROM [RepositoryLog] WHERE [RepositoryId] = " + this.RepositoryId);
+                    sb.AppendLine($"DELETE FROM [RepositoryLog] WHERE [RepositoryId] = {this.RepositoryId}");
                 else
-                    sb.AppendLine("DELETE FROM [RepositoryLog] WHERE [RepositoryId] = " + this.RepositoryId + " AND [CreatedDate] <= '" + this.PivotDate.Value.ToString("yyyy-MM-dd HH:mm:ss") + "'");
+                    sb.AppendLine($"DELETE FROM [RepositoryLog] WHERE [RepositoryId] = {this.RepositoryId} AND [CreatedDate] <= '{this.PivotDate.Value.ToString(DimensionItem.DateTimeFormat)}'");
 
                 var count = 0;
                 var tempCount = 0;
@@ -42,7 +42,7 @@ namespace Gravitybox.Datastore.Server.Core.Housekeeping
                 }
                 while (tempCount > 0);
                 timer.Stop();
-                LoggerCQ.LogInfo("HkClearRepositoryLog: Count=" + count + ", RepositoryId=" + this.RepositoryId + ", Elapsed=" + timer.ElapsedMilliseconds);
+                LoggerCQ.LogInfo($"HkClearRepositoryLog: Count={count}, RepositoryId={this.RepositoryId}, Elapsed={timer.ElapsedMilliseconds}");
                 return true;
             }
             catch (Exception ex)

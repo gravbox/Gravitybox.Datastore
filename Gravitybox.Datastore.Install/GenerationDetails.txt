@@ -2,7 +2,6 @@ DO NOT MODIFY THIS FILE. IT IS ALWAYS OVERWRITTEN ON GENERATION.
 Generation Details
 
 Version 2.1.0.0
-Generated on 2018-02-09 10:43
 Table Count: 12
 Tenant Table Count: 0
 View Count: 0
@@ -56,7 +55,7 @@ RepositoryLog, ColumnCount=9, IsTenant=False
     Field: [RepositoryLog].[ElapsedTime], Not Nullable
     Field: [RepositoryLog].[IPAddress], Field Length: 50, Not Nullable
     Field: [RepositoryLog].[LockTime], Not Nullable, Default Value: 0
-    Field: [RepositoryLog].[Query], Field Length: 500, Nullable
+    Field: [RepositoryLog].[Query], Field Length: 1000, Nullable
     Field: [RepositoryLog].[QueryId], Not Nullable
     Field: [RepositoryLog].[RepositoryId], Not Nullable, Indexed
     Field: [RepositoryLog].[RepositoryLogId], Not Nullable, Primary Key, AutoNumber, Unique, Indexed

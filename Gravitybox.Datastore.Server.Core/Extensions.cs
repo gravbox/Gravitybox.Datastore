@@ -83,7 +83,12 @@ namespace Gravitybox.Datastore.Server.Core
         public static string ToSqlDirection(this IFieldSort sort)
         {
             if (sort == null) return string.Empty;
-            return sort.SortDirection == SortDirectionConstants.Desc ? "DESC" : "ASC";
+            return sort.SortDirection.ToSqlDirection();
+        }
+
+        public static string ToSqlDirection(this SortDirectionConstants sort)
+        {
+            return sort == SortDirectionConstants.Desc ? "DESC" : "ASC";
         }
 
         public static string ToSqlType(this IFieldDefinition field)
@@ -97,10 +102,68 @@ namespace Gravitybox.Datastore.Server.Core
             return str?.Replace("'", "''");
         }
 
-        internal static string ToCommaList(this IEnumerable<string> list)
+        /// <summary>
+        /// Concatenates the members of a list into a string with a comma as a separator
+        /// </summary>
+        internal static string ToCommaList<T>(this IEnumerable<T> list)
+        {
+            return list.ToStringList(",");
+        }
+
+        /// <summary>
+        /// Concatenates the members of a list into a string with a separator
+        /// </summary>
+        internal static string ToStringList<T>(this IEnumerable<T> list, string separator)
         {
             if (list == null || !list.Any()) return string.Empty;
-            return string.Join(",", list);
+            return string.Join(separator, list);
         }
+
+        /// <summary />
+        internal static long? ToInt64(this string v)
+        {
+            if (string.IsNullOrEmpty(v)) return null;
+            if (long.TryParse(v, out long parsed))
+                return parsed;
+            return null;
+        }
+
+        /// <summary>
+        /// Given a DataItem object this will generate a repeatable has for its state
+        /// </summary>
+        public static long Hash(this DataItem item)
+        {
+            if (item == null || item.ItemArray == null) return 0;
+            var sb = new StringBuilder();
+            foreach (var o in item.ItemArray)
+            {
+                if (o == null)
+                    sb.Append("~~NULL|");
+                else if (o is string)
+                    sb.Append((string)o);
+                else if (o is DateTime)
+                    sb.Append(((DateTime)o).Ticks);
+                else if (o is GeoCode)
+                {
+                    var g = o as GeoCode;
+                    sb.Append(g.Latitude + "*" + g.Longitude);
+                }
+                else
+                    sb.Append(o.ToString());
+            }
+            string data = sb.ToString();
+
+            UInt64 hashedValue = 3074457345618258791ul;
+            for (int i = 0; i < data.Length; i++)
+            {
+                hashedValue += data[i];
+                hashedValue *= 3074457345618258799ul;
+            }
+
+            //Convert to long as it is just a hash.
+            //We do not care what the actual value is as long as it is unique
+            return (long)hashedValue;
+        }
+
     }
 }

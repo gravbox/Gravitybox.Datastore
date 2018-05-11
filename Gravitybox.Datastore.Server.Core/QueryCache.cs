@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Gravitybox.Datastore.Common;
 using Gravitybox.Datastore.EFDAL;
 using System.Runtime.CompilerServices;
+using Gravitybox.Datastore.Server.Core.QueryBuilders;
 
 namespace Gravitybox.Datastore.Server.Core
 {
@@ -17,6 +18,8 @@ namespace Gravitybox.Datastore.Server.Core
     /// </summary>
     internal class QueryCache
     {
+        public FTSReadyCache FTSReadyCache { get; private set; } = new FTSReadyCache();
+
         #region RepositoryCache
         private class RepositoryCache : List<CacheResultsQuery>
         {
@@ -58,6 +61,15 @@ namespace Gravitybox.Datastore.Server.Core
                     }
                 }
             }
+
+            //Clear everything and restart clean
+            internal static void Reset()
+            {
+                lock (_locker)
+                {
+                    _lockCache.Clear();
+                }
+            }
         }
         #endregion
 
@@ -80,7 +92,7 @@ namespace Gravitybox.Datastore.Server.Core
 
                 //Cull cache every minute
                 _timer = new System.Timers.Timer(TIMECHECK);
-                _timer.Elapsed += _timer_Elapsed;
+                _timer.Elapsed += TimerElapsed;
                 _timer.Start();
             }
             catch (Exception ex)
@@ -92,8 +104,10 @@ namespace Gravitybox.Datastore.Server.Core
         #endregion
 
         #region Timer
-        private void _timer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
+        private void TimerElapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
+            var lockTime = 0;
+            var cacheCount = 0;
             _timer.Stop();
             try
             {
@@ -101,13 +115,15 @@ namespace Gravitybox.Datastore.Server.Core
                 var count = 0;
 
                 var allCaches = RepositoryCacheManager.All;
+                cacheCount = allCaches.Count;
                 foreach (var cache in allCaches)
                 {
                     using (var q = new AcquireWriterLock(ServerUtilities.RandomizeGuid(cache.ID, RSeed), "QueryCache"))
                     {
+                        lockTime += q.LockTime;
                         _maxItems = System.Math.Max(0, ConfigHelper.QueryCacheCount);
 
-                        //Purge anything not used in the last X minutes
+                        //Purge anything not used in the last N minutes
                         count += cache.RemoveAll(x => DateTime.Now.Subtract(x.Timestamp).TotalMinutes >= CacheExpireMinutes);
 
                         //Keep only the last N items
@@ -125,7 +141,7 @@ namespace Gravitybox.Datastore.Server.Core
                         .ToList()
                         .ForEach(x => { _cacheSlice.Remove(x); count++; });
 
-                //Purge anything not used in the last X minutes
+                //Purge anything not used in the last N minutes
                 count += _cacheSlice.RemoveAll(x => DateTime.Now.Subtract(x.Timestamp).TotalMinutes >= CacheExpireMinutes);
                 #endregion
 
@@ -133,7 +149,7 @@ namespace Gravitybox.Datastore.Server.Core
 
                 //Log it if too long
                 if (timer.ElapsedMilliseconds > 2000)
-                    LoggerCQ.LogWarning($"QueryCache housekeeping: Elapsed={timer.ElapsedMilliseconds}, Removed={count}");
+                    LoggerCQ.LogWarning($"QueryCache housekeeping: Elapsed={timer.ElapsedMilliseconds}, LockTime={lockTime}, ItemsRemoved={count}, CacheCount={cacheCount}");
             }
             catch (Exception ex)
             {
@@ -218,7 +234,8 @@ namespace Gravitybox.Datastore.Server.Core
 
             //Do not cache big items
             if (results.RecordList.Count > 100) return;
-            if (!string.IsNullOrEmpty(query.Keyword) && !ConfigHelper.AllowCacheWithKeyword) return;
+            if (!string.IsNullOrEmpty(query.Keyword) && !this.FTSReadyCache.IsReady(id)) return;
+            //if (!string.IsNullOrEmpty(query.Keyword) && !ConfigHelper.AllowCacheWithKeyword) return;
 
             var timer = Stopwatch.StartNew();
             var cache = RepositoryCacheManager.GetCache(id, RepositoryManager.GetSchemaParentId(repositoryId));
@@ -364,44 +381,53 @@ namespace Gravitybox.Datastore.Server.Core
         /// </summary>
         public void Clear(int repositoryId, Guid id)
         {
-            var count = 0;
-            var cache = RepositoryCacheManager.GetCache(id, RepositoryManager.GetSchemaParentId(repositoryId));
-
-            using (var q = new AcquireWriterLock(ServerUtilities.RandomizeGuid(cache.ID, RSeed), "QueryCache"))
+            try
             {
-                count += cache.Count;
-                cache.Clear();
-            }
+                var count = 0;
+                var cache = RepositoryCacheManager.GetCache(id, RepositoryManager.GetSchemaParentId(repositoryId));
+                this.FTSReadyCache.Clear(id);
+                ListDimensionCache.Clear(repositoryId);
 
-            //Find caches where this is the parent and clear them all too
-            var parentCaches = RepositoryCacheManager.All.Where(x => x.ParentId == repositoryId);
-            foreach (var pcache in parentCaches)
-            {
-                using (var q = new AcquireWriterLock(ServerUtilities.RandomizeGuid(pcache.ID, RSeed), "QueryCache"))
+                using (var q = new AcquireWriterLock(ServerUtilities.RandomizeGuid(cache.ID, RSeed), "QueryCache"))
                 {
-                    count += pcache.Count;
-                    pcache.Clear();
+                    count += cache.Count;
+                    cache.Clear();
                 }
-            }
 
-            using (var q = new AcquireWriterLock(QueryCacheID, "QueryCache"))
-            {
-                count += _cacheSlice.RemoveAll(x => x.RepositoryId == repositoryId);
-                count += _cacheSlice.RemoveAll(x => x.ParentId == repositoryId);
-            }
-
-            //If the query cache is being cleared then the List dimension count cache should be too
-            QueryBuilders.ListDimensionCache.Clear(repositoryId);
-
-            //Log the invalidation
-            Task.Factory.StartNew(() =>
-            {
-                using (var context = new DatastoreEntities(ConfigHelper.ConnectionString))
+                //Find caches where this is the parent and clear them all too
+                var parentCaches = RepositoryCacheManager.All.Where(x => x.ParentId == repositoryId);
+                foreach (var pcache in parentCaches)
                 {
-                    context.AddItem(new EFDAL.Entity.CacheInvalidate { Count = count, RepositoryId = repositoryId });
-                    context.SaveChanges();
+                    using (var q = new AcquireWriterLock(ServerUtilities.RandomizeGuid(pcache.ID, RSeed), "QueryCache"))
+                    {
+                        count += pcache.Count;
+                        pcache.Clear();
+                    }
                 }
-            });
+
+                using (var q = new AcquireWriterLock(QueryCacheID, "QueryCache"))
+                {
+                    count += _cacheSlice.RemoveAll(x => x.RepositoryId == repositoryId);
+                    count += _cacheSlice.RemoveAll(x => x.ParentId == repositoryId);
+                }
+
+                //If the query cache is being cleared then the List dimension count cache should be too
+                QueryBuilders.ListDimensionCache.Clear(repositoryId);
+
+                //Log the invalidation
+                Task.Factory.StartNew(() =>
+                {
+                    using (var context = new DatastoreEntities(ConfigHelper.ConnectionString))
+                    {
+                        context.AddItem(new EFDAL.Entity.CacheInvalidate { Count = count, RepositoryId = repositoryId });
+                        context.SaveChanges();
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                LoggerCQ.LogError(ex);
+            }
         }
 
         /// <summary>
@@ -416,6 +442,15 @@ namespace Gravitybox.Datastore.Server.Core
                 return l.Sum(x => x.Count);
             }
         }
+
+        /// <summary>
+        /// Clear everything and restart clean
+        /// </summary>
+        public void Reset()
+        {
+            RepositoryCacheManager.Reset();
+        }
+
         #endregion
 
         #region CacheResultsBase

@@ -159,11 +159,11 @@ namespace Gravitybox.Datastore.Server.Core
                 using (var context = new DatastoreEntities(ConfigHelper.ConnectionString))
                 {
                     var typeValues = Enum.GetValues(typeof(RepositoryActionTypeConstants)).Cast<int>().ToList();
-                    foreach (var t in typeValues)
+                    foreach (var typeId in typeValues)
                     {
                         foreach (var key in copyCache.Keys)
                         {
-                            var q = (RepositoryActionConstants)t;
+                            var q = (RepositoryActionConstants)typeId;
                             var queryList = copyCache[key].Where(x => x.ActionType == q).ToList();
                             var elapsed = queryList.Sum(x => x.Elapsed); //Total elapsed time
                             var lockTime = queryList.Sum(x => x.LockTime); //Total lock time
@@ -191,7 +191,7 @@ namespace Gravitybox.Datastore.Server.Core
                                                   Elapsed = elapsed,
                                                   LockTime = lockTime,
                                                   ItemCount = itemCount,
-                                                  RepositoryActionTypeId = int.Parse(t.ToString("d")),
+                                                  RepositoryActionTypeId = typeId,
                                                   RepositoryId = repository.RepositoryId,
                                                   WaitingLocks = waitingLocks,
                                                   ReadLockCount = readLockCount,

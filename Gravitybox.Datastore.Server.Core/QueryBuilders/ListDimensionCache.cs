@@ -18,10 +18,10 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
         private static ConcurrentDictionary<int, ConcurrentDictionary<string, LDCacheItem>> _cache { get; } = new ConcurrentDictionary<int, ConcurrentDictionary<string, LDCacheItem>>();
 #if DEBUG
         private const int TimeCheck = 10; //seconds
-        private const int MaxCacheTime = 1; //minutes
+        private const int MaxCacheTime = 10; //minutes
 #else
         private const int TimeCheck = 120; //seconds
-        private const int MaxCacheTime = 5; //minutes
+        private const int MaxCacheTime = 60; //minutes
 #endif
         private static System.Timers.Timer _timer = null;
 
@@ -71,7 +71,6 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
             finally
             {
                 timer.Stop();
-                //LoggerCQ.LogDebug($"ListDimensionCache: RepositoryCount={_cache.Keys.Count}, ItemCount={itemCount}, HitCount={hitCount}, Elapsed={timer.ElapsedMilliseconds}, RemovedItems={removed}");
                 _timer.Start();
             }
         }
@@ -91,14 +90,13 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
             if (!query.IncludeDimensions)
                 return new Dictionary<long, IRefinementItem>();
 
-            var cacheKey = didx + "|" + query.CoreWhereHashCode();
+            var cacheKey = $"{didx}|{query.CoreWhereHashCode()}";
             lock (_cache)
             {
                 var rLookup = _cache.GetOrAdd(repositoryId, key => new ConcurrentDictionary<string, LDCacheItem>());
                 LDCacheItem retval = null;
                 var b = rLookup.TryGetValue(cacheKey, out retval);
 
-                //LoggerCQ.LogInfo("ListDimensionCache.Get: RepositoryId=" + repositoryId + ", Count=" + (retval == null ? "-1" : retval.Count.ToString()));
                 if (retval != null)
                 {
                     retval.Timestamp = DateTime.Now;

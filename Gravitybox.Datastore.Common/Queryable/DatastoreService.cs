@@ -44,6 +44,7 @@ namespace Gravitybox.Datastore.Common.Queryable
         {
             this.ChannelFactory = SystemCoreInteractDomain.GetRepositoryFactory(this.ServerName, this.Port);
             this.DataModelService = this.ChannelFactory.CreateChannel();
+            (this.DataModelService as IContextChannel).OperationTimeout = new TimeSpan(0, 0, 120); //Timeout=2m
         }
 
         /// <summary />
@@ -84,6 +85,7 @@ namespace Gravitybox.Datastore.Common.Queryable
             using (var serverFactory = SystemCoreInteractDomain.GetCoreFactory(ServerName, Port))
             {
                 var core = serverFactory.CreateChannel();
+                (core as IContextChannel).OperationTimeout = new TimeSpan(0, 0, 120); //Timeout=2m
                 if (core.RepositoryExists(this.RepositoryId))
                 {
                     core.DeleteRepository(new RepositorySchema { ID = this.RepositoryId });
@@ -224,8 +226,9 @@ namespace Gravitybox.Datastore.Common.Queryable
 
             using (var factory = SystemCoreInteractDomain.GetCoreFactory(ServerName, Port))
             {
-                var server = factory.CreateChannel();
-                server.SaveRepository(repositorySchema);
+                var core = factory.CreateChannel();
+                (core as IContextChannel).OperationTimeout = new TimeSpan(0, 0, 120); //Timeout=2m
+                core.SaveRepository(repositorySchema);
             }
         }
 

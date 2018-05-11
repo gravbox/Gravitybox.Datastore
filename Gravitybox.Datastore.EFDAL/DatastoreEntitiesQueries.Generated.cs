@@ -468,7 +468,7 @@ namespace Gravitybox.Datastore.EFDAL
 		/// <summary>
 		/// (Maps to the 'RepositoryLog.Query' database field)
 		/// </summary>
-		[Column(Name = "Query", DbType = "NVarChar (500)", CanBeNull = true, IsPrimaryKey = false)]
+		[Column(Name = "Query", DbType = "NVarChar (1000)", CanBeNull = true, IsPrimaryKey = false)]
 		[System.Diagnostics.DebuggerNonUserCode()]
 		public virtual string Query { get; set; }
 		/// <summary>

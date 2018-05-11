@@ -136,7 +136,7 @@ CREATE TABLE [dbo].[RepositoryLog] (
 	[UsedCache] [Bit] NOT NULL ,
 	[LockTime] [Int] NOT NULL CONSTRAINT [DF__REPOSITORYLOG_LOCKTIME] DEFAULT (0),
 	[QueryId] [UniqueIdentifier] NOT NULL ,
-	[Query] [NVarChar] (500) NULL ,
+	[Query] [NVarChar] (1000) NULL ,
 	[CreatedBy] [NVarchar] (50) NULL,
 	[CreatedDate] [DateTime2] CONSTRAINT [DF__REPOSITORYLOG_CREATEDDATE] DEFAULT sysdatetime() NULL,
 	CONSTRAINT [PK_REPOSITORYLOG] PRIMARY KEY CLUSTERED

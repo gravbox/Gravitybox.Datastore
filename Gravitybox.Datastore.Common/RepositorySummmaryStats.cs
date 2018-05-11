@@ -34,7 +34,7 @@ namespace Gravitybox.Datastore.Common
         /// <summary />
         public override string ToString()
         {
-            return this.RepositoryId + " | " + this.ActionType.ToString() + " | " + this.Elapsed + " | " + this.ItemCount;
+            return$"{this.RepositoryId}|{this.ActionType}|{this.Elapsed}|{this.ItemCount}";
         }
 
         /// <summary />
