@@ -212,8 +212,9 @@ namespace Gravitybox.Datastore.Common.Queryable
         public virtual void CreateRepository(string name = null)
         {
             var schema = LoadSchemaTemplate();
-            schema.ID = this.RepositoryId;
-            schema.Name = name ?? string.Empty;
+            schema.ID = this.RepositoryId;  
+            if (!string.IsNullOrEmpty(name))
+                schema.Name = name;
             _datastoreService.CreateRepository(schema);
         }
 

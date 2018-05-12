@@ -5,7 +5,7 @@ using Gravitybox.Datastore.Common;
 
 namespace Gravitybox.Datastore.Util.TestHarness
 {
-    [DatastoreRepository(Name = "MyItem", Id = "00000000-0000-0000-0000-17728d4a8361")]
+    [DatastoreRepository(Name = "MyItem")]
     [Serializable]
     public class MyItem : IDatastoreItem
     {

@@ -221,6 +221,8 @@ namespace Gravitybox.Datastore.Common.Queryable
         {
             ValidateService();
 
+            if (repositorySchema.ID == Guid.Empty)
+                throw new Exception("Invalid ID for repository");
             if (RepositoryExists())
                 return;
 
@@ -237,7 +239,8 @@ namespace Gravitybox.Datastore.Common.Queryable
         {
             var schema = DatastoreService.LoadSchemaForType(datastoreType);
             schema.ID = schema.ID; //RepositoryId;
-            schema.Name = string.Format("{0}-{1}", schema.Name[0], schema.ID); //RepositoryId
+            if (string.IsNullOrEmpty(schema.Name))
+                schema.Name = string.Format("{0}-{1}", schema.Name[0], schema.ID); //RepositoryId
             schema.CreatedDate = DateTime.Now;
             return schema;
         }
@@ -325,7 +328,12 @@ namespace Gravitybox.Datastore.Common.Queryable
             var schema = new RepositorySchema();
             schema.Name = dsRepositoryAttribute.Name;
             schema.ObjectAlias = dsRepositoryAttribute.ObjectAlias;
-            schema.ID = new Guid(dsRepositoryAttribute.Id);
+
+            Guid rid;
+            Guid.TryParse(dsRepositoryAttribute.Id, out rid);
+            if (rid == Guid.Empty) rid = Guid.NewGuid();
+            schema.ID = rid;
+
             if (!string.IsNullOrEmpty(dsRepositoryAttribute.ParentId))
                 schema.ParentID = new Guid(dsRepositoryAttribute.ParentId);
             schema.FieldIndexing = dsRepositoryAttribute.FieldIndexing;

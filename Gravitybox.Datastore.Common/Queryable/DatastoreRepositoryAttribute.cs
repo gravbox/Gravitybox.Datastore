@@ -11,9 +11,9 @@ namespace Gravitybox.Datastore.Common.Queryable
         
         /// <summary />
         public string ObjectAlias { get; set; }
-        
+
         /// <summary />
-        public string Id { get; set; }
+        public string Id { get; set; } = Guid.Empty.ToString();
 
         /// <summary />
         public string ParentId { get; set; }
