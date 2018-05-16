@@ -43,8 +43,8 @@ namespace Gravitybox.Datastore.Util.TestHarness
                 }
                 #endregion
 
-                CreateRepo();
-                AddData();
+                //CreateRepo();
+                //AddData();
                 //DuplicateFilters();
                 //TestDerivedFields();
                 //HitHard();
@@ -235,6 +235,9 @@ namespace Gravitybox.Datastore.Util.TestHarness
             {
                 using (var repo = new DatastoreRepository<MyItem>(repoID, SERVER, PORT))
                 {
+                    var q = "/results.aspx?d=20000018&ff=Location,LessThanOrEq,34.52,-118.08,50|Title,ContainsAll,0,0,0&fs=PriorityOrder|PostedDate,0&zip=Palmdale, CA 93550&skipd=1000003,1000000";
+                    repo.Query.WhereUrl(q).Results();
+
                     var query = repo.Query.RecordsPerPage(20);
                     var results = query.Results();
                     var dlist = query.DimensionsOnly();

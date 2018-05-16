@@ -108,35 +108,38 @@ namespace Gravitybox.Datastore.Common
             try
             {
                 var svalues = url.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
-                if (svalues.Length == 5)
-                {
-                    Gravitybox.Datastore.Common.ComparisonConstants enumValue;
-                    if (Enum.TryParse<Gravitybox.Datastore.Common.ComparisonConstants>(svalues[1], true, out enumValue))
-                    {
-                        if (string.IsNullOrEmpty(svalues[0]))
-                            return false;
 
-                        this.Name = svalues[0];
-                        this.Comparer = enumValue;
-                        ((GeoCodeFieldFilter)this).Latitude = svalues[2].ToDouble();
-                        ((GeoCodeFieldFilter)this).Longitude = svalues[3].ToDouble();
-                        ((GeoCodeFieldFilter)this).Radius = svalues[4].ToInt();
-                    }
-                    else return false;
+                if (svalues.Length < 3)
+                    return false;
+
+                Gravitybox.Datastore.Common.ComparisonConstants enumValue;
+                if (!Enum.TryParse<Gravitybox.Datastore.Common.ComparisonConstants>(svalues[1], true, out enumValue))
+                    return false;
+
+                if (svalues.Length == 5 &&
+                    enumValue != ComparisonConstants.ContainsAll &&
+                    enumValue != ComparisonConstants.ContainsAny &&
+                    enumValue != ComparisonConstants.ContainsNone)
+                {
+                    if (string.IsNullOrEmpty(svalues[0]))
+                        return false;
+                    if (!(this is GeoCodeFieldFilter))
+                        return false;
+
+                    this.Name = svalues[0];
+                    this.Comparer = enumValue;
+                    ((GeoCodeFieldFilter)this).Latitude = svalues[2].ToDouble();
+                    ((GeoCodeFieldFilter)this).Longitude = svalues[3].ToDouble();
+                    ((GeoCodeFieldFilter)this).Radius = svalues[4].ToInt();
                 }
                 else if (svalues.Length >= 3)
                 {
-                    Gravitybox.Datastore.Common.ComparisonConstants enumValue;
-                    if (Enum.TryParse<Gravitybox.Datastore.Common.ComparisonConstants>(svalues[1], true, out enumValue))
-                    {
-                        if (string.IsNullOrEmpty(svalues[0]))
-                            return false;
+                    if (string.IsNullOrEmpty(svalues[0]))
+                        return false;
 
-                        this.Name = svalues[0];
-                        this.Comparer = enumValue;
-                        ((IFieldFilter)this).Value = svalues[2];
-                    }
-                    else return false;
+                    this.Name = svalues[0];
+                    this.Comparer = enumValue;
+                    ((IFieldFilter)this).Value = svalues[2];
                 }
                 return true;
             }

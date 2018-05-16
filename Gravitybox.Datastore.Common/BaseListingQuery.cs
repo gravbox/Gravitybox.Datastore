@@ -104,18 +104,28 @@ namespace Gravitybox.Datastore.Common
                                 var filters = values[1].Split(new char[] { '|' }, StringSplitOptions.RemoveEmptyEntries);
                                 foreach (var s in filters)
                                 {
-                                    var svalues = s.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
-                                    if (svalues.Length == 5)
+                                    var svalues = s.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).ToArray();
+
+                                    IFieldFilter ff = new FieldFilter();
+                                    if (ff.FromUrl(s))
                                     {
-                                        IFieldFilter ff = new GeoCodeFieldFilter();
-                                        if (ff.FromUrl(s))
+                                        if (svalues.Length == 5 &&
+                                            ff.Comparer != ComparisonConstants.ContainsAll &&
+                                            ff.Comparer != ComparisonConstants.ContainsAny &&
+                                            ff.Comparer != ComparisonConstants.ContainsNone)
+                                        {
+                                            IFieldFilter ff2 = new GeoCodeFieldFilter();
+                                            if (ff2.FromUrl(s))
+                                                this.FieldFilters.Add(ff2);
+                                        }
+                                        else
                                             this.FieldFilters.Add(ff);
                                     }
-                                    else
+                                    else if (svalues.Length == 5)
                                     {
-                                        IFieldFilter ff = new FieldFilter();
-                                        if (ff.FromUrl(s))
-                                            this.FieldFilters.Add(ff);
+                                        IFieldFilter ff2 = new GeoCodeFieldFilter();
+                                        if (ff2.FromUrl(s))
+                                            this.FieldFilters.Add(ff2);
                                     }
                                 }
                             }
@@ -125,7 +135,7 @@ namespace Gravitybox.Datastore.Common
                                 var sorts = values[1].Split(new char[] { '|' }, StringSplitOptions.RemoveEmptyEntries);
                                 foreach (var s in sorts)
                                 {
-                                    var svalues = s.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+                                    var svalues = s.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).ToArray();
                                     if (svalues.Length > 0)
                                     {
                                         this.FieldSorts.Add(new FieldSort() { Name = svalues[0], SortDirection = (svalues.Length == 1 || svalues[1] != "0" ? Gravitybox.Datastore.Common.SortDirectionConstants.Asc : Gravitybox.Datastore.Common.SortDirectionConstants.Desc) });
