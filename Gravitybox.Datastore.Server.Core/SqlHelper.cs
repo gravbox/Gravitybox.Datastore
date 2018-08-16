@@ -3313,6 +3313,8 @@ namespace Gravitybox.Datastore.Server.Core
                                     sb.Append($"({subSqlList.ToStringList(" OR ")})");
                                 }
                             }
+                            else
+                                filterFound = false;
                             break;
                         case ComparisonConstants.ContainsAll:
                             if (ffValue != null)
@@ -3337,6 +3339,8 @@ namespace Gravitybox.Datastore.Server.Core
                                     sb.Append($"({subSqlList.ToStringList(" AND ")})");
                                 }
                             }
+                            else
+                                filterFound = false;
                             break;
                         case ComparisonConstants.ContainsNone:
                             if (ffValue != null)
@@ -3361,6 +3365,8 @@ namespace Gravitybox.Datastore.Server.Core
                                     sb.Append($"({subSqlList.ToStringList(" AND ")})");
                                 }
                             }
+                            else
+                                filterFound = false;
                             break;
                         default:
                             throw new Exception("This operation is not supported!");
@@ -3566,6 +3572,8 @@ namespace Gravitybox.Datastore.Server.Core
                                     sb.Append($"({subSqlList.ToStringList(" OR ")})");
                                 }
                             }
+                            else
+                                filterFound = false;
                             break;
                         case ComparisonConstants.ContainsAll:
                             if (ffValue != null)
@@ -3590,6 +3598,8 @@ namespace Gravitybox.Datastore.Server.Core
                                     sb.Append($"({subSqlList.ToStringList(" AND ")})");
                                 }
                             }
+                            else
+                                filterFound = false;
                             break;
                         case ComparisonConstants.ContainsNone:
                             if (ffValue != null)
@@ -3614,6 +3624,8 @@ namespace Gravitybox.Datastore.Server.Core
                                     sb.Append($"({subSqlList.ToStringList(" AND ")})");
                                 }
                             }
+                            else
+                                filterFound = false;
                             break;
                         default:
                             throw new Exception("This operation is not supported!");
