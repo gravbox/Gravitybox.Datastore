@@ -95,11 +95,19 @@ namespace Gravitybox.Datastore.Server.Core
 
         public void Add(T item)
         {
+            TryAdd(item);
+        }
+
+        public bool TryAdd(T item)
+        {
             _lock.EnterWriteLock();
             try
             {
-                if (!_hashSet.Contains(item))
-                    _hashSet.Add(item);
+                if (_hashSet.Contains(item))
+                    return false;
+
+                _hashSet.Add(item);
+                return true;
             }
             finally
             {

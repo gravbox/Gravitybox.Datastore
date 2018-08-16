@@ -354,22 +354,22 @@ namespace Gravitybox.Datastore.Server.Core
         {
             try
             {
-                using (var context = new DatastoreEntities())
-                {
-                    var item = context.ServiceInstance.FirstOrDefault();
-                    if (item == null)
-                        PromoteMaster();
-                    else if (DateTime.UtcNow.AddSeconds(-_serverTimeSkew).Subtract(item.LastCommunication).TotalSeconds > 10)
-                        PromoteMaster();
-                }
+                //using (var context = new DatastoreEntities())
+                //{
+                //    var item = context.ServiceInstance.FirstOrDefault();
+                //    if (item == null)
+                //        PromoteMaster();
+                //    else if (DateTime.UtcNow.AddSeconds(-_serverTimeSkew).Subtract(item.LastCommunication).TotalSeconds > 10)
+                //        PromoteMaster();
+                //}
 
-                //Get the lastest master instance
-                using (var context = new DatastoreEntities())
-                {
-                    var item = context.ServiceInstance.FirstOrDefault();
-                    if (item != null)
-                        CurrentMaster = item.InstanceId;
-                }
+                ////Get the lastest master instance
+                //using (var context = new DatastoreEntities())
+                //{
+                //    var item = context.ServiceInstance.FirstOrDefault();
+                //    if (item != null)
+                //        CurrentMaster = item.InstanceId;
+                //}
 
                 //Subtract My Time from database time
                 //If (+) then db server is behind me, if (-) db server is ahead
@@ -377,9 +377,9 @@ namespace Gravitybox.Datastore.Server.Core
                 _serverTimeSkew = DateTime.UtcNow.Subtract(GetDatabaseTime()).TotalSeconds;
 
                 //This will send the heartbeat to the DB
-                _timerHeartBeat = new System.Timers.Timer(5000);
-                _timerHeartBeat.Elapsed += TimerHeartBeatElapsed;
-                _timerHeartBeat.Start();
+                //_timerHeartBeat = new System.Timers.Timer(5000);
+                //_timerHeartBeat.Elapsed += TimerHeartBeatElapsed;
+                //_timerHeartBeat.Start();
             }
             catch (Exception ex)
             {
@@ -392,19 +392,19 @@ namespace Gravitybox.Datastore.Server.Core
         {
             try
             {
-                //When shutting down, reset the DB keep alive settings so this server is NOT the master
-                //Only do this if this instance is currently the master
-                using (var context = new DatastoreEntities())
-                {
-                    var item = context.ServiceInstance.FirstOrDefault();
-                    if (item != null && item.InstanceId == RepositoryManager.InstanceId)
-                    {
-                        item.InstanceId = Guid.Empty;
-                        item.LastCommunication = new DateTime(2000, 1, 1);
-                        item.FirstCommunication = item.LastCommunication;
-                        context.SaveChanges();
-                    }
-                }
+                ////When shutting down, reset the DB keep alive settings so this server is NOT the master
+                ////Only do this if this instance is currently the master
+                //using (var context = new DatastoreEntities())
+                //{
+                //    var item = context.ServiceInstance.FirstOrDefault();
+                //    if (item != null && item.InstanceId == RepositoryManager.InstanceId)
+                //    {
+                //        item.InstanceId = Guid.Empty;
+                //        item.LastCommunication = new DateTime(2000, 1, 1);
+                //        item.FirstCommunication = item.LastCommunication;
+                //        context.SaveChanges();
+                //    }
+                //}
             }
             catch (Exception ex)
             {
@@ -412,52 +412,52 @@ namespace Gravitybox.Datastore.Server.Core
             }
         }
 
-        public static bool PromoteMaster()
-        {
-            var tryCount = 0;
-            do
-            {
-                try
-                {
-                    using (var context = new DatastoreEntities())
-                    {
-                        var item = context.ServiceInstance.FirstOrDefault();
-                        if (item == null)
-                        {
-                            //There is no item in the table so create one
-                            context.AddItem(new ServiceInstance
-                            {
-                                FirstCommunication = DateTime.UtcNow.AddSeconds(-_serverTimeSkew),
-                                LastCommunication = DateTime.UtcNow.AddSeconds(-_serverTimeSkew),
-                                InstanceId = RepositoryManager.InstanceId,
-                            });
-                            context.SaveChanges();
-                            return true;
-                        }
-                        else if (item.InstanceId == RepositoryManager.InstanceId)
-                        {
-                            //Nothing to do. This service is already the master
-                            return true;
-                        }
-                        else
-                        {
-                            //The instance was successfully change to this service instance
-                            item.InstanceId = RepositoryManager.InstanceId;
-                            item.FirstCommunication = DateTime.UtcNow.AddSeconds(-_serverTimeSkew);
-                            item.LastCommunication = DateTime.UtcNow.AddSeconds(-_serverTimeSkew);
-                            context.SaveChanges();
-                            return true;
-                        }
-                    }
-                }
-                catch (Exception)
-                {
-                    //If the record could not be created OR not updated try again
-                    tryCount++;
-                }
-            } while (tryCount < 3);
-            return false;
-        }
+        //public static bool PromoteMaster()
+        //{
+        //    var tryCount = 0;
+        //    do
+        //    {
+        //        try
+        //        {
+        //            using (var context = new DatastoreEntities())
+        //            {
+        //                var item = context.ServiceInstance.FirstOrDefault();
+        //                if (item == null)
+        //                {
+        //                    //There is no item in the table so create one
+        //                    context.AddItem(new ServiceInstance
+        //                    {
+        //                        FirstCommunication = DateTime.UtcNow.AddSeconds(-_serverTimeSkew),
+        //                        LastCommunication = DateTime.UtcNow.AddSeconds(-_serverTimeSkew),
+        //                        InstanceId = RepositoryManager.InstanceId,
+        //                    });
+        //                    context.SaveChanges();
+        //                    return true;
+        //                }
+        //                else if (item.InstanceId == RepositoryManager.InstanceId)
+        //                {
+        //                    //Nothing to do. This service is already the master
+        //                    return true;
+        //                }
+        //                else
+        //                {
+        //                    //The instance was successfully change to this service instance
+        //                    item.InstanceId = RepositoryManager.InstanceId;
+        //                    item.FirstCommunication = DateTime.UtcNow.AddSeconds(-_serverTimeSkew);
+        //                    item.LastCommunication = DateTime.UtcNow.AddSeconds(-_serverTimeSkew);
+        //                    context.SaveChanges();
+        //                    return true;
+        //                }
+        //            }
+        //        }
+        //        catch (Exception)
+        //        {
+        //            //If the record could not be created OR not updated try again
+        //            tryCount++;
+        //        }
+        //    } while (tryCount < 3);
+        //    return false;
+        //}
 
         private static DateTime GetDatabaseTime()
         {

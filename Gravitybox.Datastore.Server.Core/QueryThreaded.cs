@@ -17,6 +17,7 @@ namespace Gravitybox.Datastore.Server.Core
     {
         private DimensionCache _dimensionCache;
         private RepositorySchema _schema;
+        private static ConcurrentHashSet<Guid> _runningList = new ConcurrentHashSet<Guid>();
 
         public QueryThreaded(DimensionCache dimensionCache, RepositorySchema schema, DataQuery query)
         {
@@ -32,6 +33,10 @@ namespace Gravitybox.Datastore.Server.Core
 
         public void Run()
         {
+            //Only have 1 running async query for a repository
+            while (!_runningList.TryAdd(_schema.ID))
+                System.Threading.Thread.Sleep(1000);
+
             try
             {
                 var timer = Stopwatch.StartNew();
@@ -223,7 +228,7 @@ namespace Gravitybox.Datastore.Server.Core
                 File.Delete(fileName);
                 System.Threading.Thread.Sleep(300);
                 timer.Stop();
-                LoggerCQ.LogInfo($"QueryThreaded Complete: File={outFile}, Size={size}, Count={rowCount}, ListElapsed={timerList.ElapsedMilliseconds}, Elapsed={timer.ElapsedMilliseconds}");
+                LoggerCQ.LogInfo($"QueryThreaded Complete: ID={_schema.ID}, File={outFile}, Size={size}, Count={rowCount}, ListElapsed={timerList.ElapsedMilliseconds}, Elapsed={timer.ElapsedMilliseconds}");
             }
             catch (Exception ex)
             {
@@ -233,7 +238,16 @@ namespace Gravitybox.Datastore.Server.Core
             finally
             {
                 this.IsComplete = true;
+                _runningList.Remove(_schema.ID);
             }
+        }
+
+        /// <summary>
+        /// Determines if a repository has a running async query
+        /// </summary>
+        public static bool HasRunningQuery(Guid id)
+        {
+            return _runningList.Contains(id);
         }
 
         /// <summary>

@@ -112,8 +112,8 @@ namespace Gravitybox.Datastore.Common
                 if (svalues.Length < 3)
                     return false;
 
-                Gravitybox.Datastore.Common.ComparisonConstants enumValue;
-                if (!Enum.TryParse<Gravitybox.Datastore.Common.ComparisonConstants>(svalues[1], true, out enumValue))
+                Datastore.Common.ComparisonConstants enumValue;
+                if (!Enum.TryParse<Datastore.Common.ComparisonConstants>(svalues[1], true, out enumValue))
                     return false;
 
                 if (svalues.Length == 5 &&
@@ -149,6 +149,7 @@ namespace Gravitybox.Datastore.Common
                 throw;
             }
         }
+
 
         object ICloneable.Clone()
         {

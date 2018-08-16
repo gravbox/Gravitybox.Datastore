@@ -194,6 +194,11 @@ namespace Gravitybox.Datastore.Server.Core
 
         private static void SyncInternal(List<DataItem> list, RepositorySchema schema)
         {
+            var timer = Stopwatch.StartNew();
+            var count = 0;
+            var processed = 0;
+            long lastRIdx = 0;
+
             try
             {
                 if (list == null) return;
@@ -201,6 +206,7 @@ namespace Gravitybox.Datastore.Server.Core
 
                 var l = list.Where(x => x.__Hash == 0 && x.__RecordIndex > 0).ToList();
                 if (!l.Any()) return;
+                count = l.Count;
 
                 var dataTable = SqlHelper.GetTableName(schema.ID);
                 foreach (var item in l)
@@ -223,15 +229,17 @@ namespace Gravitybox.Datastore.Server.Core
                         ParameterName = $"@{SqlHelper.RecordIdxField}",
                         Value = item.__RecordIndex,
                     });
+                    lastRIdx = item.__RecordIndex;
 
                     sb.AppendLine($"UPDATE [{dataTable}] SET [{SqlHelper.HashField}] = @{SqlHelper.HashField} WHERE [{SqlHelper.RecordIdxField}] = @{SqlHelper.RecordIdxField} AND [{SqlHelper.HashField}] = 0");
-                    SqlHelper.ExecuteSql(ConfigHelper.ConnectionString, sb.ToString(), parameters, false, false);
+                    SqlHelper.ExecuteSql(ConfigHelper.ConnectionString, sb.ToString(), parameters, false, false, 5);
                     Interlocked.Increment(ref _counter);
+                    processed++;
                 }
             }
             catch (Exception ex)
             {
-                LoggerCQ.LogError(ex);
+                LoggerCQ.LogWarning($"DataManager.SyncInternal: ID={schema.ID}, Count={count}, Processed={processed}, RIdx={lastRIdx}, Elapsed={timer.ElapsedMilliseconds}");
             }
         }
     }

@@ -22,7 +22,6 @@ namespace Gravitybox.Datastore.Common.Queryable
 
             //The old way of calling "Items" has been removed as it is handled by the global Aggregate methods
             //The new way only works with the new GroupBy extension that actually performs a real SQL "group by"
-            //_functionMap.Add("Items", ExecuteItems);
             _functionMap.Add("Items", ExecuteItems2);
 
             _functionMap.Add("Count", ExecuteCount);
@@ -212,27 +211,6 @@ namespace Gravitybox.Datastore.Common.Queryable
             return dataQuery;
         }
 
-        private static object ExecuteItems(MethodCallExpression methodExpression, Type returnType, DatastoreService dsService)
-        {
-            if (methodExpression.Arguments.Count < 1)
-                throw new InvalidOperationException("Missing arguments for the Items expression.");
-
-            var parser = new DatastoreExpressionParser();
-            parser.Visit(methodExpression.Arguments[0]);
-
-            var dataQuery = BuildDataQueryFromParser(parser);
-            dataQuery.IncludeDimensions = false;
-            dataQuery.IncludeAllDimensions = false;
-            dataQuery.IncludeRecords = true;
-            dataQuery.ExcludeCount = false;
-
-            var itemType = GetGenericArgument(returnType, 0);
-            var dsItems = Activator.CreateInstance(typeof(DatastoreItems<>).MakeGenericType(itemType));
-            var results = dsService.Query(dataQuery);
-            SetResultItems(dsItems, itemType, dataQuery, results, parser.SelectExpression);
-            return dsItems;
-        }
-
         private static object ExecuteItems2(MethodCallExpression methodExpression, Type returnType, DatastoreService dsService)
         {
             if (methodExpression.Arguments.Count < 1)
@@ -245,7 +223,6 @@ namespace Gravitybox.Datastore.Common.Queryable
             dataQuery.IncludeDimensions = false;
             dataQuery.IncludeAllDimensions = false;
             dataQuery.IncludeRecords = true;
-            dataQuery.ExcludeCount = false;
 
             var itemType = GetGenericArgument(returnType, 0);
             var dsItems = Activator.CreateInstance(typeof(DatastoreItems<>).MakeGenericType(itemType));
@@ -272,8 +249,8 @@ namespace Gravitybox.Datastore.Common.Queryable
             var dataQuery = BuildDataQueryFromParser(parser);
             dataQuery.IncludeDimensions = false;
             dataQuery.IncludeAllDimensions = false;
-            dataQuery.IncludeRecords = true;
-            dataQuery.ExcludeCount = false;
+            dataQuery.IncludeRecords = false;
+            dataQuery.ExcludeCount = true;
             dataQuery.FieldSelects = null;
 
             return dataQuery;
@@ -671,10 +648,7 @@ namespace Gravitybox.Datastore.Common.Queryable
 
         private static object BuildItemFromDerivedFields2(DataQueryResults results, Type itemType)
         {
-            var constructorParams = new object[results.DerivedFieldList.Length];
-            if (results.DerivedFieldList.Any())
-                return results.DerivedFieldList.First().Value;
-            return null;
+            return results.DerivedFieldList.Any() ? results.DerivedFieldList.First().Value : null;
         }
 
         private static ActionDiagnostics ExecuteCommit(MethodCallExpression methodExpression, Type returnType, DatastoreService dsService)

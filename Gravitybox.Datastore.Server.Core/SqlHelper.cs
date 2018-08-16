@@ -157,7 +157,7 @@ namespace Gravitybox.Datastore.Server.Core
             return ExecuteSql(connectionString, sql, new List<SqlParameter>());
         }
 
-        internal static int ExecuteSql(string connectionString, string sql, List<SqlParameter> parameters, bool useTransaction = true, bool retry = false)
+        internal static int ExecuteSql(string connectionString, string sql, List<SqlParameter> parameters, bool useTransaction = true, bool retry = false, int timeout = 60)
         {
             const int MAX_TRY = 1;
             var tryCount = 0;
@@ -166,7 +166,6 @@ namespace Gravitybox.Datastore.Server.Core
             if (parameters == null) parameters = new List<SqlParameter>();
             var timer = Stopwatch.StartNew();
             var errorMsg = new List<string>();
-            var timeout = 60;
             do
             {
                 try
@@ -2464,7 +2463,7 @@ namespace Gravitybox.Datastore.Server.Core
                 taskList.Add(taskAgg.GenerateSql());
                 foreach (var item in ldThreads)
                     taskList.Add(item.GenerateSql());
-                threadSuccess &= Task.WaitAll(taskList.ToArray(), SqlHelper.ThreadTimeout);
+                threadSuccess = Task.WaitAll(taskList.ToArray(), SqlHelper.ThreadTimeout);
                 if (!threadSuccess)
                     throw new DatastoreException("0x2291");
 
@@ -2476,12 +2475,12 @@ namespace Gravitybox.Datastore.Server.Core
                 taskList.Add(taskAgg.Execute());
                 foreach (var item in ldThreads)
                     taskList.Add(item.Execute());
-                threadSuccess &= Task.WaitAll(taskList.ToArray(), SqlHelper.ThreadTimeout);
+                threadSuccess = Task.WaitAll(taskList.ToArray(), SqlHelper.ThreadTimeout);
                 if (!threadSuccess)
                     throw new DatastoreException("0x2292");
 
                 //Loading can be done simultaneously
-                threadSuccess &= taskRB.Load().Wait(SqlHelper.ThreadTimeout); //must be loaded first
+                threadSuccess = taskRB.Load().Wait(SqlHelper.ThreadTimeout); //must be loaded first
                 if (!threadSuccess)
                     throw new DatastoreException("0x2293");
 
@@ -2491,8 +2490,7 @@ namespace Gravitybox.Datastore.Server.Core
                 taskList.Add(taskAgg.Load());
                 foreach (var item in ldThreads)
                     taskList.Add(item.Load());
-                threadSuccess &= Task.WaitAll(taskList.ToArray(), SqlHelper.ThreadTimeout);
-
+                threadSuccess = Task.WaitAll(taskList.ToArray(), SqlHelper.ThreadTimeout);
                 if (!threadSuccess)
                     throw new DatastoreException("0x2294");
 
@@ -2984,6 +2982,10 @@ namespace Gravitybox.Datastore.Server.Core
                                 //+-25 METERS
                                 sb.Append("(" + ((geo.Radius * 1609.344) - 25) + $" > [Z].[{field.TokenName}].STDistance(geography::Point({geo.Latitude}, {geo.Longitude}, 4326)) OR [Z].[{field.TokenName}].STDistance(geography::Point({geo.Latitude}, {geo.Longitude}, 4326)) > " + ((geo.Radius * 1609.344) + 25) + ")");
                                 break;
+                            case ComparisonConstants.ContainsAny:
+                            case ComparisonConstants.ContainsAll:
+                            case ComparisonConstants.ContainsNone:
+                                throw new NotImplementedException();
                             default:
                                 throw new Exception("This operation is not supported!");
                         }
@@ -3025,6 +3027,10 @@ namespace Gravitybox.Datastore.Server.Core
                             else
                                 sb.Append($"[Z].[{field.TokenName}] <> {filterParam.ParameterName}");
                             break;
+                        case ComparisonConstants.ContainsAny:
+                        case ComparisonConstants.ContainsAll:
+                        case ComparisonConstants.ContainsNone:
+                            throw new NotImplementedException();
                         default:
                             throw new Exception("This operation is not supported!");
                     }
@@ -3105,6 +3111,10 @@ namespace Gravitybox.Datastore.Server.Core
                             else
                                 sb.Append($"[Z].[{field.TokenName}] <> {filterParam.ParameterName}");
                             break;
+                        case ComparisonConstants.ContainsAny:
+                        case ComparisonConstants.ContainsAll:
+                        case ComparisonConstants.ContainsNone:
+                            throw new NotImplementedException();
                         default:
                             throw new Exception("This operation is not supported!");
                     }
@@ -3185,6 +3195,10 @@ namespace Gravitybox.Datastore.Server.Core
                             else
                                 sb.Append($"[Z].[{field.TokenName}] <> {filterParam.ParameterName}");
                             break;
+                        case ComparisonConstants.ContainsAny:
+                        case ComparisonConstants.ContainsAll:
+                        case ComparisonConstants.ContainsNone:
+                            throw new NotImplementedException();
                         default:
                             throw new Exception("This operation is not supported!");
                     }
@@ -3194,8 +3208,14 @@ namespace Gravitybox.Datastore.Server.Core
                 #region Int
                 else if (field.DataType == RepositorySchema.DataTypeConstants.Int)
                 {
-                    var input = GetValueInt(ff.Value);
-                    if (ff.Value != null && input == null) return;
+                    int? input = null;
+                    string ffValue = null;
+                    if (ff.Value is string && IsContainsComparer(ff.Comparer)) ffValue = (string)ff.Value;
+                    else
+                    {
+                        input = GetValueInt(ff.Value);
+                        if (ff.Value != null && input == null) return;
+                    }
                     filterFound = true;
                     var dataType = DbType.Int32;
 
@@ -3269,6 +3289,78 @@ namespace Gravitybox.Datastore.Server.Core
                                 sb.Append($"[Z].[{field.TokenName}] IS NOT NULL");
                             else
                                 sb.Append($"[Z].[{field.TokenName}] <> {filterParam.ParameterName}");
+                            break;
+                        case ComparisonConstants.ContainsAny:
+                            if (ffValue != null)
+                            {
+                                var words = ffValue.Split(new char[] { '^' }, StringSplitOptions.RemoveEmptyEntries);
+                                if (words.Any())
+                                {
+                                    var subSqlList = new List<string>();
+                                    var subIndex = 0;
+                                    foreach (var word in words)
+                                    {
+                                        filterParam = new SqlParameter
+                                        {
+                                            DbType = DbType.Int32,
+                                            ParameterName = field.ToParameterName(parameterIndex, subIndex),
+                                            Value = $"{word}",
+                                        };
+                                        parameters.Add(filterParam);
+                                        subSqlList.Add($"[Z].[{field.TokenName}] = {filterParam.ParameterName}");
+                                        subIndex++;
+                                    }
+                                    sb.Append($"({subSqlList.ToStringList(" OR ")})");
+                                }
+                            }
+                            break;
+                        case ComparisonConstants.ContainsAll:
+                            if (ffValue != null)
+                            {
+                                var words = ffValue.Split(new char[] { '^' }, StringSplitOptions.RemoveEmptyEntries);
+                                if (words.Any())
+                                {
+                                    var subSqlList = new List<string>();
+                                    var subIndex = 0;
+                                    foreach (var word in words)
+                                    {
+                                        filterParam = new SqlParameter
+                                        {
+                                            DbType = DbType.Int32,
+                                            ParameterName = field.ToParameterName(parameterIndex, subIndex),
+                                            Value = $"{word}",
+                                        };
+                                        parameters.Add(filterParam);
+                                        subSqlList.Add($"[Z].[{field.TokenName}] = {filterParam.ParameterName}");
+                                        subIndex++;
+                                    }
+                                    sb.Append($"({subSqlList.ToStringList(" AND ")})");
+                                }
+                            }
+                            break;
+                        case ComparisonConstants.ContainsNone:
+                            if (ffValue != null)
+                            {
+                                var words = ffValue.Split(new char[] { '^' }, StringSplitOptions.RemoveEmptyEntries);
+                                if (words.Any())
+                                {
+                                    var subSqlList = new List<string>();
+                                    var subIndex = 0;
+                                    foreach (var word in words)
+                                    {
+                                        filterParam = new SqlParameter
+                                        {
+                                            DbType = DbType.Int32,
+                                            ParameterName = field.ToParameterName(parameterIndex, subIndex),
+                                            Value = $"{word}",
+                                        };
+                                        parameters.Add(filterParam);
+                                        subSqlList.Add($"([Z].[{field.TokenName}] <> {filterParam.ParameterName})");
+                                        subIndex++;
+                                    }
+                                    sb.Append($"({subSqlList.ToStringList(" AND ")})");
+                                }
+                            }
                             break;
                         default:
                             throw new Exception("This operation is not supported!");
@@ -3355,6 +3447,10 @@ namespace Gravitybox.Datastore.Server.Core
                             else
                                 sb.Append($"[Z].[{field.TokenName}] <> {filterParam.ParameterName}");
                             break;
+                        case ComparisonConstants.ContainsAny:
+                        case ComparisonConstants.ContainsAll:
+                        case ComparisonConstants.ContainsNone:
+                            throw new NotImplementedException();
                         default:
                             throw new Exception("This operation is not supported!");
                     }
@@ -4819,9 +4915,9 @@ namespace Gravitybox.Datastore.Server.Core
             //Delete the values in the master table
             if (dDef != null && dDef.DimensionType == RepositorySchema.DimensionTypeConstants.Normal)
             {
+
                 var dataTable = GetTableName(schema);
-                sb.AppendLine($"update [{dataTable}] set [{dDef.TokenName}] = NULL where [__d{dDef.TokenName}] = @dvidx");
-                sb.AppendLine($"update [{dataTable}] set [__d{dDef.TokenName}] = NULL where [__d{dDef.TokenName}] = @dvidx");
+                sb.AppendLine($"update [{dataTable}] set [{dDef.TokenName}] = NULL, [__d{dDef.TokenName}] = NULL where [__d{dDef.TokenName}] = @dvidx");
             }
             else if (dDef != null && dDef.DimensionType == RepositorySchema.DimensionTypeConstants.List)
             {
@@ -5637,9 +5733,16 @@ namespace Gravitybox.Datastore.Server.Core
             }
             catch (Exception ex)
             {
-                LoggerCQ.LogError(ex, "IsFTSReady Error");
+                LoggerCQ.LogError($"IsFTSReady Error: {ex.Message}");
             }
             return false;
+        }
+
+        private static bool IsContainsComparer(ComparisonConstants value)
+        {
+            return value == ComparisonConstants.ContainsAll ||
+                value == ComparisonConstants.ContainsAny ||
+                value == ComparisonConstants.ContainsNone;
         }
 
     }

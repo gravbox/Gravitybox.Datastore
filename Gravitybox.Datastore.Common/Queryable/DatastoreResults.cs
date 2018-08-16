@@ -326,12 +326,16 @@ namespace Gravitybox.Datastore.Common.Queryable
                         if (_reader.NodeType == XmlNodeType.Text)
                             tt = _reader.Value;
 
-                        currentD.RefinementList.Add(new RefinementItem
+                        //Never happens but needed to avoid false positive in security scans
+                        if (currentD != null)
                         {
-                            DIdx = currentD.DIdx,
-                            DVIdx = dvidx,
-                            FieldValue = tt,
-                        });
+                            currentD.RefinementList.Add(new RefinementItem
+                            {
+                                DIdx = currentD.DIdx,
+                                DVIdx = dvidx,
+                                FieldValue = tt,
+                            });
+                        }
                     }
                     if (_reader.Name == "items") break;
                 }

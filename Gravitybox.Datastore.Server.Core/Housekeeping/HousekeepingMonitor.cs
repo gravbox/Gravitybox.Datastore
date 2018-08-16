@@ -13,6 +13,7 @@ namespace Gravitybox.Datastore.Server.Core.Housekeeping
     internal class HousekeepingMonitor
     {
         private System.Timers.Timer _timer = null;
+        private bool _isProcessing = false;
 
         public HousekeepingMonitor()
         {
@@ -23,9 +24,11 @@ namespace Gravitybox.Datastore.Server.Core.Housekeeping
 
         private void _timer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
+            if (_isProcessing) return;
             try
             {
                 _timer.Stop();
+                _isProcessing = true;
                 using (var context = new DatastoreEntities(ConfigHelper.ConnectionString))
                 {
                     var list = context.Housekeeping.ToList();
@@ -42,18 +45,19 @@ namespace Gravitybox.Datastore.Server.Core.Housekeeping
                         }
                         else
                         {
-                            LoggerCQ.LogWarning("Unknown housekeeping type: " + item.Type);
+                            LoggerCQ.LogWarning($"Unknown housekeeping type: {item.Type}");
                         }
                     }
                 }
             }
             catch (Exception ex)
             {
-                LoggerCQ.LogError(ex);
+                LoggerCQ.LogError(ex.Message);
             }
             finally
             {
                 _timer.Start();
+                _isProcessing = false;
             }
         }
 

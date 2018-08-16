@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -189,22 +190,23 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
             {
                 //Nothing to do
                 if (!_configuration.query.IncludeDimensions && !_configuration.query.IncludeRecords)
-                    return;
+                   return;
 
-                try
-                {
-                    _dsList = SqlHelper.GetDataset(ConfigHelper.ConnectionString, _sql, _listParameters);
-                }
-                catch (Exception ex)
-                {
-                    RepositoryHealthMonitor.HealthCheck(_configuration.schema.ID);
-                    DataManager.AddSkipItem(_configuration.schema.ID);
-                    var message = ex.Message;
-                    if (message.Contains("Timeout Expired"))
-                        message = "Timeout Expired"; //Do not show whole message, no value
-                    LoggerCQ.LogError(ex, $"ListDimensionBuilder: ID={_configuration.schema.ID}, Query=\"{_configuration.query.ToString()}\", Error={message}");
-                }
-            });
+               var timer = Stopwatch.StartNew();
+               try
+               {
+                   _dsList = SqlHelper.GetDataset(ConfigHelper.ConnectionString, _sql, _listParameters);
+               }
+               catch (Exception ex)
+               {
+                   RepositoryHealthMonitor.HealthCheck(_configuration.schema.ID);
+                   DataManager.AddSkipItem(_configuration.schema.ID);
+                   var message = ex.Message;
+                   if (message.Contains("Timeout Expired"))
+                       message = "Timeout Expired"; //Do not show whole message, no value
+                    LoggerCQ.LogError($"ListDimensionBuilder: ID={_configuration.schema.ID}, DIdx={_newDimension?.DIdx}, Elapsed={timer.ElapsedMilliseconds}, Query=\"{_configuration.query.ToString()}\", Error={message}");
+               }
+           });
         }
 
         public Task Load()
@@ -303,6 +305,11 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
 
                 }
             });
+        }
+
+        public override string ToString()
+        {
+            return _newDimension?.Name;
         }
     }
 }

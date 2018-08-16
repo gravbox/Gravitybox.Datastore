@@ -72,18 +72,76 @@ namespace Gravitybox.Datastore.Common.Queryable
                 {
                     if (node.Object == null)
                     {
-                        //x.List.Contains("v")
-                        var objectMember = Expression.Convert(node.Arguments[1], typeof(object));
-                        var getterLambda = Expression.Lambda<Func<object>>(objectMember);
-                        var getter = getterLambda.Compile();
-                        var v = getter();
-                        AddFieldFilter(ExpressionHelper.GetMemberName(node.Arguments[0]), v, ComparisonConstants.Like);
+                        var inError = false;
+                        //Try this [x.List.Contains("v")]
+                        try
+                        {
+                            var objectMember = Expression.Convert(node.Arguments[1], typeof(object));
+                            var getterLambda = Expression.Lambda<Func<object>>(objectMember);
+                            var getter = getterLambda.Compile();
+                            var v = getter();
+                            AddFieldFilter(ExpressionHelper.GetMemberName(node.Arguments[0]), v, ComparisonConstants.Like);
+                            inError = false;
+                        }
+                        catch(Exception ex)
+                        {
+                            inError = true;
+                        }
+
+                        //If error try the reverse like [arr.Contains(x.ID)]
+                        if (inError)
+                        {
+                            var objectMember = Expression.Convert(node.Arguments[0], typeof(object));
+                            var getterLambda = Expression.Lambda<Func<object>>(objectMember);
+                            var getter = getterLambda.Compile();
+                            var v = getter();
+                            if (v.GetType().IsArray)
+                            {
+                                var vv = string.Join("^", ((Array)v).ToList<object>());
+                                if (v.GetType().Name == "Int32[]")
+                                {
+                                    var newFilter = AddFieldFilter(ExpressionHelper.GetMemberName(node.Arguments[1]), vv, ComparisonConstants.ContainsAny);
+                                    newFilter.DataType = RepositorySchema.DataTypeConstants.Int;
+                                }
+                                else if (v.GetType().Name == "Int64[]")
+                                {
+                                    var newFilter = AddFieldFilter(ExpressionHelper.GetMemberName(node.Arguments[1]), vv, ComparisonConstants.ContainsAny);
+                                    newFilter.DataType = RepositorySchema.DataTypeConstants.Int64;
+                                }
+                                else
+                                    AddFieldFilter(ExpressionHelper.GetMemberName(node.Arguments[1]), vv, ComparisonConstants.Like);
+                            }
+                            else
+                                AddFieldFilter(ExpressionHelper.GetMemberName(node.Arguments[1]), v, ComparisonConstants.Like);
+                        }
+
                     }
                     else
                     {
-                        //x.Single.Contains("v")
-                        var v = ExpressionHelper.GetMemberExpressionValue(fe);
-                        AddFieldFilter(ExpressionHelper.GetMemberName(node.Object), v, ComparisonConstants.Like);
+                        //var fe = node.Object as fieldexpress
+                        var objectMember = Expression.Convert(node.Object, typeof(object));
+                        var getterLambda = Expression.Lambda<Func<object>>(objectMember);
+                        var getter = getterLambda.Compile();
+                        var v = getter();
+
+                        if (v is List<int>)
+                        {
+                            var vv = string.Join("^", (v as List<int>));
+                            var newFilter = AddFieldFilter(ExpressionHelper.GetMemberName(node.Arguments[0]), vv, ComparisonConstants.ContainsAny);
+                            newFilter.DataType = RepositorySchema.DataTypeConstants.Int;
+                        }
+                        else if (v is List<long>)
+                        {
+                            var vv = string.Join("^", (v as List<long>));
+                            var newFilter = AddFieldFilter(ExpressionHelper.GetMemberName(node.Arguments[0]), vv, ComparisonConstants.ContainsAny);
+                            newFilter.DataType = RepositorySchema.DataTypeConstants.Int64;
+                        }
+                        else
+                        {
+                            //x.Single.Contains("v")
+                            var v2 = ExpressionHelper.GetMemberExpressionValue(fe);
+                            AddFieldFilter(ExpressionHelper.GetMemberName(node.Object), v2, ComparisonConstants.Like);
+                        }
                     }
                     return node;
                 }
@@ -337,7 +395,7 @@ namespace Gravitybox.Datastore.Common.Queryable
         }
 
 
-        private void AddFieldFilter(string name, object value, ComparisonConstants comparsion)
+        private IFieldFilter AddFieldFilter(string name, object value, ComparisonConstants comparsion)
         {
             //handle enums
             if (value != null)
@@ -358,6 +416,7 @@ namespace Gravitybox.Datastore.Common.Queryable
             //    throw new InvalidOperationException($"Duplicate filter field \"{filter.Name}\" was encountered.");
 
             FieldFilters.Add(filter);
+            return filter;
         }
     }
 }

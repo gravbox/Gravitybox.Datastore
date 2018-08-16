@@ -47,12 +47,14 @@ namespace Gravitybox.Datastore.Server.Core
         private DateTime _initTime = DateTime.Now;
         private const int TimeOut = 60000;
         private bool _inError = false;
+        private Guid _id;
 
         /// <summary />
         public AcquireReaderLock(Guid id, string traceInfo)
         {
             this.LockTime = -1;
             m_Lock = LockingManager.GetLocker(id);
+            _id = id;
             if (!ConfigHelper.AllowLocking) return;
 
             this.ReadLockCount = m_Lock.CurrentReadCount;
@@ -127,7 +129,7 @@ namespace Gravitybox.Datastore.Server.Core
                         m_Lock.ExitReadLock();
 
                     if (elapsed > 60000)
-                        LoggerCQ.LogWarning($"ReaderLock Long: Elapsed={elapsed}");
+                        LoggerCQ.LogWarning($"ReaderLock Long: Elapsed={elapsed}, ID={_id}");
                 }
             }
             m_Disposed = true;

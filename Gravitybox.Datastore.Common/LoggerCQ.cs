@@ -26,13 +26,13 @@ namespace Gravitybox.Datastore.Common
         /// <summary />
         public static void LogError(string message)
         {
-            _logger.Error(message);
+            _logger.Error(message.Replace('\n','_').Replace('\r','_'));
         }
 
         /// <summary />
         public static void LogError(Exception exception, string message)
         {
-            _logger.Error(exception, message);
+            _logger.Error(exception, message.Replace('\n', '_').Replace('\r', '_'));
         }
 
         /// <summary />
@@ -44,25 +44,25 @@ namespace Gravitybox.Datastore.Common
         /// <summary />
         public static void LogDebug(string message)
         {
-            _logger.Debug(message);
+            _logger.Debug(message.Replace('\n', '_').Replace('\r', '_'));
         }
 
         /// <summary />
         public static void LogInfo(string message)
         {
-            _logger.Info(message);
+            _logger.Info(message.Replace('\n', '_').Replace('\r', '_'));
         }
 
         /// <summary />
         public static void LogWarning(string message)
         {
-            _logger.Warn(message);
+            _logger.Warn(message.Replace('\n', '_').Replace('\r', '_'));
         }
 
         /// <summary />
         public static void LogWarning(Exception exception, string message)
         {
-            _logger.Warn(exception, message);
+            _logger.Warn(exception, message.Replace('\n', '_').Replace('\r', '_'));
         }
 
         /// <summary />
@@ -73,7 +73,7 @@ namespace Gravitybox.Datastore.Common
 
         public static void LogTrace(string message)
         {
-            _logger.Trace(message);
+            _logger.Trace(message.Replace('\n', '_').Replace('\r', '_'));
         }
 
         #endregion

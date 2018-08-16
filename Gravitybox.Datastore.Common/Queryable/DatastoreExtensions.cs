@@ -212,7 +212,6 @@ namespace Gravitybox.Datastore.Common.Queryable
 
         /// <summary />
         public static IDatastoreQueryable<TSourceType> RecordsPerPage<TSourceType>(this IDatastoreQueryable<TSourceType> source, int recordsPerPage)
-            where TSourceType : IDatastoreItem
         {
             if (source == null)
                 throw new ArgumentNullException(ERROR_SOURCE);
@@ -337,7 +336,6 @@ namespace Gravitybox.Datastore.Common.Queryable
 
         /// <summary />
         public static IDatastoreQueryable<TSourceType> ExcludeCount<TSourceType>(this IDatastoreQueryable<TSourceType> source, bool value)
-            where TSourceType : IDatastoreItem
         {
             if (source == null)
                 throw new ArgumentNullException(ERROR_SOURCE);
@@ -2010,17 +2008,13 @@ namespace Gravitybox.Datastore.Common.Queryable
 
         /// <summary />
         public static DatastoreItems<T> RecordsOnly<T>(this IDatastoreQueryable<T> query)
-            where T : IDatastoreItem
         {
-            return query.IncludeRecords(true)
-                        .IncludeDimensions(false)
-                        .ExcludeCount(true)
-                        .Results();
+            return query.ExcludeCount(true)
+                        .Items();
         }
 
         /// <summary />
         public static T SingleItem<T>(this IDatastoreQueryable<T> query)
-            where T : IDatastoreItem
         {
             var result = query.RecordsPerPage(1)
                               .RecordsOnly();

@@ -56,22 +56,32 @@ namespace Gravitybox.Datastore.Common
                         case "_ied":
                             if (values[1] == "1" || values[1] == "true")
                                 this.IncludeEmptyDimensions = true;
+                            else if (values[1] == "0" || values[1] == "false")
+                                this.IncludeEmptyDimensions = false;
                             break;
                         case "_ec":
                             if (values[1] == "1" || values[1] == "true")
                                 this.ExcludeCount = true;
+                            else if (values[1] == "0" || values[1] == "false")
+                                this.ExcludeCount = false;
                             break;
                         case "_id":
                             if (values[1] == "0" || values[1] == "false")
                                 this.IncludeDimensions = false;
+                            else if (values[1] == "1" || values[1] == "true")
+                                this.IncludeDimensions = true;
                             break;
                         case "_iad":
                             if (values[1] == "0" || values[1] == "false")
                                 this.IncludeAllDimensions = false;
+                            else if (values[1] == "1" || values[1] == "true")
+                                this.IncludeAllDimensions = true;
                             break;
                         case "_ir":
                             if (values[1] == "0" || values[1] == "false")
                                 this.IncludeRecords = false;
+                            else if (values[1] == "1" || values[1] == "true")
+                                this.IncludeRecords = true;
                             break;
                         case "d":
                             {
@@ -312,7 +322,6 @@ namespace Gravitybox.Datastore.Common
 
         /// <summary />
         [DataMember]
-        [DefaultValue(true)]
         public bool ExcludeCount { get; set; }
 
         /// <summary>

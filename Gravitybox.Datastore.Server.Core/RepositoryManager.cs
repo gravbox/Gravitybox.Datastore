@@ -84,7 +84,7 @@ namespace Gravitybox.Datastore.Server.Core
 
         public static void SetRepositoryChangeStamp(Guid id)
         {
-            if (RepositoryManager.InstanceId != ConfigHelper.CurrentMaster)
+            if (!IsMaster())
                 throw new NotMasterInstanceException();
 
             try
@@ -105,7 +105,7 @@ namespace Gravitybox.Datastore.Server.Core
 
         public static int GetRepositoryChangeStamp(DatastoreEntities context, int id)
         {
-            if (RepositoryManager.InstanceId != ConfigHelper.CurrentMaster)
+            if (!IsMaster())
                 throw new NotMasterInstanceException();
 
             try
@@ -126,7 +126,7 @@ namespace Gravitybox.Datastore.Server.Core
 
         public static void SetDimensionChanged(int id)
         {
-            if (RepositoryManager.InstanceId != ConfigHelper.CurrentMaster)
+            if (!IsMaster())
                 throw new NotMasterInstanceException();
 
             try
@@ -147,7 +147,7 @@ namespace Gravitybox.Datastore.Server.Core
 
         public static int GetDimensionChanged(DatastoreEntities context, int id)
         {
-            if (RepositoryManager.InstanceId != ConfigHelper.CurrentMaster)
+            if (!IsMaster())
                 throw new NotMasterInstanceException();
 
             try
@@ -622,7 +622,7 @@ namespace Gravitybox.Datastore.Server.Core
                                 {
                                     allDimTask = Task.Factory.StartNew(() =>
                                     {
-                                        allDimensions = GetAllDimensions(query.SkipDimensions, id, context, schema, dimensionList);
+                                        allDimensions = GetAllDimensions(query, id, context, schema, dimensionList);
                                     });
                                 }
 
@@ -854,7 +854,7 @@ namespace Gravitybox.Datastore.Server.Core
             }
 
             //Log if there was a wait.
-            if (waitTime > 0)
+            if (waitLoops > 0)
             {
                 waitTime = (int)timer.ElapsedMilliseconds;
                 LoggerCQ.LogDebug($"Query Wait, ID={repositoryId}, Elapsed={timer.ElapsedMilliseconds}, WaitLoops={waitLoops}, WaitCount={_runningQueries.Count}, Query=\"{query.ToString()}\"");
@@ -2143,7 +2143,12 @@ namespace Gravitybox.Datastore.Server.Core
         /// <remarks>The return is the instance value of this service</remarks>
         public bool IsServerMaster()
         {
-            return InstanceId == ConfigHelper.CurrentMaster;
+            return IsMaster();
+        }
+
+        private static bool IsMaster()
+        {
+            return true; //InstanceId == ConfigHelper.CurrentMaster;
         }
 
         /// <summary>
@@ -2153,16 +2158,16 @@ namespace Gravitybox.Datastore.Server.Core
         {
             try
             {
-                if (IsServerMaster())
-                {
-                    //Do Nothing
-                }
-                else
-                {
-                    //Try to promote to master
-                    if (!ConfigHelper.PromoteMaster())
-                        return false;
-                }
+                //if (IsServerMaster())
+                //{
+                //    //Do Nothing
+                //}
+                //else
+                //{
+                //    //Try to promote to master
+                //    if (!ConfigHelper.PromoteMaster())
+                //        return false;
+                //}
 
                 _dimensionCache = new DimensionCache();
                 QueryCache.Reset();
@@ -2207,20 +2212,22 @@ namespace Gravitybox.Datastore.Server.Core
         /// This will calculate the complete list of dimensions and append it to the results object's AllDimensionList
         /// so that the client has a master list of all dimensions
         /// </summary>
-        private List<DimensionItem> GetAllDimensions(List<long> skipDimensions, int id, DatastoreEntities context, RepositorySchema schema, List<DimensionItem> dimensionList)
+        private List<DimensionItem> GetAllDimensions(DataQuery query, int id, DatastoreEntities context, RepositorySchema schema, List<DimensionItem> dimensionList)
         {
-            var query = new DataQuery();
-            query.IncludeRecords = false;
-            query.IncludeEmptyDimensions = true;
-            query.SkipDimensions = skipDimensions;
+            var newQuery = new DataQuery();
+            newQuery.IncludeRecords = false;
+            newQuery.IncludeEmptyDimensions = true;
+            newQuery.SkipDimensions = query.SkipDimensions;
+            newQuery.NonParsedFieldList = query.NonParsedFieldList;
+
             bool isCore;
-            var retval = QueryCache.Get(context, query, id, schema.ID, out isCore);
+            var retval = QueryCache.Get(context, newQuery, id, schema.ID, out isCore);
             if (retval == null)
             {
-                retval = SqlHelper.Query(schema, id, query, dimensionList);
-                if (query.SkipDimensions.Any())
-                    retval.DimensionList.RemoveAll(x => query.SkipDimensions.Contains(x.DIdx));
-                QueryCache.Set(context, query, id, schema.ID, retval);
+                retval = SqlHelper.Query(schema, id, newQuery, dimensionList);
+                if (newQuery.SkipDimensions.Any())
+                    retval.DimensionList.RemoveAll(x => newQuery.SkipDimensions.Contains(x.DIdx));
+                QueryCache.Set(context, newQuery, id, schema.ID, retval);
             }
             return retval.DimensionList;
         }
