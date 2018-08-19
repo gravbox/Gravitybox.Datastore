@@ -174,7 +174,7 @@ namespace Gravitybox.Datastore.Common
                     url = url.Remove(index, ss.Length).Insert(index, string.Empty);
             }
 
-            return System.Text.RegularExpressions.Regex.Replace(url, @"[^-A-Za-z0-9+&@#/%?=~_|!:,.;\(\)]", "");
+            return System.Text.RegularExpressions.Regex.Replace(url, @"[^-A-Za-z0-9+&@#/%?=~_|!:,.;\(\)\s]", "");
         }
 
     }
