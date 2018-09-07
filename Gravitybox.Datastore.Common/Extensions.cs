@@ -401,7 +401,7 @@ namespace Gravitybox.Datastore.Common
 
         /// <summary />
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool Match(this string s, string str)
+        internal static bool Match(this string s, string str)
         {
             if (s == null && str == null) return true;
             if (s != null && str == null) return false;

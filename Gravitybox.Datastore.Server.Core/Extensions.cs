@@ -165,5 +165,13 @@ namespace Gravitybox.Datastore.Server.Core
             return (long)hashedValue;
         }
 
+        /// <summary />
+        internal static bool Match(this string s, string str)
+        {
+            if (s == null && str == null) return true;
+            if (s != null && str == null) return false;
+            if (s == null && str != null) return false;
+            return string.Equals(s, str, StringComparison.InvariantCultureIgnoreCase);
+        }
     }
 }
