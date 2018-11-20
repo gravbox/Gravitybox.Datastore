@@ -20,7 +20,7 @@ namespace Gravitybox.Datastore.WinService
 
         private const int ThrottleMax = 1000;
         private static Gravitybox.Datastore.Common.ISystemCore _core = null;
-        private bool _echoConsole = false;
+        private bool _enableHouseKeeping = true;
 
         #endregion
 
@@ -38,9 +38,9 @@ namespace Gravitybox.Datastore.WinService
             }
         }
 
-        public PersistentService(bool echoConsole)
+        public PersistentService(bool enableHouseKeeping)
         {
-            _echoConsole = echoConsole;
+            _enableHouseKeeping = enableHouseKeeping;
         }
 
         #endregion
@@ -118,7 +118,7 @@ namespace Gravitybox.Datastore.WinService
             }
         }
 
-        private static void StartupEndpoint()
+        private void StartupEndpoint()
         {
             var config = new SetupConfig();
             try
@@ -209,7 +209,7 @@ namespace Gravitybox.Datastore.WinService
             {
                 #region Primary Endpoint
 
-                var service = new Gravitybox.Datastore.Server.Core.SystemCore(ConfigurationManager.ConnectionStrings["DatastoreEntities"].ConnectionString);
+                var service = new Gravitybox.Datastore.Server.Core.SystemCore(ConfigurationManager.ConnectionStrings["DatastoreEntities"].ConnectionString, _enableHouseKeeping);
                 if (config != null)
                     ConfigHelper.SetupConfig = config;
 

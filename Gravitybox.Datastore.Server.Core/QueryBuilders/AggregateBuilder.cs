@@ -34,7 +34,7 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
                 if (aggList.Count > 0)
                 {
                     var sb = new StringBuilder();
-                    sb.AppendLine($"--MARKER 18");
+                    sb.AppendLine($"--MARKER 18" + _configuration.QueryPlanDebug);
                     sb.Append("SELECT ");
                     foreach (var field in aggList)
                     {

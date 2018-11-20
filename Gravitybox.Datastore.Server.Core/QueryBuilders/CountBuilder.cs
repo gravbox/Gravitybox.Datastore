@@ -55,7 +55,7 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
                     var sbSql = new StringBuilder();
 
                     //If we calculated the count in the GROUPING statement then skip this
-                    sbSql.AppendLine($"--MARKER 20");
+                    sbSql.AppendLine($"--MARKER 20" + _configuration.QueryPlanDebug);
                     sbSql.AppendLine("SELECT COUNT(*) from (");
                     sbSql.AppendLine($"SELECT {groupSql}, COUNT(*) AS C");
                     sbSql.AppendLine($"FROM [{_configuration.dataTable}] Z {SqlHelper.NoLockText()} {_configuration.innerJoinClause}");
@@ -73,7 +73,7 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
                     if (!_configuration.query.ExcludeCount)
                     {
                         //If we calculated the count in the GROUPING statement then skip this
-                        sbSql.AppendLine($"--MARKER 21");
+                        sbSql.AppendLine($"--MARKER 21" + _configuration.QueryPlanDebug);
                         sbSql.AppendLine($"SELECT COUNT(DISTINCT([Z].[{SqlHelper.RecordIdxField}]))");
                         sbSql.AppendLine($"FROM [{_configuration.dataTable}] Z {SqlHelper.NoLockText()} {_configuration.innerJoinClause}");
                         sbSql.AppendLine($"WHERE {_configuration.whereClause}");

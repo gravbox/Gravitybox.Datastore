@@ -70,14 +70,16 @@ namespace Gravitybox.Datastore.Server.Core
                           connection.Open();
                           using (var command = new SqlCommand($"SELECT Y.[{SqlHelper.RecordIdxField}], Y.[DVIdx] FROM [{dTable}] Y {SqlHelper.NoLockText()} ORDER BY Y.[{SqlHelper.RecordIdxField}], Y.[DVIdx]", connection))
                           {
-                              var reader = command.ExecuteReader();
-                              while (reader.Read())
+                              using (var reader = command.ExecuteReader())
                               {
-                                  var recordIndex = (long)reader[0];
-                                  var dvidx = (long)reader[1];
-                                  if (!valueMapper.ContainsKey(recordIndex))
-                                      valueMapper.Add(recordIndex, new List<long>());
-                                  valueMapper[recordIndex].Add(dvidx);
+                                  while (reader.Read())
+                                  {
+                                      var recordIndex = (long)reader[0];
+                                      var dvidx = (long)reader[1];
+                                      if (!valueMapper.ContainsKey(recordIndex))
+                                          valueMapper.Add(recordIndex, new List<long>());
+                                      valueMapper[recordIndex].Add(dvidx);
+                                  }
                               }
                           }
                       }
@@ -97,130 +99,132 @@ namespace Gravitybox.Datastore.Server.Core
                         command.CommandTimeout = 3600;
                         command.Parameters.AddRange(parameters.ToArray());
                         connection.Open();
-                        var reader = command.ExecuteReader();
-                        if (reader.HasRows)
+                        using (var reader = command.ExecuteReader())
                         {
-                            #region Write headers
-                            tempFile.WriteStartElement("headers");
-                            foreach (var h in dataTableFields)
+                            if (reader.HasRows)
                             {
-                                var d = nonListDimensionFields.FirstOrDefault(x => x.Name == h.Name);
-                                if (d == null)
-                                    tempFile.WriteElementString("h", h.Name);
-                                else
+                                #region Write headers
+                                tempFile.WriteStartElement("headers");
+                                foreach (var h in dataTableFields)
+                                {
+                                    var d = nonListDimensionFields.FirstOrDefault(x => x.Name == h.Name);
+                                    if (d == null)
+                                        tempFile.WriteElementString("h", h.Name);
+                                    else
+                                    {
+                                        tempFile.WriteStartElement("h");
+                                        tempFile.WriteAttributeString("didx", d.DIdx.ToString());
+                                        tempFile.WriteValue(d.Name);
+                                        tempFile.WriteEndElement();
+                                    }
+                                }
+                                foreach (var d in listDimensionFields)
                                 {
                                     tempFile.WriteStartElement("h");
                                     tempFile.WriteAttributeString("didx", d.DIdx.ToString());
                                     tempFile.WriteValue(d.Name);
-                                    tempFile.WriteEndElement();
+                                    tempFile.WriteEndElement(); //h
                                 }
-                            }
-                            foreach (var d in listDimensionFields)
-                            {
-                                tempFile.WriteStartElement("h");
-                                tempFile.WriteAttributeString("didx", d.DIdx.ToString());
-                                tempFile.WriteValue(d.Name);
-                                tempFile.WriteEndElement(); //h
-                            }
-                            tempFile.WriteEndElement(); //headers
-                            #endregion
+                                tempFile.WriteEndElement(); //headers
+                                #endregion
 
-                            #region Write Dimension Defs
-                            tempFile.WriteStartElement("dimensions");
-                            foreach(var d in dimensionList)
-                            {
-                                tempFile.WriteStartElement("d");
-                                tempFile.WriteAttributeString("didx", d.DIdx.ToString());
-                                tempFile.WriteAttributeString("name", d.Name);
-                                foreach (var r in d.RefinementList)
+                                #region Write Dimension Defs
+                                tempFile.WriteStartElement("dimensions");
+                                foreach (var d in dimensionList)
                                 {
-                                    tempFile.WriteStartElement("r");
-                                    tempFile.WriteAttributeString("dvidx", r.DVIdx.ToString());
-                                    tempFile.WriteValue(r.FieldValue);
-                                    tempFile.WriteEndElement(); //r
-                                }
-                                tempFile.WriteEndElement(); //d
-                            }
-                            tempFile.WriteEndElement(); //dimensions
-                            #endregion
-
-                            #region Write Items
-                            tempFile.WriteStartElement("items");
-                            while (reader.Read())
-                            {
-                                var index = 0;
-                                tempFile.WriteStartElement("i");
-
-                                //Write static fields
-                                var recordIndex = reader.GetInt64(dataTableFields.Count);
-                                var timestamp = reader.GetInt32(dataTableFields.Count + 1);
-                                tempFile.WriteAttributeString("ri", recordIndex.ToString());
-                                tempFile.WriteAttributeString("ts", timestamp.ToString());
-
-                                #region Write all data table (Z) fields
-                                foreach (var field in dataTableFields)
-                                {
-                                    if (reader.IsDBNull(index))
+                                    tempFile.WriteStartElement("d");
+                                    tempFile.WriteAttributeString("didx", d.DIdx.ToString());
+                                    tempFile.WriteAttributeString("name", d.Name);
+                                    foreach (var r in d.RefinementList)
                                     {
-                                        tempFile.WriteElementString("v", "~■!N");
+                                        tempFile.WriteStartElement("r");
+                                        tempFile.WriteAttributeString("dvidx", r.DVIdx.ToString());
+                                        tempFile.WriteValue(r.FieldValue);
+                                        tempFile.WriteEndElement(); //r
                                     }
-                                    else
+                                    tempFile.WriteEndElement(); //d
+                                }
+                                tempFile.WriteEndElement(); //dimensions
+                                #endregion
+
+                                #region Write Items
+                                tempFile.WriteStartElement("items");
+                                while (reader.Read())
+                                {
+                                    var index = 0;
+                                    tempFile.WriteStartElement("i");
+
+                                    //Write static fields
+                                    var recordIndex = reader.GetInt64(dataTableFields.Count);
+                                    var timestamp = reader.GetInt32(dataTableFields.Count + 1);
+                                    tempFile.WriteAttributeString("ri", recordIndex.ToString());
+                                    tempFile.WriteAttributeString("ts", timestamp.ToString());
+
+                                    #region Write all data table (Z) fields
+                                    foreach (var field in dataTableFields)
                                     {
-                                        switch (field.DataType)
+                                        if (reader.IsDBNull(index))
                                         {
-                                            case RepositorySchema.DataTypeConstants.Bool:
-                                                tempFile.WriteElementString("v", reader.GetBoolean(index) ? "1" : "0");
-                                                break;
-                                            case RepositorySchema.DataTypeConstants.DateTime:
-                                                tempFile.WriteElementString("v", reader.GetDateTime(index).Ticks.ToString());
-                                                break;
-                                            case RepositorySchema.DataTypeConstants.Float:
-                                                tempFile.WriteElementString("v", reader.GetDouble(index).ToString());
-                                                break;
-                                            case RepositorySchema.DataTypeConstants.GeoCode:
-                                                var geo = (Microsoft.SqlServer.Types.SqlGeography)reader.GetValue(index);
-                                                tempFile.WriteElementString("v", $"{geo.Lat}|{geo.Long}");
-                                                break;
-                                            case RepositorySchema.DataTypeConstants.Int:
-                                                tempFile.WriteElementString("v", reader.GetInt32(index).ToString());
-                                                break;
-                                            case RepositorySchema.DataTypeConstants.Int64:
-                                                tempFile.WriteElementString("v", reader.GetInt64(index).ToString());
-                                                break;
-                                            case RepositorySchema.DataTypeConstants.String:
-                                                tempFile.WriteElementString("v", StripNonValidXMLCharacters(reader.GetString(index)));
-                                                break;
-                                            default:
-                                                break;
+                                            tempFile.WriteElementString("v", "~■!N");
+                                        }
+                                        else
+                                        {
+                                            switch (field.DataType)
+                                            {
+                                                case RepositorySchema.DataTypeConstants.Bool:
+                                                    tempFile.WriteElementString("v", reader.GetBoolean(index) ? "1" : "0");
+                                                    break;
+                                                case RepositorySchema.DataTypeConstants.DateTime:
+                                                    tempFile.WriteElementString("v", reader.GetDateTime(index).Ticks.ToString());
+                                                    break;
+                                                case RepositorySchema.DataTypeConstants.Float:
+                                                    tempFile.WriteElementString("v", reader.GetDouble(index).ToString());
+                                                    break;
+                                                case RepositorySchema.DataTypeConstants.GeoCode:
+                                                    var geo = (Microsoft.SqlServer.Types.SqlGeography)reader.GetValue(index);
+                                                    tempFile.WriteElementString("v", $"{geo.Lat}|{geo.Long}");
+                                                    break;
+                                                case RepositorySchema.DataTypeConstants.Int:
+                                                    tempFile.WriteElementString("v", reader.GetInt32(index).ToString());
+                                                    break;
+                                                case RepositorySchema.DataTypeConstants.Int64:
+                                                    tempFile.WriteElementString("v", reader.GetInt64(index).ToString());
+                                                    break;
+                                                case RepositorySchema.DataTypeConstants.String:
+                                                    tempFile.WriteElementString("v", StripNonValidXMLCharacters(reader.GetString(index)));
+                                                    break;
+                                                default:
+                                                    break;
+                                            }
+                                        }
+                                        index++;
+                                    }
+                                    #endregion
+
+                                    #region Write List fields
+                                    foreach (var field in listDimensionFields)
+                                    {
+                                        if (dimensionMapper.ContainsKey(field.DIdx) && dimensionMapper[field.DIdx].ContainsKey(recordIndex))
+                                        {
+                                            tempFile.WriteElementString("v", dimensionMapper[field.DIdx][recordIndex].ToList().ToStringList("|"));
                                         }
                                     }
-                                    index++;
-                                }
-                                #endregion
+                                    #endregion
 
-                                #region Write List fields
-                                foreach (var field in listDimensionFields)
-                                {
-                                    if (dimensionMapper.ContainsKey(field.DIdx) && dimensionMapper[field.DIdx].ContainsKey(recordIndex))
-                                    {
-                                        tempFile.WriteElementString("v", dimensionMapper[field.DIdx][recordIndex].ToList().ToStringList("|"));
-                                    }
+                                    tempFile.WriteEndElement(); //i
+                                    rowCount++;
                                 }
+                                tempFile.WriteEndElement(); //items
                                 #endregion
-
-                                tempFile.WriteEndElement(); //i
-                                rowCount++;
                             }
-                            tempFile.WriteEndElement(); //items
-                            #endregion
+                            reader.Close();
                         }
-                        reader.Close();
                     }
                     tempFile.WriteEndElement(); //root
                 }
 
                 //Write file that signifies we are done
-                var zipFile = Gravitybox.Datastore.Common.Extensions.ZipFile(fileName);
+                var zipFile = Extensions.ZipFile(fileName);
                 var outFile = fileName + ".zzz";
                 File.Move(zipFile, outFile);
                 var size = (new FileInfo(outFile)).Length;

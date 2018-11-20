@@ -104,6 +104,11 @@ namespace Gravitybox.Datastore.Common.Queryable
         public bool IsSuccess { get; set; }
 
         /// <summary>
+        /// Determines the item count for the operation
+        /// </summary>
+        public int Count { get; set; }
+
+        /// <summary>
         /// A list of errors that occured during the operation
         /// </summary>
         public string[] Errors { get; set; }

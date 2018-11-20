@@ -121,7 +121,7 @@ namespace Gravitybox.Datastore.Common
         /// <summary>
         /// Trims the value parameter off both ends of a string
         /// </summary>
-        public static string Trim(this string s, string value)
+        internal static string Trim(this string s, string value)
         {
             if (string.IsNullOrEmpty(s)) return s;
             if (string.IsNullOrEmpty(value)) return s;
@@ -140,7 +140,7 @@ namespace Gravitybox.Datastore.Common
         }
 
         /// <summary />
-        public static string ToXml(object obj)
+        internal static string ToXml(object obj)
         {
             using (var writer = new StringWriter())
             {
@@ -161,7 +161,7 @@ namespace Gravitybox.Datastore.Common
         }
 
         /// <summary />
-        public static object FromXml(string s, System.Type type)
+        internal static object FromXml(string s, System.Type type)
         {
             var reader = new StringReader(s);
             var serializer = new XmlSerializer(type);
@@ -177,7 +177,7 @@ namespace Gravitybox.Datastore.Common
         }
 
         /// <summary />
-        public static byte[] Zip(this string value)
+        internal static byte[] Zip(this string value)
         {
             if (string.IsNullOrEmpty(value)) return null;
             var byteArray = System.Text.Encoding.UTF8.GetBytes(value);
@@ -185,7 +185,7 @@ namespace Gravitybox.Datastore.Common
         }
 
         /// <summary />
-        public static byte[] ZipBytes(this byte[] byteArray, bool fast = true)
+        internal static byte[] ZipBytes(this byte[] byteArray, bool fast = true)
         {
             if (byteArray == null) return null;
             try
@@ -213,7 +213,7 @@ namespace Gravitybox.Datastore.Common
         }
 
         /// <summary />
-        public static string ZipFile(string fileName)
+        internal static string ZipFile(string fileName)
         {
             try
             {
@@ -242,7 +242,7 @@ namespace Gravitybox.Datastore.Common
         }
 
         /// <summary />
-        public static bool UnzipFile(string gzipFile, string newFile)
+        internal static bool UnzipFile(string gzipFile, string newFile)
         {
             try
             {
@@ -272,7 +272,7 @@ namespace Gravitybox.Datastore.Common
         }
 
         /// <summary />
-        public static string Unzip(this byte[] byteArray)
+        internal static string Unzip(this byte[] byteArray)
         {
             //If null stream return null string
             if (byteArray == null) return null;
@@ -301,7 +301,7 @@ namespace Gravitybox.Datastore.Common
         }
 
         /// <summary />
-        public static byte[] UnzipBytes(this byte[] byteArray)
+        internal static byte[] UnzipBytes(this byte[] byteArray)
         {
             //If null stream return null string
             if (byteArray == null) return null;
@@ -390,14 +390,6 @@ namespace Gravitybox.Datastore.Common
         //        throw;
         //    }
         //}
-
-        /// <summary />
-        public static List<T> ToClone<T>(this IEnumerable<ICloneable> source)
-        {
-            var retval = new List<T>();
-            source.ToList().ForEach(x => retval.Add((T)x.Clone()));
-            return retval;
-        }
 
         /// <summary />
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -546,7 +538,7 @@ namespace Gravitybox.Datastore.Common
         #endregion
 
         /// <summary />
-        public static byte[] ObjectToBin(this object obj)
+        internal static byte[] ObjectToBin(this object obj)
         {
             if (obj == null) throw new Exception("Object cannot be null");
             try
@@ -570,7 +562,7 @@ namespace Gravitybox.Datastore.Common
         }
 
         /// <summary />
-        public static T BinToObject<T>(this byte[] data)
+        internal static T BinToObject<T>(this byte[] data)
         {
             try
             {

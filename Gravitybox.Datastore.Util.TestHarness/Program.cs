@@ -43,12 +43,13 @@ namespace Gravitybox.Datastore.Util.TestHarness
                 }
                 #endregion
 
-                CreateRepo();
-                AddData();
+                //CreateRepo();
+                //AddData();
                 //DuplicateFilters();
                 //TestDerivedFields();
                 //HitHard();
-                Test12();
+                PerfTest();
+                //Test12();
                 //TestAllDimensions();
                 //Test44();
                 //TestSchema();
@@ -208,7 +209,6 @@ namespace Gravitybox.Datastore.Util.TestHarness
         {
             try
             {
-                var _rnd = new Random();
                 long index = 0;
                 while (true)
                 {
@@ -226,6 +226,99 @@ namespace Gravitybox.Datastore.Util.TestHarness
             catch (Exception ex)
             {
                 throw;
+            }
+        }
+
+        private static void PerfTest()
+        {
+            try
+            {
+                var tList = new List<Task>();
+
+                for (var ii = 0; ii < 10; ii++)
+                {
+                    tList.Add(new Task(() =>
+                    {
+                        long index = 0;
+                        while (true)
+                        {
+                            using (var repo = new DatastoreRepository<MyItem>(repoID, SERVER, PORT))
+                            {
+                                index++;
+                                var id = _rnd.Next(1, 99999999);
+                                //LoggerCQ.LogInfo("HitHard: ID=" + id + ", Index=" + index);
+                                var results = repo.Query
+                                    .Where(x => x.ID == id)
+                                    .Results();
+                            }
+                        }
+                    }));
+                }
+
+                for (var ii = 0; ii <= 10; ii++)
+                {
+                    tList.Add(new Task(() =>
+                    {
+                        while (true)
+                        {
+                            InsertRandom();
+                        }
+                    }));
+                }
+
+                tList.ForEach(x => x.Start());
+
+                Task.WaitAll(tList.ToArray());
+
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
+
+        private static void InsertRandom()
+        {
+            var rnd = new Random();
+
+            var dimValues = new List<string>();
+            for (var ii = 1; ii <= 50; ii++)
+                dimValues.Add("Value " + ii);
+
+            var timer = Stopwatch.StartNew();
+            using (var repo = new DatastoreRepository<MyItem>(repoID, SERVER, PORT))
+            {
+                var list = new List<MyItem>();
+                for (var ii = 0; ii < 50; ii++)
+                {
+                    var ID = rnd.Next() % 9999999;
+                    var newItem = new MyItem
+                    {
+                        Project = "Hello" + ID,
+                        Field1 = "V-" + (rnd.Next() % 5),
+                        ID = ID,
+                        MyList = new string[] { "aa", "bb" },
+                        CreatedDate = DateTime.Now.AddMinutes(-_rnd.Next(0, 10000)),
+                        Dim2 = "Dim2-" + (rnd.Next() % 10),
+                        MyBool = (rnd.Next(100) % 2 == 0) ? true : false,
+                        MyFloat = rnd.Next(1, 10000),
+                        MyGeo = new GeoCode { Latitude = rnd.Next(-90, 90), Longitude = rnd.Next(-90, 90) },
+                        MyBool2 = (rnd.Next(100) % 2 == 0) ? true : false,
+                        MyFloat2 = 2,
+                        MyFloat3 = 4,
+                        SomeInt2 = 5,
+                        MyByte = 40,
+                        MyShort = 99,
+                        MyDecimal = 66,
+                        MyDecimal2 = 33,
+                        MyLong = 17626,
+                    };
+                    newItem.Dim2 = dimValues[rnd.Next(0, dimValues.Count)];
+                    list.Add(newItem);
+                }
+                repo.InsertOrUpdate(list);
+                timer.Stop();
+                Console.WriteLine($"Added Items: Elapsed={timer.ElapsedMilliseconds}");
             }
         }
 

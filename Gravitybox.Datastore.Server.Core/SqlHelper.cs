@@ -273,9 +273,9 @@ namespace Gravitybox.Datastore.Server.Core
                         foreach (var p in parameters)
                         {
                             if (p.Value == System.DBNull.Value)
-                                sb.AppendLine(p.ParameterName + "=NULL");
+                                sb.AppendLine($"{p.ParameterName}=NULL");
                             else
-                                sb.AppendLine(p.ParameterName + "=" + p.Value.ToString());
+                                sb.AppendLine($"{p.ParameterName}={p.Value}");
                         }
                     }
                     LoggerCQ.LogError(sb.ToString());
@@ -288,10 +288,10 @@ namespace Gravitybox.Datastore.Server.Core
             }
         }
 
-        internal static DataSet GetDataset(string connectionString, string sql, List<SqlParameter> parameters = null, int timeOut = 60, int maxRetry = 1)
+        internal static DataSet GetDataset(string connectionString, string sql, List<SqlParameter> parameters = null, int timeOut = 60, int maxRetry = 0)
         {
             if (maxRetry < 0) maxRetry = 0;
-            var tryCount = 0;
+            var tryCount = 1;
             var timer = Stopwatch.StartNew();
 
             if (parameters == null) parameters = new List<SqlParameter>();
@@ -324,7 +324,7 @@ namespace Gravitybox.Datastore.Server.Core
                         //Keep track of each try for logging
                         errorMsg.Add($"[Try={tryCount}|Elapsed={timer.ElapsedMilliseconds}]");
 
-                        if (tryCount < maxRetry &&
+                        if (tryCount <= maxRetry &&
                             !ex.Message.Contains("Invalid column name") &&
                             !ex.Message.Contains("Invalid object name") &&
                             !ex.Message.Contains("Ambiguous column name"))
@@ -821,7 +821,7 @@ namespace Gravitybox.Datastore.Server.Core
                 x.DimensionType != RepositorySchema.DimensionTypeConstants.List &&
                 x.DataType != RepositorySchema.DataTypeConstants.GeoCode).ToList())
             {
-                var dimensionColumnName = "__d" + dimension.TokenName;
+                var dimensionColumnName = $"__d{dimension.TokenName}";
                 var indexName = GetIndexName(dimension, dataTable, true);
                 indexList.Add(indexName);
                 sb.AppendLine($"if not exists(select * from sys.indexes where name = '{indexName}') and exists(select * from sys.objects where name = '{dataTable}' and type = 'U') and exists (select * from syscolumns c inner join sysobjects o on c.id = o.id where c.name = '{dimensionColumnName}' and o.name = '{dataTable}')");
@@ -1903,6 +1903,7 @@ namespace Gravitybox.Datastore.Server.Core
                                 var localTable = tableCheckList.First();
                                 if (!string.IsNullOrEmpty(viewName))
                                 {
+                                    sb.AppendLine($"--MARKER 28");
                                     sb.AppendLine($"UPDATE [{localTable}] SET ");
                                     var index = 0;
                                     foreach (var item in list)
@@ -1941,6 +1942,7 @@ namespace Gravitybox.Datastore.Server.Core
                                 }
                                 else
                                 {
+                                    sb.AppendLine($"--MARKER 27");
                                     sb.AppendLine("UPDATE Z SET ");
                                     var index = 0;
                                     foreach (var item in list)
@@ -2007,6 +2009,7 @@ namespace Gravitybox.Datastore.Server.Core
                                             {
                                                 if (!string.IsNullOrEmpty(viewName))
                                                 {
+                                                    sb.AppendLine($"--MARKER 29");
                                                     sb.AppendLine($"UPDATE [{localTable}]");
                                                     sb.AppendLine($"SET [{localTable}].[{field.TokenName}] = NULL, [{localTable}].[{dimensionColumnName}] = NULL, [{localTable}].[{TimestampField}] = @{TimestampField}, [{localTable}].[{HashField}] = @{HashField}");
                                                     sb.AppendLine($"FROM [{localTable}] A {NoLockText()} {innerJoinClause}");
@@ -2015,6 +2018,7 @@ namespace Gravitybox.Datastore.Server.Core
                                                 }
                                                 else
                                                 {
+                                                    sb.AppendLine($"--MARKER 30");
                                                     sb.AppendLine("UPDATE Z");
                                                     sb.AppendLine($"SET [Z].[{field.TokenName}] = NULL, [Z].[{dimensionColumnName}] = NULL, [Z].[{TimestampField}] = @{TimestampField}, [Z].[{HashField}] = @{HashField}");
                                                     sb.AppendLine($"FROM [{localTable}] Z {NoLockText()} {innerJoinClause}");
@@ -2036,6 +2040,7 @@ namespace Gravitybox.Datastore.Server.Core
 
                                                     if (!string.IsNullOrEmpty(viewName))
                                                     {
+                                                        sb.AppendLine($"--MARKER 31");
                                                         sb.AppendLine($"UPDATE [{localTable}]");
                                                         sb.AppendLine($"SET [{localTable}].[{field.TokenName}] = {valueParam.ParameterName}, [{localTable}].[{dimensionColumnName}] = {indexParam.ParameterName}, [{localTable}].[{TimestampField}] = @{TimestampField}, [{localTable}].[{HashField}] = @{HashField}");
                                                         sb.AppendLine($"FROM [{localTable}] A {NoLockText()} {innerJoinClause}");
@@ -2044,6 +2049,7 @@ namespace Gravitybox.Datastore.Server.Core
                                                     }
                                                     else
                                                     {
+                                                        sb.AppendLine($"--MARKER 32");
                                                         sb.AppendLine("UPDATE Z");
                                                         sb.AppendLine($"SET [Z].[{field.TokenName}] = {valueParam.ParameterName}, [Z].[{dimensionColumnName}] = {indexParam.ParameterName}, [Z].[{TimestampField}] = @{TimestampField}, [Z].[{HashField}] = @{HashField}");
                                                         sb.AppendLine($"FROM [{localTable}] Z {NoLockText()} {innerJoinClause}");
@@ -2060,6 +2066,7 @@ namespace Gravitybox.Datastore.Server.Core
                                         parameters.Add(param);
                                         if (!string.IsNullOrEmpty(viewName))
                                         {
+                                            sb.AppendLine($"--MARKER 33");
                                             sb.AppendLine($"UPDATE [{localTable}]");
                                             sb.AppendLine($"SET [{localTable}].[{field.TokenName}] = {param.ParameterName}, [{localTable}].[{TimestampField}] = @{TimestampField}, [{localTable}].[{HashField}] = @{HashField}");
                                             sb.AppendLine($"FROM [{localTable}] A {NoLockText()} {innerJoinClause}");
@@ -2068,6 +2075,7 @@ namespace Gravitybox.Datastore.Server.Core
                                         }
                                         else
                                         {
+                                            sb.AppendLine($"--MARKER 34");
                                             sb.AppendLine($"UPDATE Z");
                                             sb.AppendLine($"SET [Z].[{field.TokenName}] = {param.ParameterName}, [Z].[{TimestampField}] = @{TimestampField}, [Z].[{HashField}] = @{HashField}");
                                             sb.AppendLine($"FROM [{localTable}] Z {NoLockText()} {innerJoinClause}");
@@ -2342,7 +2350,7 @@ namespace Gravitybox.Datastore.Server.Core
                     configuration.dimensionValueTableParent = SqlHelper.GetDimensionValueTableName(schema.ParentID.Value);
                 }
 
-                configuration.orderByClause = "[Z].[" + RecordIdxField + "] ASC";
+                configuration.orderByClause = $"[Z].[{RecordIdxField}] ASC";
                 var listDim = schema.DimensionList.Where(x => x.DimensionType == RepositorySchema.DimensionTypeConstants.List).Select(x => x.DIdx).ToList();
                 //TODO also consider if FieldFilters contain List
                 configuration.hasFilteredListDims = dimensionList.Where(x => listDim.Contains(x.DIdx)).SelectMany(x => x.RefinementList).Select(x => x.DVIdx).ToList().Any(x => query.DimensionValueList.Contains(x));
@@ -2405,7 +2413,7 @@ namespace Gravitybox.Datastore.Server.Core
                             usedFields.Add(sf.Name);
                         }
                     }
-                    configuration.orderByClause += "[Z].[" + RecordIdxField + "] ASC";
+                    configuration.orderByClause += $"[Z].[{RecordIdxField}] ASC";
                 }
 
                 #endregion
@@ -2641,7 +2649,7 @@ namespace Gravitybox.Datastore.Server.Core
                 executeHistory += (configuration.PerfLoadAgg ? "1" : "0");
 #endif
                 if (query.IncludeRecords)
-                    DataManager.Sync(configuration.retval.RecordList, schema);
+                    DataManager.Sync(configuration.retval.RecordList.ToList(), schema);
                 return configuration.retval;
             }
             catch (Exception ex)
@@ -2720,6 +2728,10 @@ namespace Gravitybox.Datastore.Server.Core
                             if (!prepList.ContainsKey(dItem)) prepList.Add(dItem, new List<long>());
                             prepList[dItem].Add(dvidx);
                         }
+                        else
+                        {
+                            LoggerCQ.LogWarning($"GetWhereClause could not find dimension {dvidx}");
+                        }
                     }
 
                     foreach (var dItem in prepList.Keys)
@@ -2770,12 +2782,12 @@ namespace Gravitybox.Datastore.Server.Core
                                     var newParam = new SqlParameter
                                     {
                                         DbType = DbType.Int64,
-                                        ParameterName = "@__d_" + dItem.DIdx + "_" + rindex,
+                                        ParameterName = $"@__d_{dItem.DIdx}_{rindex}",
                                         Value = dvidx
                                     };
                                     parameters.Add(newParam);
 
-                                    retval.Append("[Z].[__d" + Utilities.DbTokenize(dItem.Name) + "] = " + newParam.ParameterName);
+                                    retval.Append($"[Z].[__d{Utilities.DbTokenize(dItem.Name)}] = {newParam.ParameterName}");
                                     if (rindex < prepList[dItem].Count - 1)
                                         retval.Append(" OR ");
                                     rindex++;
@@ -2786,7 +2798,7 @@ namespace Gravitybox.Datastore.Server.Core
                         }
                         else
                         {
-                            LoggerCQ.LogWarning("GetWhereClause could find dimension " + dItem.Name + "|" + dItem.DIdx);
+                            LoggerCQ.LogWarning($"GetWhereClause could not find dimension {dItem.Name}|{dItem.DIdx}");
                         }
                     }
                 }
@@ -3540,14 +3552,18 @@ namespace Gravitybox.Datastore.Server.Core
                                 sb.Append($"[Z].[{field.TokenName}] <> {filterParam.ParameterName}");
                             break;
                         case ComparisonConstants.Like:
-                            filterParam = new SqlParameter
                             {
-                                DbType = DbType.String,
-                                ParameterName = field.ToParameterName(parameterIndex),
-                                Value = ffValue?.Replace("*", "%"),
-                            };
-                            parameters.Add(filterParam);
-                            sb.Append($"[Z].[{field.TokenName}] LIKE {filterParam.ParameterName}");
+                                var frontMatch = ffValue?.StartsWith("*") == true ? "'%'" : "''";
+                                var endMatch = ffValue?.EndsWith("*") == true ? "'%'" : "''";
+                                filterParam = new SqlParameter
+                                {
+                                    DbType = DbType.String,
+                                    ParameterName = field.ToParameterName(parameterIndex),
+                                    Value = ffValue?.Replace("*", string.Empty),
+                                };
+                                parameters.Add(filterParam);
+                                sb.Append($"[Z].[{field.TokenName}] LIKE {frontMatch}+{filterParam.ParameterName}+{endMatch}");
+                            }
                             break;
                         case ComparisonConstants.ContainsAny:
                             if (ffValue != null)
@@ -3563,10 +3579,10 @@ namespace Gravitybox.Datastore.Server.Core
                                         {
                                             DbType = DbType.String,
                                             ParameterName = field.ToParameterName(parameterIndex, subIndex),
-                                            Value = $"%{word}%",
+                                            Value = $"{word}",
                                         };
                                         parameters.Add(filterParam);
-                                        subSqlList.Add($"[Z].[{field.TokenName}] LIKE {filterParam.ParameterName}");
+                                        subSqlList.Add($"[Z].[{field.TokenName}] LIKE '%'+{filterParam.ParameterName}+'%'");
                                         subIndex++;
                                     }
                                     sb.Append($"({subSqlList.ToStringList(" OR ")})");
@@ -3589,10 +3605,10 @@ namespace Gravitybox.Datastore.Server.Core
                                         {
                                             DbType = DbType.String,
                                             ParameterName = field.ToParameterName(parameterIndex, subIndex),
-                                            Value = $"%{word}%",
+                                            Value = $"{word}",
                                         };
                                         parameters.Add(filterParam);
-                                        subSqlList.Add($"[Z].[{field.TokenName}] LIKE {filterParam.ParameterName}");
+                                        subSqlList.Add($"[Z].[{field.TokenName}] LIKE '%'+{filterParam.ParameterName}+'%'");
                                         subIndex++;
                                     }
                                     sb.Append($"({subSqlList.ToStringList(" AND ")})");
@@ -3615,10 +3631,10 @@ namespace Gravitybox.Datastore.Server.Core
                                         {
                                             DbType = DbType.String,
                                             ParameterName = field.ToParameterName(parameterIndex, subIndex),
-                                            Value = $"%{word}%",
+                                            Value = $"{word}",
                                         };
                                         parameters.Add(filterParam);
-                                        subSqlList.Add($"([Z].[{field.TokenName}] NOT LIKE {filterParam.ParameterName})");
+                                        subSqlList.Add($"([Z].[{field.TokenName}] NOT LIKE '%'+{filterParam.ParameterName}+'%')");
                                         subIndex++;
                                     }
                                     sb.Append($"({subSqlList.ToStringList(" AND ")})");
@@ -3838,12 +3854,12 @@ namespace Gravitybox.Datastore.Server.Core
 
         #region Count
 
-        public static int Count(RepositorySchema schema, int repositoryId, string connectionString)
+        internal static int Count(RepositorySchema schema, string connectionString)
         {
             try
             {
                 var dataTable = GetTableName(schema);
-                var ds = GetDataset(connectionString, $"select count(*) from [{dataTable}]");
+                var ds = GetDataset(connectionString, $"select count(*) from [{dataTable}] {NoLockText()}");
                 if (ds.Tables.Count == 1 && ds.Tables[0].Rows.Count == 1)
                     return (int)ds.Tables[0].Rows[0][0];
                 return 0;
@@ -3858,11 +3874,11 @@ namespace Gravitybox.Datastore.Server.Core
 
         #region Clear
 
-        public static void Clear(RepositorySchema schema, string connectionString)
+        internal static int Clear(RepositorySchema schema, string connectionString)
         {
             try
             {
-                RepositorySchema parentSchema = null;
+               RepositorySchema parentSchema = null;
                 var hasChildren = false;
                 if (schema.ParentID != null)
                     parentSchema = RepositoryManager.GetSchema(schema.ParentID.Value);
@@ -3871,6 +3887,8 @@ namespace Gravitybox.Datastore.Server.Core
 
                 var dataTable = GetTableName(schema);
                 var sb = new StringBuilder();
+
+                var count = Count(schema, connectionString);
 
                 //If there is no binding view then truncate table
                 var viewName = GetTableViewName(schema.ID);
@@ -3918,6 +3936,7 @@ namespace Gravitybox.Datastore.Server.Core
                 } while (!completeDelete);
 
                 MarkUpdated(schema.ID);
+                return count;
             }
             catch (Exception ex)
             {
@@ -4543,12 +4562,12 @@ namespace Gravitybox.Datastore.Server.Core
                     foreach (var r in list)
                     {
                         var tableName = GetTableName(r);
-                        var sql = "select count(*) from [" + tableName + "] " + NoLockText();
+                        var sql = $"select count(*) from [{tableName}] " + NoLockText();
                         var ds = GetDataset(connectionString, sql);
                         if (ds.Tables.Count == 1 && ds.Tables[0].Rows.Count == 1)
                         {
                             var count = (int)ds.Tables[0].Rows[0][0];
-                            ExecuteSql(connectionString, "update [Repository] set [ItemCount] = " + count + " where [UniqueKey] = '" + r + "'");
+                            ExecuteSql(connectionString, $"update [Repository] set [ItemCount] = {count} where [UniqueKey] = '{r}'");
                         }
                     }
                 }
@@ -4587,20 +4606,25 @@ namespace Gravitybox.Datastore.Server.Core
                         var dataTable = GetTableName(id);
                         var catalogName = $"FTS_{dataTable}";
 
-                        var sql = $"ALTER FULLTEXT CATALOG [{catalogName}] REORGANIZE";
-                        ExecuteSql(connectionString, sql, null, false, false);
+                        var sb = new StringBuilder();
+                        sb.AppendLine($"if exists(select * from sys.fulltext_indexes where object_id = (select top 1 object_id from sys.objects where name = '{dataTable}'))");
+                        sb.AppendLine($"ALTER FULLTEXT CATALOG [{catalogName}] REORGANIZE");
+                        try
+                        {
+                            ExecuteSql(connectionString, sb.ToString(), null, false, false);
+                        }
+                        catch (SqlException ex)
+                        {
+                            if (ex.ToString().Contains("Timeout Expired"))
+                                LoggerCQ.LogWarning($"DefragFTS Failed: ID={id}, Error=TimeoutExpired");
+                            else
+                                LoggerCQ.LogWarning($"DefragFTS Failed: ID={id}, Error={ex.Message}");
+                        }
 
                         //Do not do this longer than 3 hours
                         if (timer.Elapsed.TotalHours >= 3) return;
                     }
                 }
-            }
-            catch (System.Data.SqlClient.SqlException ex)
-            {
-                if (ex.ToString().Contains("Timeout Expired"))
-                    LoggerCQ.LogWarning($"DefragIndexes: Timeout Expired");
-                else
-                    LoggerCQ.LogWarning(ex);
             }
             catch (Exception ex)
             {
@@ -4998,6 +5022,7 @@ namespace Gravitybox.Datastore.Server.Core
             var innerJoinClause = GetInnerJoinClause(schema, null, slice.Query, dimensionList, parameters);
 
             var allFields = fields.Select(x => x.Name).ToList();
+            sb.AppendLine($"--MARKER 26");
             sb.Append("SELECT " + string.Join(",", fields.Select(x => $"[A].[{x.TokenName}]")));
             var joinFields = string.Join(" AND ", fields.Select(x => $"[A].[{x.TokenName}] = [Z].[{x.TokenName}]"));
             foreach (var refinement in dimension.RefinementList)
@@ -5051,6 +5076,7 @@ namespace Gravitybox.Datastore.Server.Core
             if (ConfigHelper.SupportsRowsFetch)
             {
                 var sbSql = new StringBuilder();
+                sbSql.AppendLine($"--MARKER 22");
                 sbSql.AppendLine("WITH T (" + string.Join(",", allFields.Select(x => $"[{x}]")) + ") AS (");
                 sbSql.AppendLine(sb.ToString());
                 sbSql.AppendLine(") SELECT * FROM T");
@@ -5064,6 +5090,7 @@ namespace Gravitybox.Datastore.Server.Core
             }
 
             #region Count
+            sb.AppendLine($"--MARKER 23");
             sb.AppendLine("; WITH T ([Count]) AS (");
             sb.AppendLine("select count(*) as [Count]");
             sb.AppendLine($"from [{dataTable}] Z {NoLockText()}{innerJoinClause}");
@@ -5329,40 +5356,33 @@ namespace Gravitybox.Datastore.Server.Core
         {
             var sb = new StringBuilder();
 
-            sb.AppendLine($"if not exists(select * from sys.objects where name = '{dimensionTable}' and type = 'U')");
-            sb.AppendLine("BEGIN");
-            sb.AppendLine($"CREATE TABLE [{dimensionTable}] (");
-            sb.AppendLine($"[DVIdx] BIGINT NOT NULL, [{RecordIdxField}] BIGINT NOT NULL,");
-            sb.AppendLine($"CONSTRAINT [PK_{dimensionTable}] PRIMARY KEY CLUSTERED ([{RecordIdxField}], [DVIdx])");
-            sb.AppendLine(")");
-
             //Determine if the List tables are in a separate file group by configuration
             //If not, get a random group
             var fileGroup = RepositoryManager.GetRandomFileGroup();
             if (ConfigHelper.SetupConfig.HashListTableFileGroup)
                 fileGroup = SetupConfig.YFileGroup;
 
-            if (!string.IsNullOrEmpty(fileGroup))
-            {
-                sb.AppendLine($"ON [{fileGroup}];");
-            }
+            sb.AppendLine($"if not exists(select * from sys.objects where name = '{dimensionTable}' and type = 'U')");
+            sb.AppendLine($"CREATE TABLE [{dimensionTable}] (");
+            sb.AppendLine($"[DVIdx] BIGINT NOT NULL, [{RecordIdxField}] BIGINT NOT NULL,");
+            sb.AppendLine($"CONSTRAINT [PK_{dimensionTable}] PRIMARY KEY CLUSTERED ([DVIdx], [{RecordIdxField}])");
+            sb.AppendLine(")");
+            if (!string.IsNullOrEmpty(fileGroup)) sb.AppendLine($"ON [{fileGroup}];");
+            else sb.AppendLine(";");
+
+            //Create covering index
+            var indexName = $"NCK_{dimensionTable}";
+            sb.AppendLine($"if not exists(select * from sys.indexes where name = '{indexName}')");
+            sb.AppendLine($"CREATE NONCLUSTERED INDEX [{indexName}] ON [{dimensionTable}] ([{SqlHelper.RecordIdxField}], [DVIdx])");
+            if (!string.IsNullOrEmpty(fileGroup)) sb.AppendLine($"ON [{fileGroup}];");
+            else sb.AppendLine(";");
 
             if (ConfigHelper.SupportsCompression)
             {
                 sb.AppendLine($"ALTER TABLE [{dimensionTable}] REBUILD PARTITION = ALL WITH (DATA_COMPRESSION = PAGE);");
+                sb.AppendLine($"ALTER INDEX [PK_{dimensionTable}] ON [{dimensionTable}] REBUILD WITH (DATA_COMPRESSION = PAGE);");
+                sb.AppendLine($"ALTER INDEX [{indexName}] ON [{dimensionTable}] REBUILD WITH (DATA_COMPRESSION = PAGE);");
             }
-
-            sb.AppendLine("END");
-
-            //Create '__RecordIdx' index for speed (makes big difference)
-            var indexName = $"IDX_{dimensionTable}_RecordIdx";
-            sb.AppendLine($"if not exists(select * from sys.indexes where name = '{indexName}')");
-            sb.AppendLine($"CREATE NONCLUSTERED INDEX [{indexName}] ON [{dimensionTable}] ([{RecordIdxField}]){GetSqlIndexFileGrouping()}");
-
-            //Create 'DVIDX' index for speed (makes big difference)
-            indexName = $"IDX_{dimensionTable}_DVIDX";
-            sb.AppendLine($"if not exists(select * from sys.indexes where name = '{indexName}')");
-            sb.AppendLine($"CREATE NONCLUSTERED INDEX [{indexName}] ON [{dimensionTable}] ([DVIdx]){GetSqlIndexFileGrouping()}");
 
             return sb.ToString();
         }
@@ -5379,9 +5399,7 @@ namespace Gravitybox.Datastore.Server.Core
             sb.AppendLine(")");
             var fileGroup = RepositoryManager.GetRandomFileGroup();
             if (!string.IsNullOrEmpty(fileGroup))
-            {
                 sb.AppendLine($"ON [{fileGroup}];");
-            }
             sb.AppendLine("END");
 
             //Dimension value table
@@ -5394,9 +5412,7 @@ namespace Gravitybox.Datastore.Server.Core
             sb.AppendLine("[Value] NVARCHAR(500) NOT NULL");
             sb.AppendLine(")");
             if (!string.IsNullOrEmpty(fileGroup))
-            {
                 sb.AppendLine($"ON [{fileGroup}];");
-            }
 
             sb.AppendLine($"if not exists(select * from sys.indexes where name = 'PK_{dimensionValueTableName}')");
             sb.AppendLine($"ALTER TABLE [{dimensionValueTableName}] ADD CONSTRAINT [PK_{dimensionValueTableName}] PRIMARY KEY NONCLUSTERED ([DIdx],[DVIdx]);");
@@ -5425,20 +5441,22 @@ namespace Gravitybox.Datastore.Server.Core
                 else return string.Empty; //cannot index a field this big
             }
 
-            //Dimension table
+            //Permisions table
             var userPermissionTableName = GetUserPermissionTableName(schema.ID);
             sb.AppendLine($"if not exists(select * from sys.objects where name = '{userPermissionTableName}' and type = 'U')");
-            sb.AppendLine("BEGIN");
             sb.AppendLine($"CREATE TABLE [{userPermissionTableName}] (");
             sb.AppendLine("[UserId] INT NOT NULL,");
             sb.AppendLine($"[FKField] {field.ToSqlType()} {sqlLength} NOT NULL,");
-            sb.AppendLine($"CONSTRAINT [PK_{userPermissionTableName.ToUpper()}] PRIMARY KEY NONCLUSTERED ([UserId], [FKField]){GetSqlIndexFileGrouping()}");
-            sb.AppendLine(")");
-            if (!string.IsNullOrEmpty(fileGroup))
-            {
-                sb.AppendLine($"ON [{fileGroup}];");
-            }
-            sb.AppendLine("END");
+            sb.Append($"CONSTRAINT [PK_{userPermissionTableName.ToUpper()}] PRIMARY KEY CLUSTERED ([UserId], [FKField]){GetSqlIndexFileGrouping()})");
+            if (!string.IsNullOrEmpty(fileGroup)) sb.AppendLine($"ON [{fileGroup}];");
+            else sb.AppendLine(";");
+
+            //Create covering index
+            var indexName = $"NCK_{userPermissionTableName}";
+            sb.AppendLine($"if not exists(select * from sys.indexes where name = '{indexName}')");
+            sb.Append($"CREATE NONCLUSTERED INDEX [{indexName}] ON [{userPermissionTableName}] ([FKField], [UserId])");
+            if (!string.IsNullOrEmpty(fileGroup)) sb.AppendLine($"ON [{fileGroup}];");
+            else sb.AppendLine(";");
 
             return sb.ToString();
         }

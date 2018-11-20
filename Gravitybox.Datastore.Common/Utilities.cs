@@ -147,35 +147,5 @@ namespace Gravitybox.Datastore.Common
         //Timeout in 20 minutes
         private static Cache<int, byte[]> _cloneCache = new Cache<int, byte[]>(new TimeSpan(0, 10, 0), 4391);
 
-        /// <summary>
-        /// returns a more "safe" URL, stripping anything outside normal charsets for URL
-        /// </summary>
-        internal static string SanitizeUrl(string url)
-        {
-            if (string.IsNullOrEmpty(url)) return url;
-            if (url.Contains("%"))
-                url = Uri.UnescapeDataString(url);
-
-            var replacements = new[] {
-                "onchange",
-                "onclick",
-                "onmouseover",
-                "onmouseout",
-                "onkeyup",
-                "onkeydown",
-                "onkeypress",
-                "onload",
-            };
-
-            foreach (var ss in replacements)
-            {
-                var index = url.IndexOf(ss, StringComparison.InvariantCultureIgnoreCase);
-                if (index != -1)
-                    url = url.Remove(index, ss.Length).Insert(index, string.Empty);
-            }
-
-            return System.Text.RegularExpressions.Regex.Replace(url, @"[^-A-Za-z0-9+&@#/%?=~_|!:,.;\(\)\s]", "");
-        }
-
     }
 }

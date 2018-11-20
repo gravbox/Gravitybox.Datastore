@@ -6,6 +6,7 @@ using System.ServiceModel;
 namespace Gravitybox.Datastore.Common
 {
     /// <summary />
+    [System.ServiceModel.ServiceKnownType(typeof(string[]))]
     [ServiceContract()]
     public interface IDataModel
     {

@@ -193,7 +193,12 @@ namespace Gravitybox.Datastore.Server.Core
                     //Ensure that the pre-calculations are complete
                     task1.Wait();
 
-                    var item = cache.FirstOrDefault(x => x.QueryHash == queryHash && x.ChangeStamp == changeStamp);
+                    CacheResultsQuery item = null;
+                    lock (cache)
+                    {
+                        item = cache?.FirstOrDefault(x => x.QueryHash == queryHash && x.ChangeStamp == changeStamp);
+                    }
+
                     if (item == null) //return null;
                     {
                         if (ConfigHelper.AllowCoreCache)
@@ -201,7 +206,10 @@ namespace Gravitybox.Datastore.Server.Core
                             //TODO: OPTIMIZE: this is a linear search of thousands of items!!!!
                             //If did not find a match then find see if core properties match
                             //If so we can use the dimension and count values and just replace the records collection
-                            item = cache.FirstOrDefault(x => x.QueryCoreHash == coreHash && x.ChangeStamp == changeStamp);
+                            lock (cache)
+                            {
+                                item = cache?.FirstOrDefault(x => x.QueryCoreHash == coreHash && x.ChangeStamp == changeStamp);
+                            }
                         }
                         if (item == null) return null;
                         isCore = true;
@@ -216,14 +224,14 @@ namespace Gravitybox.Datastore.Server.Core
             catch (Exception ex)
             {
                 timer.Stop();
-                LoggerCQ.LogError(ex, $"RepositoryId={id}, Elapsed={timer.ElapsedMilliseconds}, LockTime={lockTime}, Count={cache.Count}, ID={id}");
+                LoggerCQ.LogError(ex, $"RepositoryId={id}, Elapsed={timer.ElapsedMilliseconds}, LockTime={lockTime}, Count={cache.Count}, QueryHash={queryHash}, ChangeStamp={changeStamp}, ID={id}");
                 throw;
             }
             finally
             {
                 timer.Stop();
                 if (timer.ElapsedMilliseconds > 50)
-                    LoggerCQ.LogWarning($"Slow cache get: Elapsed={timer.ElapsedMilliseconds}, LockTime={lockTime}, Count={cache.Count}, ID={id}, QueryString =\"{query.ToString()}\"");
+                    LoggerCQ.LogWarning($"Slow cache get: Elapsed={timer.ElapsedMilliseconds}, LockTime={lockTime}, Count={cache.Count}, ID={id}, QueryString=\"{query.ToString()}\"");
             }
         }
 
@@ -240,6 +248,8 @@ namespace Gravitybox.Datastore.Server.Core
             var timer = Stopwatch.StartNew();
             var cache = RepositoryCacheManager.GetCache(id, RepositoryManager.GetSchemaParentId(repositoryId));
             long lockTime = 0;
+            var changeStamp = 0;
+            var queryHash = 0;
             try
             {
                 //Some queries should be cached a long time
@@ -249,8 +259,6 @@ namespace Gravitybox.Datastore.Server.Core
                     !query.SkipDimensions.Any();
                 var extraMinutes = longCache ? 480 : 0;
 
-                var changeStamp = 0;
-                var queryHash = 0;
                 var coreHash = 0;
                 CacheResultsQuery item;
 
@@ -262,7 +270,11 @@ namespace Gravitybox.Datastore.Server.Core
                         coreHash = query.CoreHashCode();
 
                     changeStamp = RepositoryManager.GetRepositoryChangeStamp(context, repositoryId);
-                    item = cache.FirstOrDefault(x => x.QueryHash == queryHash && x.ChangeStamp == changeStamp);
+                    lock (cache)
+                    {
+                        item = cache?.FirstOrDefault(x => x.QueryHash == queryHash && x.ChangeStamp == changeStamp);
+                    }
+
                     //If data has not changed and results are in cache then do nothing except mark as accessed
                     if (item != null)
                     {
@@ -272,6 +284,7 @@ namespace Gravitybox.Datastore.Server.Core
                     }
                 }
 
+                lock (cache)
                 using (var q = new AcquireWriterLock(ServerUtilities.RandomizeGuid(cache.ID, RSeed), "QueryCache"))
                 {
                     lockTime += q.LockTime;
@@ -298,7 +311,7 @@ namespace Gravitybox.Datastore.Server.Core
             catch (Exception ex)
             {
                 timer.Stop();
-                LoggerCQ.LogError(ex, $"RepositoryId={id}, Elapsed={timer.ElapsedMilliseconds}, ID={id}, LockTime={lockTime}, Count={cache.Count}");
+                LoggerCQ.LogError(ex, $"RepositoryId={id}, Elapsed={timer.ElapsedMilliseconds}, ID={id}, LockTime={lockTime}, Count={cache.Count}, QueryHash={queryHash}, ChangeStamp={changeStamp}");
                 throw;
             }
             finally

@@ -75,9 +75,10 @@ namespace Gravitybox.Datastore.Server.Core
 
         #region Constructors
 
-        public SystemCore(string connectionString)
+        public SystemCore(string connectionString, bool enableHouseKeeping = true)
             : base()
         {
+            this.EnableHouseKeeping = enableHouseKeeping;
             var builder = new System.Data.SqlClient.SqlConnectionStringBuilder(connectionString);
             LoggerCQ.LogInfo($"Connection: Server={builder.DataSource}, Database={builder.InitialCatalog}");
 
@@ -92,6 +93,7 @@ namespace Gravitybox.Datastore.Server.Core
 
             _manager = new RepositoryManager(this);
             DataManager.IsActive = true;
+            DataManager.EnableHouseKeeping = this.EnableHouseKeeping;
             QueryBuilders.RepositoryHealthMonitor.IsActive = true;
             //this.StatLocker = new DatastoreLock(System.Threading.LockRecursionPolicy.SupportsRecursion);
             //this.StatLocker = new DatastoreLock();
@@ -113,11 +115,14 @@ namespace Gravitybox.Datastore.Server.Core
             LoggerCQ.LogInfo($"SupportsRowsFetch: {ConfigHelper.SupportsRowsFetch}");
             LoggerCQ.LogInfo($"SupportsCompression: {ConfigHelper.SupportsCompression}");
             LoggerCQ.LogInfo($"AllowCaching: {ConfigHelper.AllowCaching}");
-            LoggerCQ.LogInfo($"AllowLocking: {ConfigHelper.AllowLocking}");
+            LoggerCQ.LogInfo($"AllowReadLocking: {ConfigHelper.AllowReadLocking}");
+            LoggerCQ.LogInfo($"AllowWriteLocking: {ConfigHelper.AllowWriteLocking}");
             LoggerCQ.LogInfo($"DefragIndexes: {ConfigHelper.DefragIndexes}");
             LoggerCQ.LogInfo($"AsyncCachePath: {ConfigHelper.AsyncCachePath}");
             LoggerCQ.LogInfo($"AllowLockStats: {ConfigHelper.AllowLockStats}");
             LoggerCQ.LogInfo($"Timezone: {TimeZone.CurrentTimeZone.DaylightName}");
+            if (!this.EnableHouseKeeping)
+                LoggerCQ.LogInfo($"HouseKeeping: Off");
 #if DEBUG
             LoggerCQ.LogInfo("Build: Debug");
 #else
@@ -146,7 +151,8 @@ namespace Gravitybox.Datastore.Server.Core
 
             #region Force save of configuration
             ConfigHelper.AllowCaching = ConfigHelper.AllowCaching;
-            ConfigHelper.AllowLocking = ConfigHelper.AllowLocking;
+            ConfigHelper.AllowReadLocking = ConfigHelper.AllowReadLocking;
+            ConfigHelper.AllowWriteLocking = ConfigHelper.AllowWriteLocking;
             ConfigHelper.QueryCacheCount = ConfigHelper.QueryCacheCount;
             ConfigHelper.DefragIndexes = ConfigHelper.DefragIndexes;
             ConfigHelper.FromEmail = ConfigHelper.FromEmail;
@@ -181,23 +187,28 @@ namespace Gravitybox.Datastore.Server.Core
             _timer.Elapsed += _timer_Elapsed;
             _timer.Start();
 
-            _lastServerStatWrite = DateTime.MinValue;
-            _timerStats = new System.Timers.Timer(5000);
-            _timerStats.Elapsed += _timerStats_Elapsed;
-            _timerStats.Start();
+            if (this.EnableHouseKeeping)
+            {
+                _lastServerStatWrite = DateTime.MinValue;
+                _timerStats = new System.Timers.Timer(5000);
+                _timerStats.Elapsed += _timerStats_Elapsed;
+                _timerStats.Start();
 
-            //Every 5 minutes perform housekeeping
+                //Every 5 minutes perform housekeeping
 #if DEBUG
-            _timerHouseKeeping = new System.Timers.Timer(30000);
+                _timerHouseKeeping = new System.Timers.Timer(30000);
 #else
-            _timerHouseKeeping = new System.Timers.Timer(300000);
+                _timerHouseKeeping = new System.Timers.Timer(300000);
 #endif
-            _timerHouseKeeping.Elapsed += _timerHouseKeeping_Elapsed;
-            _timerHouseKeeping.Start();
+                _timerHouseKeeping.Elapsed += _timerHouseKeeping_Elapsed;
+                _timerHouseKeeping.Start();
+            }
 
             var patchThread = new System.Threading.Thread(InitializeService);
             patchThread.Start();
         }
+
+        public bool EnableHouseKeeping { get; private set; } = true;
 
         private void InitializeService()
         {
@@ -353,6 +364,14 @@ namespace Gravitybox.Datastore.Server.Core
                     LoggerCQ.LogInfo("Applying fix: IndexOptimization");
                     PatchesDomain.ApplyFix_IndexOptimization(ConfigHelper.ConnectionString);
                     PatchApply(currentGuid, "Fix IndexOptimization");
+                }
+
+                currentGuid = new Guid("a6671345-1900-4FC5-77a4-A897F0035F83");
+                if (!IsPatchApplied(currentGuid))
+                {
+                    LoggerCQ.LogInfo("Applying fix: ApplyFix_ListTableCK");
+                    PatchesDomain.ApplyFix_ListTableCK(ConfigHelper.ConnectionString);
+                    PatchApply(currentGuid, "Fix ApplyFix_ListTableCK");
                 }
 
                 if (!IsPatchApplied(DataManager.FullIndexPatch))

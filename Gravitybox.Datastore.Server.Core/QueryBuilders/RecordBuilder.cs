@@ -55,35 +55,35 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
                 //Only supports 1 group by field for now
                 foreach (var gItem in _configuration.query.GroupFields)
                 {
-                    fieldListSql.Add("[Z].[" + Utilities.DbTokenize(gItem) + "]");
+                    fieldListSql.Add($"[Z].[{Utilities.DbTokenize(gItem)}]");
                 }
 
                 foreach (DerivedField dField in _configuration.query.DerivedFieldList)
                 {
                     var field = fields.FirstOrDefault(x => x.Name == dField.Field);
                     if (field?.DataType == RepositorySchema.DataTypeConstants.List)
-                        fieldListSql.Add("0 AS [__" + field.TokenName + "]");
+                        fieldListSql.Add($"0 AS [__{field.TokenName}]");
                     else
                     {
                         if (_configuration.query.GroupFields.Any(x => x == field?.Name))
                         {
-                            fieldListSql.Add("[Z].[" + field.TokenName + "]");
+                            fieldListSql.Add($"[Z].[{field.TokenName}]");
                         }
                         else
                         {
                             switch (dField.Action)
                             {
                                 case AggregateOperationConstants.Count:
-                                    fieldListSql.Add("COUNT(*) AS [" + dField.TokenName + "]");
+                                    fieldListSql.Add($"COUNT(*) AS [{dField.TokenName}]");
                                     break;
                                 case AggregateOperationConstants.Max:
-                                    fieldListSql.Add("MAX([Z].[" + field.TokenName + "]) AS [" + dField.TokenName + "]");
+                                    fieldListSql.Add($"MAX([Z].[{field.TokenName}]) AS [{dField.TokenName}]");
                                     break;
                                 case AggregateOperationConstants.Min:
-                                    fieldListSql.Add("MIN([Z].[" + field.TokenName + "]) AS [" + dField.TokenName + "]");
+                                    fieldListSql.Add($"MIN([Z].[{field.TokenName}]) AS [{dField.TokenName}]");
                                     break;
                                 case AggregateOperationConstants.Sum:
-                                    fieldListSql.Add("SUM([Z].[" + field.TokenName + "]) AS [" + dField.TokenName + "]");
+                                    fieldListSql.Add($"SUM([Z].[{field.TokenName}]) AS [{dField.TokenName}]");
                                     break;
                                 //case AggregateOperationConstants.Distinct:
                                 default:
@@ -129,6 +129,7 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
                 if (_configuration.query.RecordsPerPage <= 0 || _configuration.query.RecordsPerPage == int.MaxValue)
                 {
                     //No paging...this is faster
+                    sbSql.AppendLine($"--MARKER 25" + _configuration.QueryPlanDebug);
                     sbSql.AppendLine($"SELECT {fieldSql}");
                     sbSql.AppendLine($"FROM [{_configuration.dataTable}] Z {SqlHelper.NoLockText()}{_configuration.innerJoinClause}");
                     sbSql.AppendLine($"WHERE {_configuration.whereClause}");
@@ -138,6 +139,7 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
                 else
                 {
                     //Big records so do NOT select into temp table
+                    sbSql.AppendLine($"--MARKER 24" + _configuration.QueryPlanDebug);
                     sbSql.AppendLine($"WITH T ([{SqlHelper.RecordIdxField}]) AS (");
                     sbSql.AppendLine($"SELECT {(_configuration.hasFilteredListDims ? "DISTINCT" : string.Empty)} [Z].[{SqlHelper.RecordIdxField}]");
                     sbSql.AppendLine($"FROM [{_configuration.dataTable}] Z {SqlHelper.NoLockText()}{_configuration.innerJoinClause}");
@@ -211,36 +213,16 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
                 if (_configuration.query.RecordsPerPage <= 0 || _configuration.query.RecordsPerPage == int.MaxValue)
                 {
                     //No paging...this is faster
-                    sbSql.AppendLine("--MARKER 4");
+                    sbSql.AppendLine("--MARKER 4" + _configuration.QueryPlanDebug);
                     sbSql.AppendLine($"SELECT {fieldSql}");
                     sbSql.AppendLine($"FROM [{_configuration.dataTable}] Z {SqlHelper.NoLockText()}{_configuration.innerJoinClause}");
                     sbSql.AppendLine($"WHERE {_configuration.whereClause}");
                     sbSql.AppendLine($"ORDER BY {_configuration.orderByClause}");
                 }
-                #region OLD CODE - There is no need to select into a temp object
-                //else if (_configuration.query.RecordsPerPage <= SqlHelper.SmallRecordBlock && !_configuration.hasFilteredListDims)
-                //{
-                //    var geoFilter = _configuration.query.FieldFilters.FirstOrDefault(x => x.DataType == RepositorySchema.DataTypeConstants.GeoCode) as GeoCodeFieldFilter;
-                //    _configuration.isGeo = (geoFilter != null);
-
-                //    //Sub-select into a table variable is faster with a small amount of records
-                //    sbSql.AppendLine("DECLARE @RecordIds TABLE ([" + SqlHelper.RecordIdxField + "] bigint PRIMARY KEY, [__SortOrder] INT NOT NULL identity(1,1)" + (_configuration.isGeo ? ", [__Distance] float" : string.Empty) + ")");
-                //    sbSql.AppendLine("INSERT INTO @RecordIds ([" + SqlHelper.RecordIdxField + "]" + (_configuration.isGeo ? ", [__Distance]" : string.Empty) + ")");
-                //    sbSql.AppendLine("SELECT [Z].[" + SqlHelper.RecordIdxField + "]" + (_configuration.isGeo ? ", [Z].[" + geoFilter.Name + "].STDistance(geography::Point(" + geoFilter.Latitude + ", " + geoFilter.Longitude + ", 4326)) / 1609.344 AS [__Distance]" : string.Empty));
-                //    sbSql.AppendLine("FROM [" + _configuration.dataTable + "] Z " + SqlHelper.NoLockText() + _configuration.innerJoinClause);
-                //    sbSql.AppendLine("WHERE " + _configuration.whereClause);
-                //    sbSql.AppendLine("ORDER BY " + _configuration.orderByClause);
-                //    sbSql.AppendLine("OFFSET (@startindex-1) ROWS FETCH FIRST (@endindex-@startindex) ROWS ONLY;");
-                //    sbSql.AppendLine();
-                //    sbSql.AppendLine("SELECT " + fieldSql + (_configuration.isGeo ? ", S.[__Distance]" : string.Empty));
-                //    sbSql.AppendLine("FROM [" + _configuration.dataTable + "] Z " + SqlHelper.NoLockText() + " inner join @RecordIds S on [Z].[" + SqlHelper.RecordIdxField + "] = S.[" + SqlHelper.RecordIdxField + "]");
-                //    sbSql.AppendLine("ORDER BY S.[__SortOrder]");
-                //}
-                #endregion
                 else
                 {
                     //Big records so do NOT select into temp table
-                    sbSql.AppendLine("--MARKER 5");
+                    sbSql.AppendLine("--MARKER 5" + _configuration.QueryPlanDebug);
                     sbSql.AppendLine($"WITH T ([{SqlHelper.RecordIdxField}]) AS (");
                     sbSql.AppendLine($"SELECT {(_configuration.hasFilteredListDims ? "DISTINCT" : string.Empty)} [Z].[{SqlHelper.RecordIdxField}]");
                     sbSql.AppendLine($"FROM [{_configuration.dataTable}] Z {SqlHelper.NoLockText()}{_configuration.innerJoinClause}");
@@ -255,6 +237,7 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
             }
             else
             {
+                //TODO: SQL 2008, this should be removed
                 sbSql.AppendLine("--MARKER 6");
                 sbSql.AppendLine("WITH Z AS (");
                 sbSql.AppendLine($"SELECT ROW_NUMBER() OVER ( ORDER BY {_configuration.orderByClause} ) AS [__RowNum], {fieldSql} FROM [{_configuration.dataTable}] Z {SqlHelper.NoLockText()}{_configuration.innerJoinClause} WHERE {_configuration.whereClause}");

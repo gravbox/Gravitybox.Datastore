@@ -68,5 +68,8 @@ namespace Gravitybox.Datastore.Common
         [OperationContract]
         bool IsSystemReady();
 
+        /// <summary />
+        bool EnableHouseKeeping { get; }
+
     }
 }

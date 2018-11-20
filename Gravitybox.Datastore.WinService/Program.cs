@@ -43,7 +43,11 @@ namespace Gravitybox.Datastore.WinService
             {
                 try
                 {
-                    var service = new PersistentService(args.Any(x => x == "-echo" || x == "/echo"));
+                    var enableHouseKeeping = true;
+                    if (args.Any(x => x == "-nohousekeeping" || x == "/nohousekeeping"))
+                        enableHouseKeeping = false;
+
+                    var service = new PersistentService(enableHouseKeeping);
                     service.Start();
                     Console.WriteLine("Press <ENTER> to stop...");
                     Console.ReadLine();

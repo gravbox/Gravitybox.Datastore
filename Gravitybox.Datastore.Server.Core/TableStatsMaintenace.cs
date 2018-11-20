@@ -1,6 +1,7 @@
 using Gravitybox.Datastore.Common;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -14,11 +15,14 @@ namespace Gravitybox.Datastore.Server.Core
         private System.Timers.Timer _timerStats = null;
         private DateTime _lastTimerStats = DateTime.Now;
 
-        public TableStatsMaintenace()
+        public TableStatsMaintenace(bool enableHouseKeeping)
         {
-            _timerStats = new System.Timers.Timer(60 * 1000 * 15); //15 minutes
-            _timerStats.Elapsed += _timerStats_Elapsed;
-            _timerStats.Start();
+            if (enableHouseKeeping)
+            {
+                _timerStats = new System.Timers.Timer(60 * 1000 * 15); //15 minutes
+                _timerStats.Elapsed += _timerStats_Elapsed;
+                _timerStats.Start();
+            }
         }
 
         public void MarkRefreshStats(Guid repositoryId)
@@ -26,7 +30,10 @@ namespace Gravitybox.Datastore.Server.Core
             lock (_statisticsCache)
             {
                 if (!_statisticsCache.Contains(repositoryId))
+                {
                     _statisticsCache.Add(repositoryId);
+                    LoggerCQ.LogInfo($"TableStatsMaintenace MarkRefreshStats: ID={repositoryId}");
+                }
             }
         }
 
@@ -44,13 +51,15 @@ namespace Gravitybox.Datastore.Server.Core
                     _statisticsCache.Clear();
                 }
 
+                var timer = Stopwatch.StartNew();
                 foreach (var g in copy)
                 {
                     SqlHelper.UpdateStatistics(g);
                 }
+                timer.Stop();
 
                 if (copy.Count > 0)
-                    LoggerCQ.LogDebug("Update table statistics: Count=" + copy.Count);
+                    LoggerCQ.LogDebug($"Update table statistics: Count={copy.Count}, Elapsed={timer.ElapsedMilliseconds}");
             }
             catch (Exception ex)
             {

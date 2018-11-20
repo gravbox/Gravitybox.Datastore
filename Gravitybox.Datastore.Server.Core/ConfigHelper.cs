@@ -289,10 +289,16 @@ namespace Gravitybox.Datastore.Server.Core
             set { SetValue("QueryCacheCount", value); }
         }
 
-        public static bool AllowLocking
+        public static bool AllowWriteLocking
         {
-            get { return GetValue("AllowLocking", true); }
-            set { SetValue("AllowLocking", value); }
+            get { return GetValue("AllowWriteLocking", true); }
+            set { SetValue("AllowWriteLocking", value); }
+        }
+
+        public static bool AllowReadLocking
+        {
+            get { return GetValue("AllowReadLocking", false); }
+            set { SetValue("AllowReadLocking", value); }
         }
 
         public static string AsyncCachePath
@@ -308,6 +314,8 @@ namespace Gravitybox.Datastore.Server.Core
         public static bool AllowQueryCacheClearing => GetValue("AllowQueryCacheClearing", true);
 
         //public static bool MemOpt => false;
+
+        public static bool EnabledDataManager => GetValue("EnabledDataManager", true); 
 
         public static bool AllowCacheWithKeyword => GetValue("AllowCacheWithKeyword", false);
 

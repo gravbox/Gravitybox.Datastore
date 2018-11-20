@@ -57,5 +57,48 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
         {
             get { return (this.query.DerivedFieldList?.Count > 0 && this.query.GroupFields?.Count > 0); }
         }
+
+        /// <summary>
+        /// A comment to inject into SQL text to force a unique query plan compile
+        /// </summary>
+        public string QueryPlanDebug
+        {
+            //For now we will base the query plan separation based on the schema clustering key
+            //If there is a field filter that that field then inject it into the SQL text and a new query plan will be made
+            //In multi-thread environment it will calculate multiple times but it does not matter. It runs in microseconds!
+            get
+            {
+                try
+                {
+                    var retval = string.Empty;
+
+                    //If there is a grouping field use it to generate QP
+                    var f = this.schema?.FieldList?.FirstOrDefault(x => x.IsDataGrouping);
+                    if (f != null)
+                    {
+                        var v = this.query?.FieldFilters?.FirstOrDefault(x => x.Name == f.Name);
+                        if (v != null)
+                        {
+                            retval += $", {f.Name}={v.Value}";
+                        }
+                    }
+
+                    //If there is a user then create QP for each one
+                    if (this.query?.UserList != null && this.query.UserList.Any())
+                        retval += ", uid=" + this.query.UserList?.FirstOrDefault().ToString();
+
+                    //Also add the time so it recycles QP every 10 minutes
+                    var min = DateTime.Now.Minute / 10;
+                    retval += $", t={DateTime.Now.ToString("ddHH")}.{min}";
+
+                    return retval;
+                }
+                catch (Exception ex)
+                {
+                    return string.Empty;
+                }
+            }
+        }
+
     }
 }

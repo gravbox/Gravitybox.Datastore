@@ -33,7 +33,7 @@ namespace Gravitybox.Datastore.Server.Core
         private readonly QueryLogManager _queryLogManager = new QueryLogManager();
         private static readonly Guid DimensionCacheID = new Guid("2726FFC1-F4F6-477E-B9AC-B10E59C4BD63");
         private static readonly Guid RepositoryChangeStampID = new Guid("9941FFC1-F4F6-477E-B9AC-B10E59C4BD63");
-        private static TableStatsMaintenace _statsMaintenance = new TableStatsMaintenace();
+        private static TableStatsMaintenace _statsMaintenance = null;
         private static HousekeepingMonitor _housekeepingMonitor = new HousekeepingMonitor();
         private bool _masterReset = false;
         private const byte RSeedPermissions = 187;
@@ -49,6 +49,8 @@ namespace Gravitybox.Datastore.Server.Core
             _system = system;
             _fileGroups = SqlHelper.GetFileGroups(ConfigHelper.ConnectionString);
             LoggerCQ.LogInfo($"Filegroups: Count={_fileGroups.Count}");
+
+            _statsMaintenance = new TableStatsMaintenace(_system.EnableHouseKeeping);
 
             //This will process the Async update where statements
             //_timerUpdateDataWhereAsync = new System.Timers.Timer(10000);
@@ -360,6 +362,7 @@ namespace Gravitybox.Datastore.Server.Core
                         lockTime = q.LockTime;
                         retval.LockTime = q.LockTime;
                         retval.IsSuccess = true;
+                        retval.Count = itemCount;
                     }
 
                     _system.LogRepositoryPerf(new RepositorySummmaryStats
@@ -449,6 +452,7 @@ namespace Gravitybox.Datastore.Server.Core
                         retval.ComputeTime = timer.ElapsedMilliseconds;
                         retval.LockTime = q.LockTime;
                         retval.IsSuccess = true;
+                        retval.Count = count;
                     }
 
                     _system.LogRepositoryPerf(new RepositorySummmaryStats
@@ -513,7 +517,7 @@ namespace Gravitybox.Datastore.Server.Core
                     {
                         lockTime = q.LockTime;
                         var schema = GetSchema(repositoryId);
-                        SqlHelper.Clear(schema, ConfigHelper.ConnectionString);
+                        retval.Count = SqlHelper.Clear(schema, ConfigHelper.ConnectionString);
                         QueryCache.Clear(schema.InternalID, schema.ID);
                         retval.LockTime = q.LockTime;
                         retval.IsSuccess = true;
@@ -830,8 +834,8 @@ namespace Gravitybox.Datastore.Server.Core
                 var b = _runningQueries.TryRemove(queryKey, out d);
                 if (!b) LoggerCQ.LogDebug("Running query dequeue failed");
 
-                //If takes too long then mark for statistics refresh
-                if (timer.ElapsedMilliseconds > TableStatsMaintenace.StatCheckThreshold)
+                //If takes too long then mark for statistics refresh (real execute excludes lock time)
+                if ((timer.ElapsedMilliseconds - lockTime) > TableStatsMaintenace.StatCheckThreshold)
                     _statsMaintenance.MarkRefreshStats(repositoryId);
             }
 
@@ -935,7 +939,7 @@ namespace Gravitybox.Datastore.Server.Core
                 {
                     var schema = GetSchema(repositoryId);
                     if (schema == null) return 0;
-                    return SqlHelper.Count(schema, schema.InternalID, ConfigHelper.ConnectionString);
+                    return SqlHelper.Count(schema, ConfigHelper.ConnectionString);
                 }
             }
             catch (Exception ex)
@@ -1153,6 +1157,7 @@ namespace Gravitybox.Datastore.Server.Core
                             retval.LockTime = q.LockTime;
                             retval.ComputeTime = timer.ElapsedMilliseconds;
                             retval.IsSuccess = true;
+                            retval.Count = itemCount;
                             LoggerCQ.LogDebug($"UpdateData: ID={schema.ID}" +
                                 $", Elapsed={timer.ElapsedMilliseconds}" +
                                 $", LockTime={q.LockTime}" +
@@ -1299,12 +1304,14 @@ namespace Gravitybox.Datastore.Server.Core
                             retval.LockTime = q.LockTime;
                             retval.ComputeTime = timer.ElapsedMilliseconds;
                             retval.IsSuccess = true;
+                            retval.Count = results.AffectedCount;
                             LoggerCQ.LogDebug($"UpdateDataWhere: ID={schema.ID}" +
                                 $", Elapsed={timer.ElapsedMilliseconds}" +
                                 $", LockTime={q.LockTime}" +
                                 $", WorkTime={CalcWorkTime(timer, q.LockTime)}" +
                                 (q.WaitingLocksOnEntry > 0 ? ", WaitLocks=" + q.WaitingLocksOnEntry : string.Empty) +
                                 $", Count={results.AffectedCount}" +
+                                $", Fields={string.Join("|", list.Where(x => x != null).Select(x => x.FieldName))}" +
                                 $", QueryString=\"{query.ToString()}\"");
                             QueryCache.Clear(id, schema.ID);
 
@@ -1569,6 +1576,7 @@ namespace Gravitybox.Datastore.Server.Core
                         retval.LockTime = q.LockTime;
                         retval.IsSuccess = true;
                         retval.Errors = actionResults.Errors.ToArray();
+                        retval.Count = retval.Errors.Any() ? 0 : 1;
 
                         var logText = $"UpdateSchema: ID={newSchema.ID}, Elapsed={timer.ElapsedMilliseconds}, LockTime={q.LockTime}, WorkTime={CalcWorkTime(timer, q.LockTime)}";
                         if (timer.ElapsedMilliseconds > 3000)
@@ -2175,7 +2183,7 @@ namespace Gravitybox.Datastore.Server.Core
                 _repositoryChangeStampCache = new Dictionary<Guid, int>();
                 _repositoryExistCache = new ConcurrentHashSet<Guid>();
                 _schemaCache.Reset();
-                _statsMaintenance = new TableStatsMaintenace();
+                _statsMaintenance = new TableStatsMaintenace(_system.EnableHouseKeeping);
                 _housekeepingMonitor = new HousekeepingMonitor();
                 SqlHelper.Reset();
                 LoggerCQ.LogInfo("System Reset");

@@ -456,6 +456,23 @@ namespace Gravitybox.Datastore.Common.Queryable
                 ));
         }
 
+        /// <summary>
+        /// Uses a URL to initialize the update object
+        /// </summary>
+        public static IDatastoreUpdatable<TSourceType> WhereUrl<TSourceType>(this IDatastoreUpdatable<TSourceType> source, string url)
+            where TSourceType : IDatastoreItem
+        {
+            if (source == null)
+                throw new ArgumentNullException(ERROR_SOURCE);
+
+            return source.Provider.CreateUpdateQuery<TSourceType>(
+                Expression.Call(
+                    null,
+                    GetMethodInfo(DatastoreExtensions.WhereUrl<TSourceType>, source, url),
+                    new Expression[] { source.Expression, Expression.Constant(url) }
+                ));
+        }
+
         #endregion
 
         #region FromQuery

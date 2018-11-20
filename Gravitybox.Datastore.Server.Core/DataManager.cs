@@ -50,10 +50,13 @@ namespace Gravitybox.Datastore.Server.Core
 
         public static bool IsActive { get; set; } = true;
 
+        public static bool EnableHouseKeeping { get; set; } = true;
+
         private static bool InFullIndex { get; set; } = false;
 
         public static void StartFullIndex()
         {
+            if (!ConfigHelper.EnabledDataManager) return;
             try
             {
                 //If need a full index then add all repositories to the list
@@ -80,9 +83,22 @@ namespace Gravitybox.Datastore.Server.Core
         /// <returns></returns>
         public static void Add(Guid ID)
         {
+            if (!ConfigHelper.EnabledDataManager) return;
+
+            //If this is a big repository then do not perform hash coordination
+            lock (_tooBigRepositoryList)
+            {
+                if (_tooBigRepositoryList.Contains(ID)) return;
+                var q = RepositoryItemCount(ID);
+                if (RepositoryItemCount(ID) > 100000)
+                    _tooBigRepositoryList.Add(ID);
+                if (_tooBigRepositoryList.Contains(ID)) return;
+            }            
+
             if (!_highPriority.Contains(ID))
                 _highPriority.Add(ID);
         }
+        private static HashSet<Guid> _tooBigRepositoryList = new HashSet<Guid>();
 
         public static void AddSkipItem(Guid ID)
         {
@@ -92,24 +108,27 @@ namespace Gravitybox.Datastore.Server.Core
 
         private static void _timer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
+            if (!ConfigHelper.EnabledDataManager) return;
             try
             {
                 var value = Interlocked.Read(ref _counter);
                 Interlocked.Exchange(ref _counter, 0);
                 if (value > 0)
-                    LoggerCQ.LogDebug("DataManager: ResetCount=" + value);
+                    LoggerCQ.LogDebug($"DataManager: ResetCount={value}");
             }
             catch { }
         }
 
         /// <summary>
-        /// This timer will trawl through the data and find any item with no hash
+        /// This timer will crawl through the data and find any item with no hash
         /// It will then then select records to activate the hash generation routine
         /// </summary>
         private static void _timerCheck_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
             //If the system is turned off then do nothing
+            if (!ConfigHelper.EnabledDataManager) return;
             if (!IsActive) return;
+            if (!EnableHouseKeeping) return;
 
             _timerCheck.Enabled = false;
             try
@@ -240,6 +259,22 @@ namespace Gravitybox.Datastore.Server.Core
             catch (Exception ex)
             {
                 LoggerCQ.LogWarning($"DataManager.SyncInternal: ID={schema.ID}, Count={count}, Processed={processed}, RIdx={lastRIdx}, Elapsed={timer.ElapsedMilliseconds}");
+            }
+        }
+
+        private static int RepositoryItemCount(Guid id)
+        {
+            try
+            {
+                using (var context = new DatastoreEntities(ConfigHelper.ConnectionString))
+                {
+                    return context.Repository.FirstOrDefault(x => x.UniqueKey == id)?.ItemCount ?? 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggerCQ.LogError(ex);
+                return 0;
             }
         }
     }

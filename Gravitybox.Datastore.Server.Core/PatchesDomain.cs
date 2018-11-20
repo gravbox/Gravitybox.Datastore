@@ -503,15 +503,15 @@ namespace Gravitybox.Datastore.Server.Core
                         var sb = new StringBuilder();
                         var dimensionValueTableName = SqlHelper.GetDimensionValueTableName(repository.UniqueKey);
 
-                        sb.AppendLine("if exists (select * from sys.indexes where name = 'PK_" + dimensionValueTableName + "')");
-                        sb.AppendLine("ALTER TABLE [" + dimensionValueTableName + "] DROP CONSTRAINT [PK_" + dimensionValueTableName + "]");
+                        sb.AppendLine($"if exists (select * from sys.indexes where name = 'PK_{dimensionValueTableName}')");
+                        sb.AppendLine($"ALTER TABLE [{dimensionValueTableName}] DROP CONSTRAINT [PK_{dimensionValueTableName}]");
                         sb.AppendLine("GO");
-                        sb.AppendLine("if exists (select * from sys.objects where name = '" + dimensionValueTableName + "' and type = 'U')");
-                        sb.AppendLine("ALTER TABLE [" + dimensionValueTableName + "] ADD CONSTRAINT [PK_" + dimensionValueTableName + "] PRIMARY KEY NONCLUSTERED ([DVIdx] ASC,[DIdx] ASC)");
+                        sb.AppendLine($"if exists (select * from sys.objects where name = '{dimensionValueTableName}' and type = 'U')");
+                        sb.AppendLine($"ALTER TABLE [{dimensionValueTableName}] ADD CONSTRAINT [PK_{dimensionValueTableName}] PRIMARY KEY NONCLUSTERED ([DVIdx] ASC,[DIdx] ASC)");
                         SqlHelper.ExecuteSql(connectionString, sb.ToString(), null, false);
 
                         index++;
-                        LoggerCQ.LogInfo("ApplyFix_XTableMultiKey: ID=" + repository.UniqueKey + ", Progress:" + index + "/" + list.Count);
+                        LoggerCQ.LogInfo($"ApplyFix_XTableMultiKey: ID={repository.UniqueKey}, Progress:{index}/{list.Count}");
                     }
                 }
             }
@@ -591,7 +591,7 @@ namespace Gravitybox.Datastore.Server.Core
 
                                 //Create new index
                                 sb.AppendLine("if not exists(select * from sys.indexes where name = '" + indexName + "')");
-                                sb.AppendLine("ALTER TABLE [" + tableName + "] ADD CONSTRAINT [" + indexName + "] PRIMARY KEY CLUSTERED ([" + SqlHelper.RecordIdxField + "], [DVIdx]);");
+                                sb.AppendLine("ALTER TABLE [" + tableName + "] ADD CONSTRAINT [" + indexName + "] PRIMARY KEY CLUSTERED ([DVIdx], [" + SqlHelper.RecordIdxField + "]);");
                             }
                         }
 
@@ -932,5 +932,188 @@ namespace Gravitybox.Datastore.Server.Core
                 LoggerCQ.LogError(ex);
             }
         }
+
+        public static void ApplyFix_ListTableCK(string connectionString)
+        {
+            var timer = Stopwatch.StartNew();
+            var processed = 0;
+            try
+            {
+                var repoIndex = 0;
+                using (var context = new DatastoreEntities(connectionString))
+                {
+                    var repositorylist = context.Repository
+                        .OrderByDescending(x => x.ItemCount)
+                        .Select(x => x.UniqueKey)
+                        .ToList();
+
+                    //Take bottom 5 and add to top so first 5 will be fast and we can verify
+                    if (repositorylist.Count > 10)
+                    {
+                        repositorylist.Reverse();
+                        var small5 = repositorylist.Take(5).ToList();
+                        repositorylist.RemoveRange(0, 5);
+                        repositorylist.AddRange(small5);
+                        repositorylist.Reverse();
+                    }
+
+                    foreach (var r in repositorylist)
+                    {
+                        LoggerCQ.LogInfo($"ApplyFix_ListTableCK Before: ID={r}");
+
+                        var schema = RepositoryManager.GetSchema(r);
+                        var listDimensions = schema.DimensionList.Where(x => x.DimensionType == RepositorySchema.DimensionTypeConstants.List).ToList();
+
+                        var timer2 = Stopwatch.StartNew();
+
+                        //Step 1
+                        foreach (var ld in listDimensions)
+                        {
+                            var sb = new StringBuilder();
+                            var table = SqlHelper.GetListTableName(r, ld.DIdx);
+                            var indexName = $"PK_{table}";
+
+                            #region Delete Index if the [DVIdx] is second column. We are re-arrange to make it first column in clustered index
+                            sb.AppendLine($"if exists(select * from sys.indexes i");
+                            sb.AppendLine($"inner join sys.index_columns ic on i.object_id = ic.object_id and i.index_id = ic.index_id");
+                            sb.AppendLine($"inner join sys.columns c on c.object_id = i.object_id and c.column_id = ic.column_id");
+                            sb.AppendLine($"where i.name = '{indexName}' and c.name = 'DVIdx' and ic.key_ordinal = 2)");
+                            sb.AppendLine("BEGIN");
+                            sb.AppendLine($"ALTER TABLE [{table}] DROP CONSTRAINT [{indexName}]");
+                            sb.AppendLine("END");
+                            sb.AppendLine("GO");
+                            #endregion
+
+                            #region Add Index
+                            sb.AppendLine($"if not exists(select * from sys.indexes i where i.name = '{indexName}') and exists (select * from sys.tables where name = '{table}')");
+                            sb.AppendLine("BEGIN");
+                            sb.AppendLine($"ALTER TABLE[dbo].[{table}] ");
+                            sb.AppendLine($"ADD CONSTRAINT[{indexName}] PRIMARY KEY CLUSTERED");
+                            sb.AppendLine($"([DVIdx] ASC, [{SqlHelper.RecordIdxField}] ASC)");
+                            sb.AppendLine("END");
+                            sb.AppendLine("GO");
+                            #endregion
+
+                            if (ConfigHelper.SupportsCompression)
+                            {
+                                sb.AppendLine($"if exists(select * from sys.indexes i where i.name = '{indexName}')");
+                                sb.AppendLine($"ALTER INDEX [{indexName}] ON [{table}] REBUILD WITH (DATA_COMPRESSION = PAGE);");
+                            }
+
+                            try
+                            {
+                                var c = SqlHelper.ExecuteSql(connectionString, sb.ToString(), null, false, false);
+                            }
+                            catch (Exception ex)
+                            {
+                                LoggerCQ.LogError(ex);
+                            }
+                            processed++;
+                        }
+
+                        //Step 2
+                        foreach (var ld in listDimensions)
+                        {
+                            var sb = new StringBuilder();
+                            var table = SqlHelper.GetListTableName(r, ld.DIdx);
+
+                            #region Delete Index
+                            var indexName = $"IDX_{table}_DVIDX";
+                            sb.AppendLine($"if exists(select * from sys.indexes where name = '{indexName}')");
+                            sb.AppendLine($"DROP INDEX [{indexName}] ON [{table}]");
+                            sb.AppendLine("GO");
+                            #endregion
+
+                            #region Delete Index
+                            indexName = $"IDX_{table}_RecordIdx";
+                            sb.AppendLine($"if exists(select * from sys.indexes where name = '{indexName}')");
+                            sb.AppendLine($"DROP INDEX [{indexName}] ON [{table}]");
+                            sb.AppendLine("GO");
+                            #endregion
+
+                            #region Add Covering Index
+                            var fileGroup = RepositoryManager.GetRandomFileGroup();
+                            indexName = $"NCK_{table}";
+                            sb.AppendLine($"if not exists(select * from sys.indexes where name = '{indexName}') and exists (select * from sys.tables where name = '{table}')");
+                            sb.AppendLine($"CREATE NONCLUSTERED INDEX [{indexName}] ON [{table}] ([{SqlHelper.RecordIdxField}], [DVIdx])");
+                            if (!string.IsNullOrEmpty(fileGroup)) sb.AppendLine($"ON [{fileGroup}];");
+                            sb.AppendLine("GO");
+                            #endregion
+
+                            if (ConfigHelper.SupportsCompression)
+                            {
+                                sb.AppendLine($"if exists(select * from sys.indexes where name = '{indexName}')");
+                                sb.AppendLine($"ALTER INDEX [{indexName}] ON [{table}] REBUILD WITH (DATA_COMPRESSION = PAGE);");
+                                sb.AppendLine("GO");
+                            }
+
+                            try
+                            {
+                                var c = SqlHelper.ExecuteSql(connectionString, sb.ToString(), null, false, false);
+                            }
+                            catch (Exception ex)
+                            {
+                                LoggerCQ.LogError(ex);
+                            }
+                            processed++;
+                        }
+
+                        //Step 3
+                        {
+                            var sb = new StringBuilder();
+                            var userPermissionTableName = SqlHelper.GetUserPermissionTableName(schema.ID);
+                            var fileGroup = RepositoryManager.GetRandomFileGroup();
+
+                            //Delete Index
+                            var indexName = $"PK_{userPermissionTableName}";
+                            sb.AppendLine($"if exists(select * from sys.indexes where name = '{indexName}' and is_primary_key = 1)");
+                            sb.AppendLine($"ALTER TABLE [{userPermissionTableName}] DROP CONSTRAINT [{indexName}];");
+                            sb.AppendLine($"if exists(select * from sys.indexes where name = '{indexName}' and is_primary_key = 0)");
+                            sb.AppendLine($"DROP INDEX [{indexName}] ON [{userPermissionTableName}]");
+                            sb.AppendLine("GO");
+
+                            //Create PK
+                            sb.AppendLine($"if exists (select * from sys.tables where name = '{userPermissionTableName}')");
+                            sb.AppendLine($"ALTER TABLE [{userPermissionTableName}] ADD CONSTRAINT [{indexName}] PRIMARY KEY CLUSTERED ([UserId], [FKField])");
+                            if (!string.IsNullOrEmpty(fileGroup)) sb.AppendLine($"ON [{fileGroup}];");
+                            else sb.AppendLine(";");
+                            sb.AppendLine("GO");
+
+                            //Add Covering Index
+                            indexName = $"NCK_{userPermissionTableName}";
+                            sb.AppendLine($"if not exists(select * from sys.indexes where name = '{indexName}') and exists (select * from sys.tables where name = '{userPermissionTableName}')");
+                            sb.AppendLine($"CREATE NONCLUSTERED INDEX [{indexName}] ON [{userPermissionTableName}] ([FKField], [UserId])");
+                            if (!string.IsNullOrEmpty(fileGroup)) sb.AppendLine($"ON [{fileGroup}];");
+                            else sb.AppendLine(";");
+                            sb.AppendLine("GO");
+
+                            try
+                            {
+                                var c = SqlHelper.ExecuteSql(connectionString, sb.ToString(), null, false, false);
+                            }
+                            catch (Exception ex)
+                            {
+                                LoggerCQ.LogError(ex);
+                            }
+                            processed++;
+                        }
+
+                        timer2.Stop();
+                        repoIndex++;
+                        LoggerCQ.LogInfo($"ApplyFix_ListTableCK: ID={r}, Elapsed={timer2.ElapsedMilliseconds}, Count={listDimensions.Count}, Progress:{repoIndex}/{repositorylist.Count}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggerCQ.LogError(ex);
+            }
+            finally
+            {
+                timer.Stop();
+                LoggerCQ.LogInfo($"ApplyFix_ListTableCK: Processed={processed}, Elapsed={timer.ElapsedMilliseconds}");
+            }
+        }
+
     }
 }
