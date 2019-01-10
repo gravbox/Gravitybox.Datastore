@@ -3223,6 +3223,8 @@ namespace Gravitybox.Datastore.Server.Core
                     int? input = null;
                     string ffValue = null;
                     if (ff.Value is string && IsContainsComparer(ff.Comparer)) ffValue = (string)ff.Value;
+                    if (ff.Value?.GetType() == typeof(int[]))
+                        ffValue = string.Join("^", ((int[])ff.Value).Select(x => x.ToString()));
                     else
                     {
                         input = GetValueInt(ff.Value);
@@ -3389,8 +3391,16 @@ namespace Gravitybox.Datastore.Server.Core
                 #region Int64
                 else if (field.DataType == RepositorySchema.DataTypeConstants.Int64)
                 {
-                    var input = GetValueInt64(ff.Value);
-                    if (ff.Value != null && input == null) return;
+                    long? input = null;
+                    string ffValue = null;
+                    if (ff.Value is string && IsContainsComparer(ff.Comparer)) ffValue = (string)ff.Value;
+                    if (ff.Value?.GetType() == typeof(long[]))
+                        ffValue = string.Join("^", ((long[])ff.Value).Select(x => x.ToString()));
+                    else
+                    {
+                        input = GetValueInt64(ff.Value);
+                        if (ff.Value != null && input == null) return;
+                    }
                     filterFound = true;
                     var dataType = DbType.Int64;
 
@@ -3466,9 +3476,83 @@ namespace Gravitybox.Datastore.Server.Core
                                 sb.Append($"[Z].[{field.TokenName}] <> {filterParam.ParameterName}");
                             break;
                         case ComparisonConstants.ContainsAny:
+                            if (ffValue != null)
+                            {
+                                var words = ffValue.Split(new char[] { '^' }, StringSplitOptions.RemoveEmptyEntries);
+                                if (words.Any())
+                                {
+                                    var subSqlList = new List<string>();
+                                    var subIndex = 0;
+                                    foreach (var word in words)
+                                    {
+                                        filterParam = new SqlParameter
+                                        {
+                                            DbType = DbType.Int64,
+                                            ParameterName = field.ToParameterName(parameterIndex, subIndex),
+                                            Value = $"{word}",
+                                        };
+                                        parameters.Add(filterParam);
+                                        subSqlList.Add($"[Z].[{field.TokenName}] = {filterParam.ParameterName}");
+                                        subIndex++;
+                                    }
+                                    sb.Append($"({subSqlList.ToStringList(" OR ")})");
+                                }
+                            }
+                            else
+                                filterFound = false;
+                            break;
                         case ComparisonConstants.ContainsAll:
+                            if (ffValue != null)
+                            {
+                                var words = ffValue.Split(new char[] { '^' }, StringSplitOptions.RemoveEmptyEntries);
+                                if (words.Any())
+                                {
+                                    var subSqlList = new List<string>();
+                                    var subIndex = 0;
+                                    foreach (var word in words)
+                                    {
+                                        filterParam = new SqlParameter
+                                        {
+                                            DbType = DbType.Int64,
+                                            ParameterName = field.ToParameterName(parameterIndex, subIndex),
+                                            Value = $"{word}",
+                                        };
+                                        parameters.Add(filterParam);
+                                        subSqlList.Add($"[Z].[{field.TokenName}] = {filterParam.ParameterName}");
+                                        subIndex++;
+                                    }
+                                    sb.Append($"({subSqlList.ToStringList(" AND ")})");
+                                }
+                            }
+                            else
+                                filterFound = false;
+                            break;
                         case ComparisonConstants.ContainsNone:
-                            throw new NotImplementedException();
+                            if (ffValue != null)
+                            {
+                                var words = ffValue.Split(new char[] { '^' }, StringSplitOptions.RemoveEmptyEntries);
+                                if (words.Any())
+                                {
+                                    var subSqlList = new List<string>();
+                                    var subIndex = 0;
+                                    foreach (var word in words)
+                                    {
+                                        filterParam = new SqlParameter
+                                        {
+                                            DbType = DbType.Int64,
+                                            ParameterName = field.ToParameterName(parameterIndex, subIndex),
+                                            Value = $"{word}",
+                                        };
+                                        parameters.Add(filterParam);
+                                        subSqlList.Add($"([Z].[{field.TokenName}] <> {filterParam.ParameterName})");
+                                        subIndex++;
+                                    }
+                                    sb.Append($"({subSqlList.ToStringList(" AND ")})");
+                                }
+                            }
+                            else
+                                filterFound = false;
+                            break;
                         default:
                             throw new Exception("This operation is not supported!");
                     }

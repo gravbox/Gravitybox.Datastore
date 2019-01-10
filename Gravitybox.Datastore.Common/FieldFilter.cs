@@ -10,6 +10,9 @@ namespace Gravitybox.Datastore.Common
     /// <summary />
     [DataContract]
     [Serializable]
+    [KnownType(typeof(int[]))]
+    [KnownType(typeof(string[]))]
+    [KnownType(typeof(long[]))]
     public class FieldFilter : Gravitybox.Datastore.Common.IFieldFilter, System.ICloneable
     {
         /// <summary />
@@ -85,7 +88,13 @@ namespace Gravitybox.Datastore.Common
                 {
                     if (f1.Value != null)
                     {
-                        retval = this.Name + "," + this.Comparer.ToString() + "," + f1.Value.ToString() + "|";
+                        var v = f1.Value.ToString();
+                        if (f1.Value.GetType() == typeof(int[]))
+                            v = string.Join("^", ((int[])f1.Value));
+                        else if (f1.Value.GetType() == typeof(long[]))
+                            v = string.Join("^", ((long[])f1.Value));
+
+                        retval = this.Name + "," + this.Comparer.ToString() + "," + v + "|";
                     }
                     else
                     {
