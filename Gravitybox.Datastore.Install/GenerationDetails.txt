@@ -2,7 +2,7 @@ DO NOT MODIFY THIS FILE. IT IS ALWAYS OVERWRITTEN ON GENERATION.
 Generation Details
 
 Version 2.1.0.0
-Table Count: 12
+Table Count: 14
 Tenant Table Count: 0
 View Count: 0
 StoredProc Count: 0
@@ -20,6 +20,13 @@ ConfigurationSetting, ColumnCount=3, IsTenant=False
     Field: [ConfigurationSetting].[ID], Not Nullable, Primary Key, AutoNumber, Unique, Indexed
     Field: [ConfigurationSetting].[Name], Field Length: 50, Not Nullable
     Field: [ConfigurationSetting].[Value], Field Length: max, Not Nullable
+DeleteQueue, ColumnCount=3, IsTenant=False
+    Field: [DeleteQueue].[IsReady], Not Nullable, Default Value: false
+    Field: [DeleteQueue].[RepositoryId], Not Nullable
+    Field: [DeleteQueue].[RowId], Not Nullable, Primary Key, AutoNumber, Unique, Indexed
+DeleteQueueItem, ColumnCount=2, IsTenant=False
+    Field: [DeleteQueueItem].[ParentRowId], Not Nullable, Primary Key, Unique, Indexed
+    Field: [DeleteQueueItem].[RecordIdx], Not Nullable, Primary Key, Unique, Indexed
 Housekeeping, ColumnCount=3, IsTenant=False
     Field: [Housekeeping].[Data], Field Length: max, Not Nullable
     Field: [Housekeeping].[ID], Not Nullable, Primary Key, AutoNumber, Unique, Indexed

@@ -79,6 +79,9 @@
 								<c key="4ccd287e-ab70-48d8-9fa5-17db62654a12" name="IsInitialized" description="Determines if the item has been fully created" dataFieldSortOrder="9" default="1" isIndexed="1" id="1448751278" type="2" allowNull="0">
 										<pt key="5b0293c0-a352-41ee-9688-cb9ea27b3823" ref="168493840" refType="1" />
 								</c>
+								<c key="ca3495e9-94fe-4acb-b3a3-c089db773d51" name="IsReady" description="Determine if this item is ready to be processed" dataFieldSortOrder="3" default="0" id="703438516" type="2" allowNull="0">
+										<pt key="b4471c3d-8e5f-455e-96c1-6048e60c7884" ref="1146035816" refType="1" />
+								</c>
 								<c key="df28872e-aff0-4ee5-9d8a-5896b005bc18" name="IsWriteLockHeld" dataFieldSortOrder="8" id="1982190992" type="2" allowNull="0">
 										<pt key="617eb474-1224-42f5-9bf0-549042892c0f" ref="1781545979" refType="1" />
 								</c>
@@ -124,6 +127,9 @@
 								<c key="fa965f87-ff7f-42eb-8072-7417078b4c18" name="ParentId" description="The parent abstract repository" dataFieldSortOrder="13" isIndexed="1" id="889663635" type="8">
 										<pt key="5b0293c0-a352-41ee-9688-cb9ea27b3823" ref="168493840" refType="1" />
 								</c>
+								<c key="b2ab1c5a-d74e-44c0-908d-94a1d4d5455c" primaryKey="1" name="ParentRowId" dataFieldSortOrder="1" isIndexed="1" isUnique="1" id="477769028" type="0" allowNull="0">
+										<pt key="20c8e8cc-d7ae-45fe-b9b9-11974bd2f5ee" ref="1895902331" refType="1" />
+								</c>
 								<c key="8197ef09-bf93-4cac-8787-20fdd0dd7af1" name="ProcessorUsage" dataFieldSortOrder="10" id="1857284586" type="8" allowNull="0">
 										<pt key="9fe58257-9f30-46fb-8e06-dc7681dd72de" ref="1285279716" refType="1" />
 								</c>
@@ -135,6 +141,9 @@
 								</c>
 								<c key="e421276c-324b-426b-844b-6881f6f31e04" name="ReadLockCount" dataFieldSortOrder="9" default="0" id="682421188" type="8" allowNull="0">
 										<pt key="65c859b0-9d8a-4bc1-95cb-97868b167853" ref="1097915898" refType="1" />
+								</c>
+								<c key="82efe099-8cf1-491c-8613-e36385c2a498" primaryKey="1" name="RecordIdx" dataFieldSortOrder="2" isIndexed="1" isUnique="1" id="947314868" type="0" allowNull="0">
+										<pt key="20c8e8cc-d7ae-45fe-b9b9-11974bd2f5ee" ref="1895902331" refType="1" />
 								</c>
 								<c key="e1886760-00a8-4afa-98e3-fd2b577ebea7" primaryKey="1" identity="1" name="RepositoryActionTypeId" dataFieldSortOrder="1" isIndexed="1" isUnique="1" id="1079762350" type="8" allowNull="0">
 										<pt key="c570f646-444a-41c0-b9de-8d05de95c948" ref="73054585" refType="1" />
@@ -160,6 +169,9 @@
 								<c key="4955f5df-b642-4e6e-a419-3f79c0bae4bb" name="RepositoryId" dataFieldSortOrder="2" id="1285215222" type="8" allowNull="0">
 										<pt key="65c859b0-9d8a-4bc1-95cb-97868b167853" ref="1097915898" refType="1" />
 								</c>
+								<c key="996c0b1f-8f16-4f6d-bf83-b6c9ae50750c" name="RepositoryId" dataFieldSortOrder="2" id="1123825496" type="8" allowNull="0">
+										<pt key="b4471c3d-8e5f-455e-96c1-6048e60c7884" ref="1146035816" refType="1" />
+								</c>
 								<c key="b3744500-2db1-477f-be0d-da3521bfa4d0" name="RepositoryLoadDelta" dataFieldSortOrder="5" id="207070419" type="8" allowNull="0">
 										<pt key="9fe58257-9f30-46fb-8e06-dc7681dd72de" ref="1285279716" refType="1" />
 								</c>
@@ -180,6 +192,9 @@
 								</c>
 								<c key="7a341017-38a5-4d45-bb6c-e5deb98f7357" primaryKey="1" name="RowId" description="There is only one record and it is always RowId = 1" dataFieldSortOrder="1" default="1" isIndexed="1" isUnique="1" id="2025010755" type="8" allowNull="0">
 										<pt key="bec25185-9308-472e-b8e9-35354ee36797" ref="104381028" refType="1" />
+								</c>
+								<c key="16f0f177-c7ce-4f2f-8811-465badda6809" primaryKey="1" identity="1" name="RowId" dataFieldSortOrder="1" isIndexed="1" isUnique="1" id="286667010" type="0" allowNull="0">
+										<pt key="b4471c3d-8e5f-455e-96c1-6048e60c7884" ref="1146035816" refType="1" />
 								</c>
 								<c key="9cf993a1-b1e1-4f0c-b1ed-b2534c95d641" primaryKey="1" identity="1" name="ServerId" dataFieldSortOrder="1" isIndexed="1" isUnique="1" id="1054024029" type="8" allowNull="0">
 										<pt key="32b513f0-3ede-416d-92d7-5a202cc89fce" ref="225803044" refType="1" />
@@ -249,6 +264,16 @@
 										<ct key="9fe58257-9f30-46fb-8e06-dc7681dd72de" ref="1285279716" refType="1" />
 										<pt key="32b513f0-3ede-416d-92d7-5a202cc89fce" ref="225803044" refType="1" />
 								</r>
+								<r key="ad3e16c1-b5ef-484d-a7ef-5a61d3affb73" enforce="1" id="2106137490">
+										<crl>
+												<cr>
+														<pt key="16f0f177-c7ce-4f2f-8811-465badda6809" ref="286667010" refType="0" />
+														<ct key="b2ab1c5a-d74e-44c0-908d-94a1d4d5455c" ref="477769028" refType="0" />
+												</cr>
+										</crl>
+										<ct key="20c8e8cc-d7ae-45fe-b9b9-11974bd2f5ee" ref="1895902331" refType="1" />
+										<pt key="b4471c3d-8e5f-455e-96c1-6048e60c7884" ref="1146035816" refType="1" />
+								</r>
 						</relations>
 						<viewrelations key="00000000-0000-0000-0000-000000000000" />
 						<tables key="00000000-0000-0000-0000-000000000000">
@@ -308,6 +333,43 @@
 												<f key="cd8557d1-e67d-45ba-8702-9f625177692d" ref="1524009300" refType="0" />
 												<f key="1329a975-a63c-4ac8-aa01-00e9e7705338" ref="241444321" refType="0" />
 												<f key="226a9518-59c1-41b6-b4d5-9089a310b6ea" ref="120507003" refType="0" />
+										</c>
+										<security key="00000000-0000-0000-0000-000000000000" sql="">
+												<parameters key="00000000-0000-0000-0000-000000000000" />
+										</security>
+								</t>
+								<t key="b4471c3d-8e5f-455e-96c1-6048e60c7884" name="DeleteQueue" dbschema="" modifiedAudit="0" createAudit="0" timestamp="0" id="1146035816">
+										<r key="00000000-0000-0000-0000-000000000000">
+												<f key="ad3e16c1-b5ef-484d-a7ef-5a61d3affb73" ref="2106137490" refType="2" />
+										</r>
+										<til>
+												<ti key="8b81a7e0-03ed-4c18-8b09-7bb64e3ee524" isUnique="1" primaryKey="1" clustered="1" description="" importedName="" id="1210472134">
+														<ticl>
+																<tic ascending="1" fieldID="16f0f177-c7ce-4f2f-8811-465badda6809" id="1" />
+														</ticl>
+												</ti>
+										</til>
+										<c key="00000000-0000-0000-0000-000000000000">
+												<f key="16f0f177-c7ce-4f2f-8811-465badda6809" ref="286667010" refType="0" />
+												<f key="996c0b1f-8f16-4f6d-bf83-b6c9ae50750c" ref="1123825496" refType="0" />
+												<f key="ca3495e9-94fe-4acb-b3a3-c089db773d51" ref="703438516" refType="0" />
+										</c>
+										<security key="00000000-0000-0000-0000-000000000000" sql="">
+												<parameters key="00000000-0000-0000-0000-000000000000" />
+										</security>
+								</t>
+								<t key="20c8e8cc-d7ae-45fe-b9b9-11974bd2f5ee" name="DeleteQueueItem" dbschema="" modifiedAudit="0" createAudit="0" timestamp="0" id="1895902331">
+										<til>
+												<ti key="7ffe63c1-16ba-4d1b-9160-2505e1a0db8b" isUnique="1" primaryKey="1" clustered="1" description="" importedName="" id="491748810">
+														<ticl>
+																<tic ascending="1" fieldID="b2ab1c5a-d74e-44c0-908d-94a1d4d5455c" id="1" />
+																<tic ascending="1" fieldID="82efe099-8cf1-491c-8613-e36385c2a498" id="1" />
+														</ticl>
+												</ti>
+										</til>
+										<c key="00000000-0000-0000-0000-000000000000">
+												<f key="b2ab1c5a-d74e-44c0-908d-94a1d4d5455c" ref="477769028" refType="0" />
+												<f key="82efe099-8cf1-491c-8613-e36385c2a498" ref="947314868" refType="0" />
 										</c>
 										<security key="00000000-0000-0000-0000-000000000000" sql="">
 												<parameters key="00000000-0000-0000-0000-000000000000" />
@@ -667,7 +729,7 @@
 						<customstoredprocedures key="00000000-0000-0000-0000-000000000000" />
 				</database>
 				<versionHistoryList>
-						<version createdDate="2018-04-16 15:39:56" version="2.1.0.0" />
+						<version createdDate="2019-03-03 11:46:32" version="2.1.0.0" />
 				</versionHistoryList>
 		</ModelRoot>
 </modelRoot>

@@ -196,8 +196,13 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
                try
                {
                    _dsList = SqlHelper.GetDataset(ConfigHelper.ConnectionString, _sql, _listParameters);
-               }
-               catch (Exception ex)
+
+                    //Log long running
+                    timer.Stop();
+                    if (timer.ElapsedMilliseconds > 10000)
+                        LoggerCQ.LogWarning($"ListDimensionBuilderDelay: ID={_configuration.schema.ID}, DIdx={_newDimension?.DIdx}, Elapsed={timer.ElapsedMilliseconds}, Query=\"{_configuration.query.ToString()}\"");
+                }
+                catch (Exception ex)
                {
                    RepositoryHealthMonitor.HealthCheck(_configuration.schema.ID);
                    DataManager.AddSkipItem(_configuration.schema.ID);
@@ -206,7 +211,7 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
                        message = "Timeout Expired"; //Do not show whole message, no value
                     LoggerCQ.LogError($"ListDimensionBuilder: ID={_configuration.schema.ID}, DIdx={_newDimension?.DIdx}, Elapsed={timer.ElapsedMilliseconds}, Query=\"{_configuration.query.ToString()}\", Error={message}");
                }
-           });
+            });
         }
 
         public Task Load()

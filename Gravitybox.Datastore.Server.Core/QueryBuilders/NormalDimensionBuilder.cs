@@ -2,6 +2,7 @@ using Gravitybox.Datastore.Common;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -117,9 +118,15 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
 
                 if (_doExecute)
                 {
+                    var timer = Stopwatch.StartNew();
                     try
                     {
                         _datset = SqlHelper.GetDataset(ConfigHelper.ConnectionString, _sql, _configuration.parameters);
+
+                        //Log long running
+                        timer.Stop();
+                        if (timer.ElapsedMilliseconds > 10000)
+                            LoggerCQ.LogWarning($"NormalDimensionBuilderDelay: ID={_configuration.schema.ID}, Elapsed={timer.ElapsedMilliseconds}, Query=\"{_configuration.query.ToString()}\"");
                     }
                     catch (Exception ex)
                     {

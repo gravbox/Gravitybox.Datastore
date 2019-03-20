@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<configuration type="entity" name="DeleteQueue" id="b4471c3d-8e5f-455e-96c1-6048e60c7884" allowaudittracking="0" allowcreateaudit="0" allowmodifyaudit="0" allowtimestamp="0" codefacade="" immutable="0" enforceprimarykey="1" isassociative="0" typedentity="None" schema="" generatesdoublederived="0" isgenerated="1" isTenant="0">
+		<summary><![CDATA[]]></summary>
+		<fieldset>
+				<field id="ca3495e9-94fe-4acb-b3a3-c089db773d51" name="IsReady" nullable="0" datatype="Bit" identity="None" codefacade="" dataformatstring="" default="0" defaultisfunc="0" formula="" isgenerated="1" isindexed="0" isprimarykey="0" Iscalculated="0" isunique="0" length="1" scale="0" sortorder="3" isreadonly="0" category="" collate="" friendlyname="" isbrowsable="1" max="NaN" min="NaN" validationexpression="" obsolete="0">
+						<summary><![CDATA[Determine if this item is ready to be processed]]></summary>
+				</field>
+				<field id="996c0b1f-8f16-4f6d-bf83-b6c9ae50750c" name="RepositoryId" nullable="0" datatype="Int" identity="None" codefacade="" dataformatstring="" default="" defaultisfunc="0" formula="" isgenerated="1" isindexed="0" isprimarykey="0" Iscalculated="0" isunique="0" length="4" scale="0" sortorder="2" isreadonly="0" category="" collate="" friendlyname="" isbrowsable="1" max="NaN" min="NaN" validationexpression="" obsolete="0">
+						<summary><![CDATA[]]></summary>
+				</field>
+				<field id="16f0f177-c7ce-4f2f-8811-465badda6809" name="RowId" nullable="0" datatype="BigInt" identity="Database" codefacade="" dataformatstring="" default="" defaultisfunc="0" formula="" isgenerated="1" isindexed="1" isprimarykey="1" Iscalculated="0" isunique="1" length="8" scale="0" sortorder="1" isreadonly="0" category="" collate="" friendlyname="" isbrowsable="1" max="NaN" min="NaN" validationexpression="" obsolete="0">
+						<summary><![CDATA[]]></summary>
+				</field>
+		</fieldset>
+</configuration>

@@ -105,6 +105,12 @@ namespace Gravitybox.Datastore.EFDAL
 		IQueryable<Gravitybox.Datastore.EFDAL.Entity.ConfigurationSetting> ConfigurationSetting { get ; }
 
 		/// <summary />
+		IQueryable<Gravitybox.Datastore.EFDAL.Entity.DeleteQueue> DeleteQueue { get ; }
+
+		/// <summary />
+		IQueryable<Gravitybox.Datastore.EFDAL.Entity.DeleteQueueItem> DeleteQueueItem { get ; }
+
+		/// <summary />
 		IQueryable<Gravitybox.Datastore.EFDAL.Entity.Housekeeping> Housekeeping { get ; }
 
 		/// <summary />

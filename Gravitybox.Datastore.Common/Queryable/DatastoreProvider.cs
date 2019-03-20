@@ -121,6 +121,7 @@ namespace Gravitybox.Datastore.Common.Queryable
             dataQuery.IncludeRecords = parser.Query.IncludeRecords;
             dataQuery.ExcludeCount = parser.Query.ExcludeCount;
             dataQuery.IncludeEmptyDimensions = parser.Query.IncludeEmptyDimensions;
+            dataQuery.ExcludeDimensionCount = parser.Query.ExcludeDimensionCount;
             dataQuery.IPMask = parser.Query.IPMask;
             dataQuery.DerivedFieldList = parser.Query.DerivedFieldList;
 
@@ -164,6 +165,7 @@ namespace Gravitybox.Datastore.Common.Queryable
             }
 
             dataQuery.IncludeEmptyDimensions = parser.Query.IncludeEmptyDimensions;
+            dataQuery.ExcludeDimensionCount = parser.Query.ExcludeDimensionCount;
 
             return dataQuery;
         }

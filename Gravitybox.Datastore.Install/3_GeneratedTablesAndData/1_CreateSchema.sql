@@ -2,7 +2,7 @@
 --Data Schema
 
 --CREATE TABLE [AppliedPatch]
-if not exists(select * from sysobjects where name = 'AppliedPatch' and xtype = 'U')
+if not exists(select * from sys.tables t inner join sys.schemas s on t.schema_id = s.schema_id where t.name = 'AppliedPatch' and s.name = 'dbo')
 CREATE TABLE [dbo].[AppliedPatch] (
 	[ID] [UniqueIdentifier] NOT NULL CONSTRAINT [DF__APPLIEDPATCH_ID] DEFAULT (newid()),
 	[Description] [NVarChar] (50) NULL ,
@@ -20,7 +20,7 @@ CREATE TABLE [dbo].[AppliedPatch] (
 GO
 
 --CREATE TABLE [CacheInvalidate]
-if not exists(select * from sysobjects where name = 'CacheInvalidate' and xtype = 'U')
+if not exists(select * from sys.tables t inner join sys.schemas s on t.schema_id = s.schema_id where t.name = 'CacheInvalidate' and s.name = 'dbo')
 CREATE TABLE [dbo].[CacheInvalidate] (
 	[RowId] [BigInt] IDENTITY (1, 1) NOT NULL ,
 	[RepositoryId] [Int] NOT NULL ,
@@ -35,7 +35,7 @@ CREATE TABLE [dbo].[CacheInvalidate] (
 GO
 
 --CREATE TABLE [ConfigurationSetting]
-if not exists(select * from sysobjects where name = 'ConfigurationSetting' and xtype = 'U')
+if not exists(select * from sys.tables t inner join sys.schemas s on t.schema_id = s.schema_id where t.name = 'ConfigurationSetting' and s.name = 'dbo')
 CREATE TABLE [dbo].[ConfigurationSetting] (
 	[ID] [Int] IDENTITY (1, 1) NOT NULL ,
 	[Name] [NVarChar] (50) NOT NULL ,
@@ -49,8 +49,35 @@ CREATE TABLE [dbo].[ConfigurationSetting] (
 
 GO
 
+--CREATE TABLE [DeleteQueue]
+if not exists(select * from sys.tables t inner join sys.schemas s on t.schema_id = s.schema_id where t.name = 'DeleteQueue' and s.name = 'dbo')
+CREATE TABLE [dbo].[DeleteQueue] (
+	[RowId] [BigInt] IDENTITY (1, 1) NOT NULL ,
+	[RepositoryId] [Int] NOT NULL ,
+	[IsReady] [Bit] NOT NULL CONSTRAINT [DF__DELETEQUEUE_ISREADY] DEFAULT (0),
+	CONSTRAINT [PK_DELETEQUEUE] PRIMARY KEY CLUSTERED
+	(
+		[RowId]
+	)
+)
+
+GO
+
+--CREATE TABLE [DeleteQueueItem]
+if not exists(select * from sys.tables t inner join sys.schemas s on t.schema_id = s.schema_id where t.name = 'DeleteQueueItem' and s.name = 'dbo')
+CREATE TABLE [dbo].[DeleteQueueItem] (
+	[ParentRowId] [BigInt] NOT NULL ,
+	[RecordIdx] [BigInt] NOT NULL ,
+	CONSTRAINT [PK_DELETEQUEUEITEM] PRIMARY KEY CLUSTERED
+	(
+		[ParentRowId],[RecordIdx]
+	)
+)
+
+GO
+
 --CREATE TABLE [Housekeeping]
-if not exists(select * from sysobjects where name = 'Housekeeping' and xtype = 'U')
+if not exists(select * from sys.tables t inner join sys.schemas s on t.schema_id = s.schema_id where t.name = 'Housekeeping' and s.name = 'dbo')
 CREATE TABLE [dbo].[Housekeeping] (
 	[ID] [Int] IDENTITY (1, 1) NOT NULL ,
 	[Data] [VarBinary] (max) NOT NULL ,
@@ -65,7 +92,7 @@ CREATE TABLE [dbo].[Housekeeping] (
 GO
 
 --CREATE TABLE [LockStat]
-if not exists(select * from sysobjects where name = 'LockStat' and xtype = 'U')
+if not exists(select * from sys.tables t inner join sys.schemas s on t.schema_id = s.schema_id where t.name = 'LockStat' and s.name = 'dbo')
 CREATE TABLE [dbo].[LockStat] (
 	[LockStatId] [Int] IDENTITY (1, 1) NOT NULL ,
 	[ThreadId] [Int] NOT NULL ,
@@ -86,7 +113,7 @@ CREATE TABLE [dbo].[LockStat] (
 GO
 
 --CREATE TABLE [Repository]
-if not exists(select * from sysobjects where name = 'Repository' and xtype = 'U')
+if not exists(select * from sys.tables t inner join sys.schemas s on t.schema_id = s.schema_id where t.name = 'Repository' and s.name = 'dbo')
 CREATE TABLE [dbo].[Repository] (
 	[RepositoryId] [Int] IDENTITY (1, 1) NOT NULL ,
 	[ItemCount] [Int] NOT NULL ,
@@ -113,7 +140,7 @@ CREATE TABLE [dbo].[Repository] (
 GO
 
 --CREATE TABLE [RepositoryActionType]
-if not exists(select * from sysobjects where name = 'RepositoryActionType' and xtype = 'U')
+if not exists(select * from sys.tables t inner join sys.schemas s on t.schema_id = s.schema_id where t.name = 'RepositoryActionType' and s.name = 'dbo')
 CREATE TABLE [dbo].[RepositoryActionType] (
 	[RepositoryActionTypeId] [Int] IDENTITY (1, 1) NOT NULL ,
 	[Name] [VarChar] (50) NOT NULL ,
@@ -126,7 +153,7 @@ CREATE TABLE [dbo].[RepositoryActionType] (
 GO
 
 --CREATE TABLE [RepositoryLog]
-if not exists(select * from sysobjects where name = 'RepositoryLog' and xtype = 'U')
+if not exists(select * from sys.tables t inner join sys.schemas s on t.schema_id = s.schema_id where t.name = 'RepositoryLog' and s.name = 'dbo')
 CREATE TABLE [dbo].[RepositoryLog] (
 	[RepositoryLogId] [BigInt] IDENTITY (1, 1) NOT NULL ,
 	[IPAddress] [VarChar] (50) NOT NULL ,
@@ -148,7 +175,7 @@ CREATE TABLE [dbo].[RepositoryLog] (
 GO
 
 --CREATE TABLE [RepositoryStat]
-if not exists(select * from sysobjects where name = 'RepositoryStat' and xtype = 'U')
+if not exists(select * from sys.tables t inner join sys.schemas s on t.schema_id = s.schema_id where t.name = 'RepositoryStat' and s.name = 'dbo')
 CREATE TABLE [dbo].[RepositoryStat] (
 	[RepositoryStatId] [BigInt] IDENTITY (1, 1) NOT NULL ,
 	[RepositoryId] [Int] NOT NULL ,
@@ -170,7 +197,7 @@ CREATE TABLE [dbo].[RepositoryStat] (
 GO
 
 --CREATE TABLE [Server]
-if not exists(select * from sysobjects where name = 'Server' and xtype = 'U')
+if not exists(select * from sys.tables t inner join sys.schemas s on t.schema_id = s.schema_id where t.name = 'Server' and s.name = 'dbo')
 CREATE TABLE [dbo].[Server] (
 	[ServerId] [Int] IDENTITY (1, 1) NOT NULL ,
 	[Name] [NVarChar] (50) NOT NULL ,
@@ -188,7 +215,7 @@ CREATE TABLE [dbo].[Server] (
 GO
 
 --CREATE TABLE [ServerStat]
-if not exists(select * from sysobjects where name = 'ServerStat' and xtype = 'U')
+if not exists(select * from sys.tables t inner join sys.schemas s on t.schema_id = s.schema_id where t.name = 'ServerStat' and s.name = 'dbo')
 CREATE TABLE [dbo].[ServerStat] (
 	[ServerStatId] [BigInt] IDENTITY (1, 1) NOT NULL ,
 	[MemoryUsageTotal] [BigInt] NOT NULL ,
@@ -212,7 +239,7 @@ CREATE TABLE [dbo].[ServerStat] (
 GO
 
 --CREATE TABLE [ServiceInstance]
-if not exists(select * from sysobjects where name = 'ServiceInstance' and xtype = 'U')
+if not exists(select * from sys.tables t inner join sys.schemas s on t.schema_id = s.schema_id where t.name = 'ServiceInstance' and s.name = 'dbo')
 CREATE TABLE [dbo].[ServiceInstance] (
 	[RowId] [Int] NOT NULL CONSTRAINT [DF__SERVICEINSTANCE_ROWID] DEFAULT (1),
 	[LastCommunication] [DateTime2] (2) NOT NULL ,
@@ -238,7 +265,7 @@ DROP INDEX [IDX_CACHEINVALIDATE_REPOSITORYID] ON [dbo].[CacheInvalidate]
 GO
 
 --INDEX FOR TABLE [CacheInvalidate] COLUMNS:[RepositoryId]
-if not exists(select * from sys.indexes where name = 'IDX_CACHEINVALIDATE_REPOSITORYID') and exists (select * from syscolumns c inner join sysobjects o on c.id = o.id where c.name = 'RepositoryId' and o.name = 'CacheInvalidate')
+if not exists(select * from sys.indexes where name = 'IDX_CACHEINVALIDATE_REPOSITORYID') and exists (select * from sys.columns c inner join sys.tables t on c.object_id = t.object_id inner join sys.schemas s on t.schema_id = s.schema_id where c.name = 'RepositoryId' and t.name = 'CacheInvalidate' and s.name = 'dbo')
 CREATE NONCLUSTERED INDEX [IDX_CACHEINVALIDATE_REPOSITORYID] ON [dbo].[CacheInvalidate] ([RepositoryId] ASC)
 GO
 
@@ -248,7 +275,7 @@ DROP INDEX [IDX_CACHEINVALIDATE_ADDEDDATE] ON [dbo].[CacheInvalidate]
 GO
 
 --INDEX FOR TABLE [CacheInvalidate] COLUMNS:[AddedDate]
-if not exists(select * from sys.indexes where name = 'IDX_CACHEINVALIDATE_ADDEDDATE') and exists (select * from syscolumns c inner join sysobjects o on c.id = o.id where c.name = 'AddedDate' and o.name = 'CacheInvalidate')
+if not exists(select * from sys.indexes where name = 'IDX_CACHEINVALIDATE_ADDEDDATE') and exists (select * from sys.columns c inner join sys.tables t on c.object_id = t.object_id inner join sys.schemas s on t.schema_id = s.schema_id where c.name = 'AddedDate' and t.name = 'CacheInvalidate' and s.name = 'dbo')
 CREATE NONCLUSTERED INDEX [IDX_CACHEINVALIDATE_ADDEDDATE] ON [dbo].[CacheInvalidate] ([AddedDate] ASC)
 GO
 
@@ -258,7 +285,7 @@ DROP INDEX [IDX_LOCKSTAT_FAILURE] ON [dbo].[LockStat]
 GO
 
 --INDEX FOR TABLE [LockStat] COLUMNS:[Failure]
-if not exists(select * from sys.indexes where name = 'IDX_LOCKSTAT_FAILURE') and exists (select * from syscolumns c inner join sysobjects o on c.id = o.id where c.name = 'Failure' and o.name = 'LockStat')
+if not exists(select * from sys.indexes where name = 'IDX_LOCKSTAT_FAILURE') and exists (select * from sys.columns c inner join sys.tables t on c.object_id = t.object_id inner join sys.schemas s on t.schema_id = s.schema_id where c.name = 'Failure' and t.name = 'LockStat' and s.name = 'dbo')
 CREATE NONCLUSTERED INDEX [IDX_LOCKSTAT_FAILURE] ON [dbo].[LockStat] ([Failure] ASC)
 GO
 
@@ -268,7 +295,7 @@ DROP INDEX [IDX_REPOSITORY_UNIQUEKEY] ON [dbo].[Repository]
 GO
 
 --INDEX FOR TABLE [Repository] COLUMNS:[UniqueKey]
-if not exists(select * from sys.indexes where name = 'IDX_REPOSITORY_UNIQUEKEY') and exists (select * from syscolumns c inner join sysobjects o on c.id = o.id where c.name = 'UniqueKey' and o.name = 'Repository')
+if not exists(select * from sys.indexes where name = 'IDX_REPOSITORY_UNIQUEKEY') and exists (select * from sys.columns c inner join sys.tables t on c.object_id = t.object_id inner join sys.schemas s on t.schema_id = s.schema_id where c.name = 'UniqueKey' and t.name = 'Repository' and s.name = 'dbo')
 CREATE NONCLUSTERED INDEX [IDX_REPOSITORY_UNIQUEKEY] ON [dbo].[Repository] ([UniqueKey] ASC)
 GO
 
@@ -278,7 +305,7 @@ DROP INDEX [IDX_REPOSITORY_ISDELETED] ON [dbo].[Repository]
 GO
 
 --INDEX FOR TABLE [Repository] COLUMNS:[IsDeleted]
-if not exists(select * from sys.indexes where name = 'IDX_REPOSITORY_ISDELETED') and exists (select * from syscolumns c inner join sysobjects o on c.id = o.id where c.name = 'IsDeleted' and o.name = 'Repository')
+if not exists(select * from sys.indexes where name = 'IDX_REPOSITORY_ISDELETED') and exists (select * from sys.columns c inner join sys.tables t on c.object_id = t.object_id inner join sys.schemas s on t.schema_id = s.schema_id where c.name = 'IsDeleted' and t.name = 'Repository' and s.name = 'dbo')
 CREATE NONCLUSTERED INDEX [IDX_REPOSITORY_ISDELETED] ON [dbo].[Repository] ([IsDeleted] ASC)
 GO
 
@@ -288,7 +315,7 @@ DROP INDEX [IDX_REPOSITORY_ISINITIALIZED] ON [dbo].[Repository]
 GO
 
 --INDEX FOR TABLE [Repository] COLUMNS:[IsInitialized]
-if not exists(select * from sys.indexes where name = 'IDX_REPOSITORY_ISINITIALIZED') and exists (select * from syscolumns c inner join sysobjects o on c.id = o.id where c.name = 'IsInitialized' and o.name = 'Repository')
+if not exists(select * from sys.indexes where name = 'IDX_REPOSITORY_ISINITIALIZED') and exists (select * from sys.columns c inner join sys.tables t on c.object_id = t.object_id inner join sys.schemas s on t.schema_id = s.schema_id where c.name = 'IsInitialized' and t.name = 'Repository' and s.name = 'dbo')
 CREATE NONCLUSTERED INDEX [IDX_REPOSITORY_ISINITIALIZED] ON [dbo].[Repository] ([IsInitialized] ASC)
 GO
 
@@ -298,7 +325,7 @@ DROP INDEX [IDX_REPOSITORY_PARENTID] ON [dbo].[Repository]
 GO
 
 --INDEX FOR TABLE [Repository] COLUMNS:[ParentId]
-if not exists(select * from sys.indexes where name = 'IDX_REPOSITORY_PARENTID') and exists (select * from syscolumns c inner join sysobjects o on c.id = o.id where c.name = 'ParentId' and o.name = 'Repository')
+if not exists(select * from sys.indexes where name = 'IDX_REPOSITORY_PARENTID') and exists (select * from sys.columns c inner join sys.tables t on c.object_id = t.object_id inner join sys.schemas s on t.schema_id = s.schema_id where c.name = 'ParentId' and t.name = 'Repository' and s.name = 'dbo')
 CREATE NONCLUSTERED INDEX [IDX_REPOSITORY_PARENTID] ON [dbo].[Repository] ([ParentId] ASC)
 GO
 
@@ -308,7 +335,7 @@ DROP INDEX [IDX_REPOSITORYLOG_REPOSITORYID] ON [dbo].[RepositoryLog]
 GO
 
 --INDEX FOR TABLE [RepositoryLog] COLUMNS:[RepositoryId]
-if not exists(select * from sys.indexes where name = 'IDX_REPOSITORYLOG_REPOSITORYID') and exists (select * from syscolumns c inner join sysobjects o on c.id = o.id where c.name = 'RepositoryId' and o.name = 'RepositoryLog')
+if not exists(select * from sys.indexes where name = 'IDX_REPOSITORYLOG_REPOSITORYID') and exists (select * from sys.columns c inner join sys.tables t on c.object_id = t.object_id inner join sys.schemas s on t.schema_id = s.schema_id where c.name = 'RepositoryId' and t.name = 'RepositoryLog' and s.name = 'dbo')
 CREATE NONCLUSTERED INDEX [IDX_REPOSITORYLOG_REPOSITORYID] ON [dbo].[RepositoryLog] ([RepositoryId] ASC)
 GO
 
@@ -318,7 +345,7 @@ DROP INDEX [IDX_REPOSITORYSTAT_REPOSITORYACTIONTYPEID] ON [dbo].[RepositoryStat]
 GO
 
 --INDEX FOR TABLE [RepositoryStat] COLUMNS:[RepositoryActionTypeId]
-if not exists(select * from sys.indexes where name = 'IDX_REPOSITORYSTAT_REPOSITORYACTIONTYPEID') and exists (select * from syscolumns c inner join sysobjects o on c.id = o.id where c.name = 'RepositoryActionTypeId' and o.name = 'RepositoryStat')
+if not exists(select * from sys.indexes where name = 'IDX_REPOSITORYSTAT_REPOSITORYACTIONTYPEID') and exists (select * from sys.columns c inner join sys.tables t on c.object_id = t.object_id inner join sys.schemas s on t.schema_id = s.schema_id where c.name = 'RepositoryActionTypeId' and t.name = 'RepositoryStat' and s.name = 'dbo')
 CREATE NONCLUSTERED INDEX [IDX_REPOSITORYSTAT_REPOSITORYACTIONTYPEID] ON [dbo].[RepositoryStat] ([RepositoryActionTypeId] ASC)
 GO
 
@@ -328,7 +355,7 @@ DROP INDEX [IDX_SERVERSTAT_SERVERID] ON [dbo].[ServerStat]
 GO
 
 --INDEX FOR TABLE [ServerStat] COLUMNS:[ServerId]
-if not exists(select * from sys.indexes where name = 'IDX_SERVERSTAT_SERVERID') and exists (select * from syscolumns c inner join sysobjects o on c.id = o.id where c.name = 'ServerId' and o.name = 'ServerStat')
+if not exists(select * from sys.indexes where name = 'IDX_SERVERSTAT_SERVERID') and exists (select * from sys.columns c inner join sys.tables t on c.object_id = t.object_id inner join sys.schemas s on t.schema_id = s.schema_id where c.name = 'ServerId' and t.name = 'ServerStat' and s.name = 'dbo')
 CREATE NONCLUSTERED INDEX [IDX_SERVERSTAT_SERVERID] ON [dbo].[ServerStat] ([ServerId] ASC)
 GO
 
@@ -338,7 +365,7 @@ GO
 
 --##SECTION END [TENANT INDEXES]
 
-if not exists(select * from sys.objects where [name] = '__nhydrateschema' and [type] = 'U')
+if not exists(select * from sys.tables where [name] = '__nhydrateschema')
 BEGIN
 CREATE TABLE [__nhydrateschema] (
 [dbVersion] [varchar] (50) NOT NULL,
@@ -351,7 +378,7 @@ ALTER TABLE [__nhydrateschema] WITH NOCHECK ADD CONSTRAINT [__pk__nhydrateschema
 END
 GO
 
-if not exists(select * from sys.objects where name = '__nhydrateobjects' and [type] = 'U')
+if not exists(select * from sys.tables where name = '__nhydrateobjects')
 CREATE TABLE [dbo].[__nhydrateobjects]
 (
 	[rowid] [bigint] IDENTITY(1,1) NOT NULL,

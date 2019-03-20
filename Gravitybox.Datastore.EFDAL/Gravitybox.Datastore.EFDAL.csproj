@@ -95,6 +95,14 @@
     <Compile Include="Entity\ConfigurationSetting.Generated.cs">
       <DependentUpon>ConfigurationSetting.cs</DependentUpon>
     </Compile>
+    <Compile Include="Entity\DeleteQueue.cs" />
+    <Compile Include="Entity\DeleteQueue.Generated.cs">
+      <DependentUpon>DeleteQueue.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Entity\DeleteQueueItem.cs" />
+    <Compile Include="Entity\DeleteQueueItem.Generated.cs">
+      <DependentUpon>DeleteQueueItem.cs</DependentUpon>
+    </Compile>
     <Compile Include="Entity\Housekeeping.cs" />
     <Compile Include="Entity\Housekeeping.Generated.cs">
       <DependentUpon>Housekeeping.cs</DependentUpon>

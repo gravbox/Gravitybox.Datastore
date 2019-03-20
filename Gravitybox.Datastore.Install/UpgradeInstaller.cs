@@ -33,12 +33,12 @@ namespace Gravitybox.Datastore.Install
         internal const string DEFAULT_NAMESPACE = "Gravitybox.Datastore.Install";
         internal const string MODELKEY = "c4808261-57ef-4c4b-9c5c-b199c70e73ae";
         private GeneratedVersion _previousVersion = null;
-        private static GeneratedVersion _upgradeToVersion = new GeneratedVersion(2, 1, 0, 0, 65);
+        private static GeneratedVersion _upgradeToVersion = new GeneratedVersion(2, 1, 0, 0, 66);
         private InstallSetup _setup = null;
         private System.Data.SqlClient.SqlConnection _connection;
         private System.Data.SqlClient.SqlTransaction _transaction;
         private List<EmbeddedResourceName> _resourceNames = new List<EmbeddedResourceName>();
-        private List<nHydrateDbObject> _databaseItems = new List<nHydrateDbObject>();
+        private nHydrateDbObjectList _databaseItems = new nHydrateDbObjectList();
         private List<string> _newItems = new List<string>();
 
         private const string UPGRADE_GENERATED_FOLDER = "._2_Upgrade_Scripts.";
@@ -206,7 +206,7 @@ namespace Gravitybox.Datastore.Install
                                                                                      "[Status] [varchar](500) NULL," +
                                                                                      "[ModelKey] [uniqueidentifier] NOT NULL)");
             sb.AppendLine("GO");
-            sb.AppendLine("if exists(select * from sys.objects where name = '__nhydrateobjects' and type = 'U') AND not exists (select * from syscolumns c inner join sysobjects o on c.id = o.id where c.name = 'status' and o.name = '__nhydrateobjects')");
+            sb.AppendLine("if exists(select * from sys.objects where name = '__nhydrateobjects' and type = 'U') AND not exists (select * from sys.columns c inner join sys.objects o on c.object_id = o.object_id where c.name = 'status' and o.name = '__nhydrateobjects')");
             sb.AppendLine("ALTER TABLE [dbo].[__nhydrateobjects] ADD [status] [Varchar] (500) NULL");
             sb.AppendLine("GO");
             sb.AppendLine("delete from [__nhydrateobjects] where [id] IS NULL and ModelKey = '" + UpgradeInstaller.MODELKEY + "'");
@@ -518,11 +518,6 @@ namespace Gravitybox.Datastore.Install
                         });
                     }
                     settings.Save(setup.ConnectionString);
-
-                    SqlServers.DeleteExtendedProperty(setup.ConnectionString, "dbVersion");
-                    SqlServers.DeleteExtendedProperty(setup.ConnectionString, "LastUpdate");
-                    SqlServers.DeleteExtendedProperty(setup.ConnectionString, "ModelKey");
-                    SqlServers.DeleteExtendedProperty(setup.ConnectionString, "History");
                 }
 
                 timer.Stop();
@@ -700,7 +695,7 @@ namespace Gravitybox.Datastore.Install
             var sortByVersionScripts = new SortedDictionary<string, EmbeddedResourceName>(upgradeSchemaScripts, new UpgradeFileNameComparer());
 
             //Run the generated upgrades
-            foreach (EmbeddedResourceName ern in sortByVersionScripts.Values)
+            foreach (var ern in sortByVersionScripts.Values)
             {
                 if (new GeneratedVersion(ern.FileName).CompareTo(_previousVersion) > 0)
                 {
@@ -734,11 +729,15 @@ namespace Gravitybox.Datastore.Install
             try
             {
                 //Run the create scripts
-                foreach (EmbeddedResourceName ern in sortByVersionScripts.Values)
+                foreach (var ern in sortByVersionScripts.Values)
                 {
                     var hashItem = _databaseItems.FirstOrDefault(x => x.name == ern.FullName);
                     if (hashItem == null) _newItems.Add(ern.FullName);
-                    if (!setup.UseHash || (hashItem == null || hashItem.Hash != GetFileHash(ern.FullName, setup)))
+
+                    //Always run relations in case removed in upgrade scripts
+                    var skipHash = (ern.FileName == "3_CreateRelations");
+
+                    if (!setup.UseHash || skipHash || (hashItem == null || hashItem.Hash != GetFileHash(ern.FullName, setup)))
                     {
                         setup.DebugScriptName = ern.FullName;
                         if (sb == null) SqlServers.RunEmbeddedFile(_connection, _transaction, ern.FullName, null, _databaseItems, setup);
@@ -1210,7 +1209,7 @@ namespace Gravitybox.Datastore.Install
             return reorderedScripts;
         }
 
-        private void ReinstallUserDefinedScripts(Dictionary<string, List<string>> allScripts, List<KeyValuePair<Guid, string>> failedScripts, List<Guid> successOrderScripts, List<nHydrateDbObject> _databaseItems, InstallSetup setup)
+        private void ReinstallUserDefinedScripts(Dictionary<string, List<string>> allScripts, List<KeyValuePair<Guid, string>> failedScripts, List<Guid> successOrderScripts, nHydrateDbObjectList _databaseItems, InstallSetup setup)
         {
             //Run all the scripts
             var newHashList = new Dictionary<nHydrateDbObject, string>();

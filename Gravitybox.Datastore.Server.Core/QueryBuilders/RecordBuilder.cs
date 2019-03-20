@@ -219,6 +219,16 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
                     sbSql.AppendLine($"WHERE {_configuration.whereClause}");
                     sbSql.AppendLine($"ORDER BY {_configuration.orderByClause}");
                 }
+                else if (_configuration.query.PageOffset == 1)
+                {
+                    //If first page just select TOP and skip the CTE
+                    //No paging...this is faster
+                    sbSql.AppendLine("--MARKER 7" + _configuration.QueryPlanDebug);
+                    sbSql.AppendLine($"SELECT TOP {_configuration.query.RecordsPerPage} {fieldSql}");
+                    sbSql.AppendLine($"FROM [{_configuration.dataTable}] Z {SqlHelper.NoLockText()}{_configuration.innerJoinClause}");
+                    sbSql.AppendLine($"WHERE {_configuration.whereClause}");
+                    sbSql.AppendLine($"ORDER BY {_configuration.orderByClause}");
+                }
                 else
                 {
                     //Big records so do NOT select into temp table

@@ -364,6 +364,21 @@ namespace Gravitybox.Datastore.Common.Queryable
         }
 
         /// <summary />
+        public static IDatastoreQueryable<TSourceType> ExcludeDimensionCount<TSourceType>(this IDatastoreQueryable<TSourceType> source)
+            where TSourceType : IDatastoreItem
+        {
+            if (source == null)
+                throw new ArgumentNullException(ERROR_SOURCE);
+
+            return source.Provider.CreateQuery<TSourceType>(
+                Expression.Call(
+                    null,
+                    GetMethodInfo(DatastoreExtensions.ExcludeDimensionCount<TSourceType>, source),
+                    new Expression[] { source.Expression, }
+                ));
+        }
+
+        /// <summary />
         public static IDatastoreDeletable<TSourceType> IncludeIpAddress<TSourceType>(this IDatastoreDeletable<TSourceType> source, string value)
             where TSourceType : IDatastoreItem
         {

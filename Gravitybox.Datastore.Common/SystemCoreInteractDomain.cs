@@ -49,6 +49,7 @@ namespace Gravitybox.Datastore.Common
         public static ChannelFactory<ISystemCore> GetCoreFactory(string serverName, int port)
         {
             var myBinding = new NetTcpBinding() { MaxBufferSize = MaxItemSize, MaxReceivedMessageSize = MaxItemSize, MaxBufferPoolSize = 0, MaxConnections = 1000 };
+            myBinding.SendTimeout = new TimeSpan(0, 5, 0);
             myBinding.ReaderQuotas.MaxStringContentLength = MaxItemSize;
             myBinding.ReaderQuotas.MaxBytesPerRead = MaxItemSize;
             myBinding.ReaderQuotas.MaxArrayLength = MaxItemSize;
@@ -69,6 +70,7 @@ namespace Gravitybox.Datastore.Common
         public static ChannelFactory<IDataModel> GetRepositoryFactory(string serverName, int port)
         {
             var myBinding = new NetTcpBinding() { MaxBufferSize = MaxItemSize, MaxReceivedMessageSize = MaxItemSize, MaxBufferPoolSize = 0, MaxConnections = 1000 };
+            myBinding.SendTimeout = new TimeSpan(0, 5, 0);
             myBinding.ReaderQuotas.MaxStringContentLength = MaxItemSize;
             myBinding.ReaderQuotas.MaxBytesPerRead = MaxItemSize;
             myBinding.ReaderQuotas.MaxArrayLength = MaxItemSize;

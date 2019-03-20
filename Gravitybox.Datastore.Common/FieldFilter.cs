@@ -54,10 +54,58 @@ namespace Gravitybox.Datastore.Common
         public override int GetHashCode()
         {
             var h = EncryptionDomain.Hash(this.Comparer.ToString()) + "." + this.Name + ".";
-            if (((IFieldFilter) this).Value == null)
+            if (((IFieldFilter)this).Value == null)
                 h += "NULL";
+            else if (((IFieldFilter)this).Value.GetType().IsArray)
+            {
+                var list = ((System.Collections.IEnumerable)((IFieldFilter)this).Value);
+                foreach(var oo in list)
+                {
+                    h += oo?.ToString() + "|";
+                }
+            }
+            else if (((IFieldFilter)this).Value.GetType().IsAssignableFrom(typeof(System.Collections.Generic.List<int>)))
+            {
+                var list = ((System.Collections.Generic.List<int>)((IFieldFilter)this).Value);
+                foreach (var oo in list)
+                {
+                    h += oo.ToString() + "|";
+                }
+            }
+            else if (((IFieldFilter)this).Value.GetType().IsAssignableFrom(typeof(System.Collections.Generic.List<int?>)))
+            {
+                var list = ((System.Collections.Generic.List<int?>)((IFieldFilter)this).Value);
+                foreach (var oo in list)
+                {
+                    h += oo?.ToString() + "|";
+                }
+            }
+            else if (((IFieldFilter)this).Value.GetType().IsAssignableFrom(typeof(System.Collections.Generic.List<long>)))
+            {
+                var list = ((System.Collections.Generic.List<long>)((IFieldFilter)this).Value);
+                foreach (var oo in list)
+                {
+                    h += oo.ToString() + "|";
+                }
+            }
+            else if (((IFieldFilter)this).Value.GetType().IsAssignableFrom(typeof(System.Collections.Generic.List<long?>)))
+            {
+                var list = ((System.Collections.Generic.List<long?>)((IFieldFilter)this).Value);
+                foreach (var oo in list)
+                {
+                    h += oo?.ToString() + "|";
+                }
+            }
+            else if (((IFieldFilter)this).Value.GetType().IsAssignableFrom(typeof(System.Collections.Generic.List<string>)))
+            {
+                var list = ((System.Collections.Generic.List<string>)((IFieldFilter)this).Value);
+                foreach (var oo in list)
+                {
+                    h += oo?.ToString() + "|";
+                }
+            }
             else
-                h += ((IFieldFilter) this).Value.ToString();
+                h += ((IFieldFilter)this).Value.ToString();
 
             return EncryptionDomain.Hash(h);
         }

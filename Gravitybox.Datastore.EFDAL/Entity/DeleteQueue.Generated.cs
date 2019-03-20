@@ -27,35 +27,28 @@ using System.ComponentModel.DataAnnotations;
 namespace Gravitybox.Datastore.EFDAL.Entity
 {
 	/// <summary>
-	/// The 'CacheInvalidate' entity
-	/// Log of when the query cache was invalidated
+	/// The 'DeleteQueue' entity
 	/// </summary>
 	[DataContract]
 	[Serializable]
 	[System.CodeDom.Compiler.GeneratedCode("nHydrateModelGenerator", "6.0.0")]
-	[FieldNameConstants(typeof(Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants))]
-	[System.ComponentModel.DataAnnotations.MetadataType(typeof(Gravitybox.Datastore.EFDAL.Entity.Metadata.CacheInvalidateMetadata))]
-	[System.ComponentModel.Description("Log of when the query cache was invalidated")]
-	[EntityMetadata("CacheInvalidate", false, false, false, false, "Log of when the query cache was invalidated", true, false, false, "dbo")]
-	public partial class CacheInvalidate : BaseEntity, Gravitybox.Datastore.EFDAL.IBusinessObject, System.ICloneable, Gravitybox.Datastore.EFDAL.ICreatable
+	[FieldNameConstants(typeof(Gravitybox.Datastore.EFDAL.Entity.DeleteQueue.FieldNameConstants))]
+	[System.ComponentModel.DataAnnotations.MetadataType(typeof(Gravitybox.Datastore.EFDAL.Entity.Metadata.DeleteQueueMetadata))]
+	[EntityMetadata("DeleteQueue", false, false, false, false, "", true, false, false, "dbo")]
+	public partial class DeleteQueue : BaseEntity, Gravitybox.Datastore.EFDAL.IBusinessObject, System.ICloneable, Gravitybox.Datastore.EFDAL.ICreatable
 	{
 		#region FieldNameConstants Enumeration
 
 		/// <summary>
-		/// Enumeration to define each property that maps to a database field for the 'CacheInvalidate' table.
+		/// Enumeration to define each property that maps to a database field for the 'DeleteQueue' table.
 		/// </summary>
 		public enum FieldNameConstants
 		{
 			/// <summary>
-			/// Field mapping for the 'AddedDate' property
+			/// Field mapping for the 'IsReady' property
 			/// </summary>
-			[System.ComponentModel.Description("Field mapping for the 'AddedDate' property")]
-			AddedDate,
-			/// <summary>
-			/// Field mapping for the 'Count' property
-			/// </summary>
-			[System.ComponentModel.Description("Field mapping for the 'Count' property")]
-			Count,
+			[System.ComponentModel.Description("Field mapping for the 'IsReady' property")]
+			IsReady,
 			/// <summary>
 			/// Field mapping for the 'RepositoryId' property
 			/// </summary>
@@ -74,12 +67,11 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 		#region Constructors
 
 		/// <summary>
-		/// Initializes a new instance of the Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate class
+		/// Initializes a new instance of the Gravitybox.Datastore.EFDAL.Entity.DeleteQueue class
 		/// </summary>
-		public CacheInvalidate()
+		public DeleteQueue()
 		{
-			this._addedDate = DateTime.Now;
-			this._count = 0;
+			this._isReady = false;
 
 		}
 
@@ -88,48 +80,30 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 		#region Properties
 
 		/// <summary>
-		/// The property that maps back to the database 'CacheInvalidate.AddedDate' field.
+		/// Determine if this item is ready to be processed
 		/// </summary>
-		/// <remarks>Field: [CacheInvalidate].[AddedDate], Field Length: 2, Not Nullable, Indexed, Default Value: getdate()</remarks>
+		/// <remarks>Field: [DeleteQueue].[IsReady], Not Nullable, Default Value: false</remarks>
 		[DataMember]
 		[System.ComponentModel.Browsable(true)]
-		[System.ComponentModel.DisplayName("AddedDate")]
-		[System.ComponentModel.DataAnnotations.Schema.Index()]
+		[System.ComponentModel.DisplayName("IsReady")]
+		[System.ComponentModel.Description("Determine if this item is ready to be processed")]
 		[System.Diagnostics.DebuggerNonUserCode()]
-		public virtual DateTime AddedDate
+		public virtual bool IsReady
 		{
-			get { return _addedDate; }
+			get { return _isReady; }
 			set
 			{
-				_addedDate = value;
+				_isReady = value;
 			}
 		}
 
 		/// <summary>
-		/// The property that maps back to the database 'CacheInvalidate.Count' field.
+		/// The property that maps back to the database 'DeleteQueue.RepositoryId' field.
 		/// </summary>
-		/// <remarks>Field: [CacheInvalidate].[Count], Not Nullable, Default Value: 0</remarks>
-		[DataMember]
-		[System.ComponentModel.Browsable(true)]
-		[System.ComponentModel.DisplayName("Count")]
-		[System.Diagnostics.DebuggerNonUserCode()]
-		public virtual int Count
-		{
-			get { return _count; }
-			set
-			{
-				_count = value;
-			}
-		}
-
-		/// <summary>
-		/// The property that maps back to the database 'CacheInvalidate.RepositoryId' field.
-		/// </summary>
-		/// <remarks>Field: [CacheInvalidate].[RepositoryId], Not Nullable, Indexed</remarks>
+		/// <remarks>Field: [DeleteQueue].[RepositoryId], Not Nullable</remarks>
 		[DataMember]
 		[System.ComponentModel.Browsable(true)]
 		[System.ComponentModel.DisplayName("RepositoryId")]
-		[System.ComponentModel.DataAnnotations.Schema.Index()]
 		[System.Diagnostics.DebuggerNonUserCode()]
 		public virtual int RepositoryId
 		{
@@ -141,9 +115,9 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 		}
 
 		/// <summary>
-		/// The property that maps back to the database 'CacheInvalidate.RowId' field.
+		/// The property that maps back to the database 'DeleteQueue.RowId' field.
 		/// </summary>
-		/// <remarks>Field: [CacheInvalidate].[RowId], Not Nullable, Primary Key, AutoNumber, Unique, Indexed</remarks>
+		/// <remarks>Field: [DeleteQueue].[RowId], Not Nullable, Primary Key, AutoNumber, Unique, Indexed</remarks>
 		[DataMember]
 		[System.ComponentModel.Browsable(true)]
 		[System.ComponentModel.DisplayName("RowId")]
@@ -164,9 +138,7 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 		#region Property Holders
 
 		/// <summary />
-		protected DateTime _addedDate;
-		/// <summary />
-		protected int _count;
+		protected bool _isReady;
 		/// <summary />
 		protected int _repositoryId;
 		/// <summary />
@@ -179,17 +151,15 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 		/// <summary>
 		/// Gets the maximum size of the field value.
 		/// </summary>
-		public static int GetMaxLength(Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants field)
+		public static int GetMaxLength(Gravitybox.Datastore.EFDAL.Entity.DeleteQueue.FieldNameConstants field)
 		{
 			switch (field)
 			{
-				case Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants.AddedDate:
+				case Gravitybox.Datastore.EFDAL.Entity.DeleteQueue.FieldNameConstants.IsReady:
 					return 0;
-				case Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants.Count:
+				case Gravitybox.Datastore.EFDAL.Entity.DeleteQueue.FieldNameConstants.RepositoryId:
 					return 0;
-				case Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants.RepositoryId:
-					return 0;
-				case Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants.RowId:
+				case Gravitybox.Datastore.EFDAL.Entity.DeleteQueue.FieldNameConstants.RowId:
 					return 0;
 			}
 			return 0;
@@ -197,7 +167,7 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 
 		int Gravitybox.Datastore.EFDAL.IReadOnlyBusinessObject.GetMaxLength(Enum field)
 		{
-			return GetMaxLength((Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants)field);
+			return GetMaxLength((Gravitybox.Datastore.EFDAL.Entity.DeleteQueue.FieldNameConstants)field);
 		}
 
 		#endregion
@@ -206,7 +176,7 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 
 		System.Type Gravitybox.Datastore.EFDAL.IReadOnlyBusinessObject.GetFieldNameConstants()
 		{
-			return typeof(Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants);
+			return typeof(Gravitybox.Datastore.EFDAL.Entity.DeleteQueue.FieldNameConstants);
 		}
 
 		#endregion
@@ -216,27 +186,26 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 		/// <summary>
 		/// Gets the system type of a field on this object
 		/// </summary>
-		public static System.Type GetFieldType(Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants field)
+		public static System.Type GetFieldType(Gravitybox.Datastore.EFDAL.Entity.DeleteQueue.FieldNameConstants field)
 		{
-			if (field.GetType() != typeof(Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants))
-				throw new Exception("The field parameter must be of type 'Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants'.");
+			if (field.GetType() != typeof(Gravitybox.Datastore.EFDAL.Entity.DeleteQueue.FieldNameConstants))
+				throw new Exception("The field parameter must be of type 'Gravitybox.Datastore.EFDAL.Entity.DeleteQueue.FieldNameConstants'.");
 
-			switch ((Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants)field)
+			switch ((Gravitybox.Datastore.EFDAL.Entity.DeleteQueue.FieldNameConstants)field)
 			{
-				case Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants.AddedDate: return typeof(DateTime);
-				case Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants.Count: return typeof(int);
-				case Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants.RepositoryId: return typeof(int);
-				case Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants.RowId: return typeof(long);
+				case Gravitybox.Datastore.EFDAL.Entity.DeleteQueue.FieldNameConstants.IsReady: return typeof(bool);
+				case Gravitybox.Datastore.EFDAL.Entity.DeleteQueue.FieldNameConstants.RepositoryId: return typeof(int);
+				case Gravitybox.Datastore.EFDAL.Entity.DeleteQueue.FieldNameConstants.RowId: return typeof(long);
 			}
 			return null;
 		}
 
 		System.Type Gravitybox.Datastore.EFDAL.IReadOnlyBusinessObject.GetFieldType(Enum field)
 		{
-			if (field.GetType() != typeof(Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants))
-				throw new Exception("The field parameter must be of type 'Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants'.");
+			if (field.GetType() != typeof(Gravitybox.Datastore.EFDAL.Entity.DeleteQueue.FieldNameConstants))
+				throw new Exception("The field parameter must be of type 'Gravitybox.Datastore.EFDAL.Entity.DeleteQueue.FieldNameConstants'.");
 
-			return GetFieldType((Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants)field);
+			return GetFieldType((Gravitybox.Datastore.EFDAL.Entity.DeleteQueue.FieldNameConstants)field);
 		}
 
 		#endregion
@@ -250,23 +219,23 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 
 		object Gravitybox.Datastore.EFDAL.IReadOnlyBusinessObject.GetValue(System.Enum field, object defaultValue)
 		{
-			if (field.GetType() != typeof(Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants))
-				throw new Exception("The field parameter must be of type 'Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants'.");
-			return this.GetValue((Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants)field, defaultValue);
+			if (field.GetType() != typeof(Gravitybox.Datastore.EFDAL.Entity.DeleteQueue.FieldNameConstants))
+				throw new Exception("The field parameter must be of type 'Gravitybox.Datastore.EFDAL.Entity.DeleteQueue.FieldNameConstants'.");
+			return this.GetValue((Gravitybox.Datastore.EFDAL.Entity.DeleteQueue.FieldNameConstants)field, defaultValue);
 		}
 
 		void Gravitybox.Datastore.EFDAL.IBusinessObject.SetValue(System.Enum field, object newValue)
 		{
-			if (field.GetType() != typeof(Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants))
-				throw new Exception("The field parameter must be of type 'Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants'.");
-			this.SetValue((Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants)field, newValue);
+			if (field.GetType() != typeof(Gravitybox.Datastore.EFDAL.Entity.DeleteQueue.FieldNameConstants))
+				throw new Exception("The field parameter must be of type 'Gravitybox.Datastore.EFDAL.Entity.DeleteQueue.FieldNameConstants'.");
+			this.SetValue((Gravitybox.Datastore.EFDAL.Entity.DeleteQueue.FieldNameConstants)field, newValue);
 		}
 
 		void Gravitybox.Datastore.EFDAL.IBusinessObject.SetValue(System.Enum field, object newValue, bool fixLength)
 		{
-			if (field.GetType() != typeof(Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants))
-				throw new Exception("The field parameter must be of type 'Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants'.");
-			this.SetValue((Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants)field, newValue, fixLength);
+			if (field.GetType() != typeof(Gravitybox.Datastore.EFDAL.Entity.DeleteQueue.FieldNameConstants))
+				throw new Exception("The field parameter must be of type 'Gravitybox.Datastore.EFDAL.Entity.DeleteQueue.FieldNameConstants'.");
+			this.SetValue((Gravitybox.Datastore.EFDAL.Entity.DeleteQueue.FieldNameConstants)field, newValue, fixLength);
 		}
 
 		#endregion
@@ -278,7 +247,7 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 		/// </summary>
 		Gravitybox.Datastore.EFDAL.IPrimaryKey Gravitybox.Datastore.EFDAL.IReadOnlyBusinessObject.PrimaryKey
 		{
-			get { return new PrimaryKey(Util.HashPK("CacheInvalidate", this.RowId)); }
+			get { return new PrimaryKey(Util.HashPK("DeleteQueue", this.RowId)); }
 		}
 
 		#endregion
@@ -290,7 +259,7 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 		/// </summary>
 		public virtual object Clone()
 		{
-			return Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.Clone(this);
+			return Gravitybox.Datastore.EFDAL.Entity.DeleteQueue.Clone(this);
 		}
 
 		/// <summary>
@@ -298,21 +267,19 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 		/// </summary>
 		public virtual object CloneAsNew()
 		{
-			var item = Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.Clone(this);
+			var item = Gravitybox.Datastore.EFDAL.Entity.DeleteQueue.Clone(this);
 			item._rowId = 0;
-			item._addedDate = DateTime.Now;
-			item._count = 0;
+			item._isReady = false;
 			return item;
 		}
 
 		/// <summary>
 		/// Creates a shallow copy of this object
 		/// </summary>
-		public static CacheInvalidate Clone(Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate item)
+		public static DeleteQueue Clone(Gravitybox.Datastore.EFDAL.Entity.DeleteQueue item)
 		{
-			var newItem = new CacheInvalidate();
-			newItem.AddedDate = item.AddedDate;
-			newItem.Count = item.Count;
+			var newItem = new DeleteQueue();
+			newItem.IsReady = item.IsReady;
 			newItem.RepositoryId = item.RepositoryId;
 			newItem.RowId = item.RowId;
 			return newItem;
@@ -325,7 +292,7 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 		/// <summary>
 		/// Gets the value of one of this object's properties.
 		/// </summary>
-		public virtual object GetValue(Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants field)
+		public virtual object GetValue(Gravitybox.Datastore.EFDAL.Entity.DeleteQueue.FieldNameConstants field)
 		{
 			return GetValue(field, null);
 		}
@@ -333,15 +300,13 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 		/// <summary>
 		/// Gets the value of one of this object's properties.
 		/// </summary>
-		public virtual object GetValue(Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants field, object defaultValue)
+		public virtual object GetValue(Gravitybox.Datastore.EFDAL.Entity.DeleteQueue.FieldNameConstants field, object defaultValue)
 		{
-			if (field == Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants.AddedDate)
-				return this.AddedDate;
-			if (field == Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants.Count)
-				return this.Count;
-			if (field == Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants.RepositoryId)
+			if (field == Gravitybox.Datastore.EFDAL.Entity.DeleteQueue.FieldNameConstants.IsReady)
+				return this.IsReady;
+			if (field == Gravitybox.Datastore.EFDAL.Entity.DeleteQueue.FieldNameConstants.RepositoryId)
 				return this.RepositoryId;
-			if (field == Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants.RowId)
+			if (field == Gravitybox.Datastore.EFDAL.Entity.DeleteQueue.FieldNameConstants.RowId)
 				return this.RowId;
 			throw new Exception("Field '" + field.ToString() + "' not found!");
 		}
@@ -355,7 +320,7 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 		/// </summary>
 		/// <param name="field">The field to set</param>
 		/// <param name="newValue">The new value to assign to the field</param>
-		public virtual void SetValue(Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants field, object newValue)
+		public virtual void SetValue(Gravitybox.Datastore.EFDAL.Entity.DeleteQueue.FieldNameConstants field, object newValue)
 		{
 			SetValue(field, newValue, false);
 		}
@@ -366,21 +331,17 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 		/// <param name="field">The field to set</param>
 		/// <param name="newValue">The new value to assign to the field</param>
 		/// <param name="fixLength">Determines if the length should be truncated if too long. When false, an error will be raised if data is too large to be assigned to the field.</param>
-		public virtual void SetValue(Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants field, object newValue, bool fixLength)
+		public virtual void SetValue(Gravitybox.Datastore.EFDAL.Entity.DeleteQueue.FieldNameConstants field, object newValue, bool fixLength)
 		{
-			if (field == Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants.AddedDate)
+			if (field == Gravitybox.Datastore.EFDAL.Entity.DeleteQueue.FieldNameConstants.IsReady)
 			{
-				this.AddedDate = GlobalValues.SetValueHelperDateTimeNotNullableInternal(newValue, "Field 'AddedDate' does not allow null values!");
+				this.IsReady = GlobalValues.SetValueHelperBoolNotNullableInternal(newValue, "Field 'IsReady' does not allow null values!");
 			}
-			else if (field == Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants.Count)
-			{
-				this.Count = GlobalValues.SetValueHelperIntNotNullableInternal(newValue, "Field 'Count' does not allow null values!");
-			}
-			else if (field == Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants.RepositoryId)
+			else if (field == Gravitybox.Datastore.EFDAL.Entity.DeleteQueue.FieldNameConstants.RepositoryId)
 			{
 				this.RepositoryId = GlobalValues.SetValueHelperIntNotNullableInternal(newValue, "Field 'RepositoryId' does not allow null values!");
 			}
-			else if (field == Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants.RowId)
+			else if (field == Gravitybox.Datastore.EFDAL.Entity.DeleteQueue.FieldNameConstants.RowId)
 			{
 				throw new Exception("Field '" + field.ToString() + "' is a primary key and cannot be set!");
 			}
@@ -392,6 +353,23 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 
 		#region Navigation Properties
 
+		/// <summary>
+		/// The navigation definition for walking DeleteQueue->DeleteQueueItem
+		/// </summary>
+		[DataMember]
+		[XmlIgnore]
+		public virtual ICollection<Gravitybox.Datastore.EFDAL.Entity.DeleteQueueItem> DeleteQueueItemList
+		{
+			get
+			{
+				if (_DeleteQueueItemList == null) _DeleteQueueItemList = new List<Gravitybox.Datastore.EFDAL.Entity.DeleteQueueItem>();
+				return _DeleteQueueItemList;
+			}
+			set { _DeleteQueueItemList = value; }
+		}
+		/// <summary />
+		protected virtual ICollection<Gravitybox.Datastore.EFDAL.Entity.DeleteQueueItem> _DeleteQueueItemList { get; set; }
+
 		#endregion
 
 		#region Static SQL Methods
@@ -401,8 +379,7 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 			alias = alias.Replace("[", string.Empty).Replace("]", string.Empty);
 			switch (alias.ToLower())
 			{
-				case "addeddate": return "addeddate";
-				case "count": return "count";
+				case "isready": return "isready";
 				case "repositoryid": return "repositoryid";
 				case "rowid": return "rowid";
 				default: throw new Exception("The select clause is not valid.");
@@ -413,10 +390,9 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 		{
 			switch (alias.ToLower())
 			{
-				case "addeddate": return "CacheInvalidate";
-				case "count": return "CacheInvalidate";
-				case "repositoryid": return "CacheInvalidate";
-				case "rowid": return "CacheInvalidate";
+				case "isready": return "DeleteQueue";
+				case "repositoryid": return "DeleteQueue";
+				case "rowid": return "DeleteQueue";
 				default: throw new Exception("The select clause is not valid.");
 			}
 		}
@@ -425,20 +401,18 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 		{
 			switch (field.ToLower())
 			{
-				case "addeddate": return "CacheInvalidate";
-				case "count": return "CacheInvalidate";
-				case "repositoryid": return "CacheInvalidate";
-				case "rowid": return "CacheInvalidate";
+				case "isready": return "DeleteQueue";
+				case "repositoryid": return "DeleteQueue";
+				case "rowid": return "DeleteQueue";
 				default: throw new Exception("The select clause is not valid.");
 			}
 		}
 
 		internal static string GetRemappedLinqSql(string sql, string parentAlias, LinqSQLFromClauseCollection childTables)
 		{
-			sql = System.Text.RegularExpressions.Regex.Replace(sql, "\\[" + parentAlias + "\\]\\.\\[addeddate\\]", "[" + childTables.GetBaseAliasTable(parentAlias, "CacheInvalidate") + "].[addeddate]", RegexOptions.IgnoreCase);
-			sql = System.Text.RegularExpressions.Regex.Replace(sql, "\\[" + parentAlias + "\\]\\.\\[count\\]", "[" + childTables.GetBaseAliasTable(parentAlias, "CacheInvalidate") + "].[count]", RegexOptions.IgnoreCase);
-			sql = System.Text.RegularExpressions.Regex.Replace(sql, "\\[" + parentAlias + "\\]\\.\\[repositoryid\\]", "[" + childTables.GetBaseAliasTable(parentAlias, "CacheInvalidate") + "].[repositoryid]", RegexOptions.IgnoreCase);
-			sql = System.Text.RegularExpressions.Regex.Replace(sql, "\\[" + parentAlias + "\\]\\.\\[rowid\\]", "[" + childTables.GetBaseAliasTable(parentAlias, "CacheInvalidate") + "].[rowid]", RegexOptions.IgnoreCase);
+			sql = System.Text.RegularExpressions.Regex.Replace(sql, "\\[" + parentAlias + "\\]\\.\\[isready\\]", "[" + childTables.GetBaseAliasTable(parentAlias, "DeleteQueue") + "].[isready]", RegexOptions.IgnoreCase);
+			sql = System.Text.RegularExpressions.Regex.Replace(sql, "\\[" + parentAlias + "\\]\\.\\[repositoryid\\]", "[" + childTables.GetBaseAliasTable(parentAlias, "DeleteQueue") + "].[repositoryid]", RegexOptions.IgnoreCase);
+			sql = System.Text.RegularExpressions.Regex.Replace(sql, "\\[" + parentAlias + "\\]\\.\\[rowid\\]", "[" + childTables.GetBaseAliasTable(parentAlias, "DeleteQueue") + "].[rowid]", RegexOptions.IgnoreCase);
 			return sql;
 		}
 
@@ -451,7 +425,7 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 		/// </summary>
 		/// <param name="where">The expression that determines the records deleted</param>
 		/// <returns>The number of rows deleted</returns>
-		public static int DeleteData(Expression<Func<Gravitybox.Datastore.EFDAL.CacheInvalidateQuery, bool>> where)
+		public static int DeleteData(Expression<Func<Gravitybox.Datastore.EFDAL.DeleteQueueQuery, bool>> where)
 		{
 			return DeleteData(where: where, optimizer: new QueryOptimizer(), startup: new ContextStartup(null), connectionString: Gravitybox.Datastore.EFDAL.DatastoreEntities.GetConnectionString());
 		}
@@ -462,7 +436,7 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 		/// <param name="where">The expression that determines the records deleted</param>
 		/// <param name="optimizer">The optimization object to use for running queries</param>
 		/// <returns>The number of rows deleted</returns>
-		public static int DeleteData(Expression<Func<Gravitybox.Datastore.EFDAL.CacheInvalidateQuery, bool>> where, QueryOptimizer optimizer)
+		public static int DeleteData(Expression<Func<Gravitybox.Datastore.EFDAL.DeleteQueueQuery, bool>> where, QueryOptimizer optimizer)
 		{
 			return DeleteData(where: where, optimizer: optimizer, startup: new ContextStartup(null), connectionString: Gravitybox.Datastore.EFDAL.DatastoreEntities.GetConnectionString());
 		}
@@ -473,7 +447,7 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 		/// <param name="where">The expression that determines the records deleted</param>
 		/// <param name="connectionString">The database connection string to use for this access</param>
 		/// <returns>The number of rows deleted</returns>
-		public static int DeleteData(Expression<Func<Gravitybox.Datastore.EFDAL.CacheInvalidateQuery, bool>> where, string connectionString)
+		public static int DeleteData(Expression<Func<Gravitybox.Datastore.EFDAL.DeleteQueueQuery, bool>> where, string connectionString)
 		{
 			return DeleteData(where: where, optimizer: new QueryOptimizer(), startup: new ContextStartup(null), connectionString: connectionString);
 		}
@@ -486,7 +460,7 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 		/// <param name="startup">The startup options</param>
 		/// <param name="connectionString">The database connection string to use for this access</param>
 		/// <returns>The number of rows deleted</returns>
-		public static int DeleteData(Expression<Func<Gravitybox.Datastore.EFDAL.CacheInvalidateQuery, bool>> where, QueryOptimizer optimizer, ContextStartup startup, string connectionString)
+		public static int DeleteData(Expression<Func<Gravitybox.Datastore.EFDAL.DeleteQueueQuery, bool>> where, QueryOptimizer optimizer, ContextStartup startup, string connectionString)
 		{
 			if (optimizer == null)
 				optimizer = new QueryOptimizer();
@@ -496,8 +470,8 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 			{
 				using (var dc = new DataContext(connection))
 				{
-					var template = dc.GetTable<Gravitybox.Datastore.EFDAL.CacheInvalidateQuery>();
-					using (var cmd = BusinessEntityQuery.GetCommand<Gravitybox.Datastore.EFDAL.CacheInvalidateQuery>(dc, template, where))
+					var template = dc.GetTable<Gravitybox.Datastore.EFDAL.DeleteQueueQuery>();
+					using (var cmd = BusinessEntityQuery.GetCommand<Gravitybox.Datastore.EFDAL.DeleteQueueQuery>(dc, template, where))
 					{
 						if (!startup.DefaultTimeout && startup.CommandTimeout > 0) cmd.CommandTimeout = startup.CommandTimeout;
 						else
@@ -509,7 +483,7 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 						var parser = LinqSQLParser.Create(cmd.CommandText, LinqSQLParser.ObjectTypeConstants.Table);
                         var sb = new StringBuilder();
                         sb.AppendLine("SET ROWCOUNT " + optimizer.ChunkSize + ";");
-                        sb.AppendLine("delete [X] from [dbo].[CacheInvalidate] [X] inner join (");
+                        sb.AppendLine("delete [X] from [dbo].[DeleteQueue] [X] inner join (");
                         sb.AppendLine("SELECT [t0].[RowId]");
                         sb.AppendLine(parser.GetFromClause(optimizer));
                         sb.AppendLine(parser.GetWhereClause());
@@ -546,9 +520,9 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 		/// <param name="where">The expression that determines the records selected</param>
 		/// <param name="newValue">The new value to set the specified field in all matching records</param>
 		/// <returns>The number of records affected</returns>
-		public static int UpdateData<TSource>(Expression<Func<Gravitybox.Datastore.EFDAL.CacheInvalidateQuery, TSource>> select, Expression<Func<Gravitybox.Datastore.EFDAL.CacheInvalidateQuery, bool>> where, TSource newValue)
+		public static int UpdateData<TSource>(Expression<Func<Gravitybox.Datastore.EFDAL.DeleteQueueQuery, TSource>> select, Expression<Func<Gravitybox.Datastore.EFDAL.DeleteQueueQuery, bool>> where, TSource newValue)
 		{
-			return BusinessObjectQuery<Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate, Gravitybox.Datastore.EFDAL.CacheInvalidateQuery, TSource>.UpdateData(select: select, where: where, newValue: newValue, leafTable: "CacheInvalidate", getField: GetDatabaseFieldName, hasModifyAudit: false);
+			return BusinessObjectQuery<Gravitybox.Datastore.EFDAL.Entity.DeleteQueue, Gravitybox.Datastore.EFDAL.DeleteQueueQuery, TSource>.UpdateData(select: select, where: where, newValue: newValue, leafTable: "DeleteQueue", getField: GetDatabaseFieldName, hasModifyAudit: false);
 		}
 
 		/// <summary>
@@ -560,9 +534,9 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 		/// <param name="connection">An open database connection</param>
 		/// <param name="transaction">The database connection transaction</param>
 		/// <returns>The number of records affected</returns>
-		public static int UpdateData<TSource>(Expression<Func<Gravitybox.Datastore.EFDAL.CacheInvalidateQuery, TSource>> select, Expression<Func<Gravitybox.Datastore.EFDAL.CacheInvalidateQuery, bool>> where, TSource newValue, System.Data.IDbConnection connection, System.Data.Common.DbTransaction transaction)
+		public static int UpdateData<TSource>(Expression<Func<Gravitybox.Datastore.EFDAL.DeleteQueueQuery, TSource>> select, Expression<Func<Gravitybox.Datastore.EFDAL.DeleteQueueQuery, bool>> where, TSource newValue, System.Data.IDbConnection connection, System.Data.Common.DbTransaction transaction)
 		{
-			return BusinessObjectQuery<Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate, Gravitybox.Datastore.EFDAL.CacheInvalidateQuery, TSource>.UpdateData(select: select, where: where, newValue: newValue, leafTable: "CacheInvalidate", getField: GetDatabaseFieldName, hasModifyAudit: false, startup: null, connection: connection, transaction: transaction);
+			return BusinessObjectQuery<Gravitybox.Datastore.EFDAL.Entity.DeleteQueue, Gravitybox.Datastore.EFDAL.DeleteQueueQuery, TSource>.UpdateData(select: select, where: where, newValue: newValue, leafTable: "DeleteQueue", getField: GetDatabaseFieldName, hasModifyAudit: false, startup: null, connection: connection, transaction: transaction);
 		}
 
 		/// <summary>
@@ -574,9 +548,9 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 		/// <param name="startup">A configuration object</param>
 		/// <param name="connectionString">The database connection string</param>
 		/// <returns>The number of records affected</returns>
-		public static int UpdateData<TSource>(Expression<Func<Gravitybox.Datastore.EFDAL.CacheInvalidateQuery, TSource>> select, Expression<Func<Gravitybox.Datastore.EFDAL.CacheInvalidateQuery, bool>> where, TSource newValue, ContextStartup startup, string connectionString)
+		public static int UpdateData<TSource>(Expression<Func<Gravitybox.Datastore.EFDAL.DeleteQueueQuery, TSource>> select, Expression<Func<Gravitybox.Datastore.EFDAL.DeleteQueueQuery, bool>> where, TSource newValue, ContextStartup startup, string connectionString)
 		{
-			return BusinessObjectQuery<Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate, Gravitybox.Datastore.EFDAL.CacheInvalidateQuery, TSource>.UpdateData(select: select, where: where, newValue: newValue, leafTable: "CacheInvalidate", getField: GetDatabaseFieldName, hasModifyAudit: false, startup: startup, connectionString: connectionString);
+			return BusinessObjectQuery<Gravitybox.Datastore.EFDAL.Entity.DeleteQueue, Gravitybox.Datastore.EFDAL.DeleteQueueQuery, TSource>.UpdateData(select: select, where: where, newValue: newValue, leafTable: "DeleteQueue", getField: GetDatabaseFieldName, hasModifyAudit: false, startup: startup, connectionString: connectionString);
 		}
 
 		/// <summary>
@@ -587,9 +561,9 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 		/// <param name="newValue">The new value to set the specified field in all matching records</param>
 		/// <param name="connectionString">The database connection string</param>
 		/// <returns>The number of records affected</returns>
-		public static int UpdateData<TSource>(Expression<Func<Gravitybox.Datastore.EFDAL.CacheInvalidateQuery, TSource>> select, Expression<Func<Gravitybox.Datastore.EFDAL.CacheInvalidateQuery, bool>> where, TSource newValue, string connectionString)
+		public static int UpdateData<TSource>(Expression<Func<Gravitybox.Datastore.EFDAL.DeleteQueueQuery, TSource>> select, Expression<Func<Gravitybox.Datastore.EFDAL.DeleteQueueQuery, bool>> where, TSource newValue, string connectionString)
 		{
-			return BusinessObjectQuery<Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate, Gravitybox.Datastore.EFDAL.CacheInvalidateQuery, TSource>.UpdateData(select: select, where: where, newValue: newValue, leafTable: "CacheInvalidate", getField: GetDatabaseFieldName, hasModifyAudit: false, connectionString: connectionString);
+			return BusinessObjectQuery<Gravitybox.Datastore.EFDAL.Entity.DeleteQueue, Gravitybox.Datastore.EFDAL.DeleteQueueQuery, TSource>.UpdateData(select: select, where: where, newValue: newValue, leafTable: "DeleteQueue", getField: GetDatabaseFieldName, hasModifyAudit: false, connectionString: connectionString);
 		}
 
 		/// <summary>
@@ -599,9 +573,9 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 		/// <param name="where">The expression that determines the records selected</param>
 		/// <param name="newValue">The new value to set the specified field in all matching records</param>
 		/// <returns>The number of records affected</returns>
-		public static int UpdateData<TSource>(Expression<Func<Gravitybox.Datastore.EFDAL.CacheInvalidateQuery, TSource>> select, Expression<Func<Gravitybox.Datastore.EFDAL.CacheInvalidateQuery, bool>> where, Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate newValue)
+		public static int UpdateData<TSource>(Expression<Func<Gravitybox.Datastore.EFDAL.DeleteQueueQuery, TSource>> select, Expression<Func<Gravitybox.Datastore.EFDAL.DeleteQueueQuery, bool>> where, Gravitybox.Datastore.EFDAL.Entity.DeleteQueue newValue)
 		{
-			return BusinessObjectQuery<Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate, Gravitybox.Datastore.EFDAL.CacheInvalidateQuery, TSource>.UpdateData(select: select, where: where, newValue: newValue, leafTable: "CacheInvalidate", getField: GetDatabaseFieldName, hasModifyAudit: false);
+			return BusinessObjectQuery<Gravitybox.Datastore.EFDAL.Entity.DeleteQueue, Gravitybox.Datastore.EFDAL.DeleteQueueQuery, TSource>.UpdateData(select: select, where: where, newValue: newValue, leafTable: "DeleteQueue", getField: GetDatabaseFieldName, hasModifyAudit: false);
 		}
 
 		/// <summary>
@@ -612,9 +586,9 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 		/// <param name="newValue">The new value to set the specified field in all matching records</param>
 		/// <param name="connectionString">The database connection string</param>
 		/// <returns>The number of records affected</returns>
-		public static int UpdateData<TSource>(Expression<Func<Gravitybox.Datastore.EFDAL.CacheInvalidateQuery, TSource>> select, Expression<Func<Gravitybox.Datastore.EFDAL.CacheInvalidateQuery, bool>> where, Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate newValue, string connectionString)
+		public static int UpdateData<TSource>(Expression<Func<Gravitybox.Datastore.EFDAL.DeleteQueueQuery, TSource>> select, Expression<Func<Gravitybox.Datastore.EFDAL.DeleteQueueQuery, bool>> where, Gravitybox.Datastore.EFDAL.Entity.DeleteQueue newValue, string connectionString)
 		{
-			return BusinessObjectQuery<Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate, Gravitybox.Datastore.EFDAL.CacheInvalidateQuery, TSource>.UpdateData(select: select, where: where, newValue: newValue, leafTable: "CacheInvalidate", getField: GetDatabaseFieldName, hasModifyAudit: false, connectionString: connectionString);
+			return BusinessObjectQuery<Gravitybox.Datastore.EFDAL.Entity.DeleteQueue, Gravitybox.Datastore.EFDAL.DeleteQueueQuery, TSource>.UpdateData(select: select, where: where, newValue: newValue, leafTable: "DeleteQueue", getField: GetDatabaseFieldName, hasModifyAudit: false, connectionString: connectionString);
 		}
 
 		#endregion
@@ -624,7 +598,7 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 		/// <summary>
 		/// Returns the actual database name of the specified field.
 		/// </summary>
-		internal static string GetDatabaseFieldName(Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants field)
+		internal static string GetDatabaseFieldName(Gravitybox.Datastore.EFDAL.Entity.DeleteQueue.FieldNameConstants field)
 		{
 			return GetDatabaseFieldName(field.ToString());
 		}
@@ -636,8 +610,7 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 		{
 			switch (field)
 			{
-				case "AddedDate": return "AddedDate";
-				case "Count": return "Count";
+				case "IsReady": return "IsReady";
 				case "RepositoryId": return "RepositoryId";
 				case "RowId": return "RowId";
 			}
@@ -648,16 +621,15 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 
 		#region Equals
 		/// <summary>
-		/// Compares two objects of 'CacheInvalidate' type and determines if all properties match
+		/// Compares two objects of 'DeleteQueue' type and determines if all properties match
 		/// </summary>
 		/// <returns>True if all properties match, false otherwise</returns>
 		public override bool Equals(object obj)
 		{
-			var other = obj as Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate;
+			var other = obj as Gravitybox.Datastore.EFDAL.Entity.DeleteQueue;
 			if (other == null) return false;
 			return (
-				other.AddedDate == this.AddedDate &&
-				other.Count == this.Count &&
+				other.IsReady == this.IsReady &&
 				other.RepositoryId == this.RepositoryId &&
 				other.RowId == this.RowId
 				);
@@ -681,26 +653,19 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 namespace Gravitybox.Datastore.EFDAL.Entity.Metadata
 {
 	/// <summary>
-	/// Metadata class for the 'CacheInvalidate' entity
+	/// Metadata class for the 'DeleteQueue' entity
 	/// </summary>
 	[System.CodeDom.Compiler.GeneratedCode("nHydrateModelGenerator", "6.0.0")]
-	public partial class CacheInvalidateMetadata : Gravitybox.Datastore.EFDAL.IMetadata
+	public partial class DeleteQueueMetadata : Gravitybox.Datastore.EFDAL.IMetadata
 	{
 		#region Properties
 
 		/// <summary>
-		/// Metadata information for the 'AddedDate' parameter
+		/// Metadata information for the 'IsReady' parameter
 		/// </summary>
-		[System.ComponentModel.DataAnnotations.Required(ErrorMessage = "'AddedDate' is required.", AllowEmptyStrings = true)]
-		[System.ComponentModel.DataAnnotations.Display(Description = "", Name = "AddedDate", AutoGenerateField = true)]
-		public object AddedDate;
-
-		/// <summary>
-		/// Metadata information for the 'Count' parameter
-		/// </summary>
-		[System.ComponentModel.DataAnnotations.Required(ErrorMessage = "'Count' is required.", AllowEmptyStrings = true)]
-		[System.ComponentModel.DataAnnotations.Display(Description = "", Name = "Count", AutoGenerateField = true)]
-		public object Count;
+		[System.ComponentModel.DataAnnotations.Required(ErrorMessage = "'IsReady' is required.", AllowEmptyStrings = true)]
+		[System.ComponentModel.DataAnnotations.Display(Description = "Determine if this item is ready to be processed", Name = "IsReady", AutoGenerateField = true)]
+		public object IsReady;
 
 		/// <summary>
 		/// Metadata information for the 'RepositoryId' parameter
@@ -726,7 +691,7 @@ namespace Gravitybox.Datastore.EFDAL.Entity.Metadata
 		/// </summary>
 		public virtual string GetTableName()
 		{
-			return "CacheInvalidate";
+			return "DeleteQueue";
 		}
 
 		/// <summary>
@@ -735,8 +700,7 @@ namespace Gravitybox.Datastore.EFDAL.Entity.Metadata
 		public virtual List<string> GetFields()
 		{
 			var retval = new List<string>();
-			retval.Add("AddedDate");
-			retval.Add("Count");
+			retval.Add("IsReady");
 			retval.Add("RepositoryId");
 			retval.Add("RowId");
 			return retval;
@@ -765,8 +729,7 @@ namespace Gravitybox.Datastore.EFDAL.Entity.Metadata
 		{
 			switch (field)
 			{
-				case "AddedDate": return "AddedDate";
-				case "Count": return "Count";
+				case "IsReady": return "IsReady";
 				case "RepositoryId": return "RepositoryId";
 				case "RowId": return "RowId";
 			}

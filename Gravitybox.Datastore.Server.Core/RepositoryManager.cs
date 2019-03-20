@@ -34,7 +34,7 @@ namespace Gravitybox.Datastore.Server.Core
         private static readonly Guid DimensionCacheID = new Guid("2726FFC1-F4F6-477E-B9AC-B10E59C4BD63");
         private static readonly Guid RepositoryChangeStampID = new Guid("9941FFC1-F4F6-477E-B9AC-B10E59C4BD63");
         private static TableStatsMaintenace _statsMaintenance = null;
-        private static HousekeepingMonitor _housekeepingMonitor = new HousekeepingMonitor();
+        private static HousekeepingMonitor _housekeepingMonitor = null;
         private bool _masterReset = false;
         private const byte RSeedPermissions = 187;
 
@@ -576,6 +576,12 @@ namespace Gravitybox.Datastore.Server.Core
             var timer = Stopwatch.StartNew();
             try
             {
+                //Do not allow more than 1000 dimension items
+                if (query.DimensionValueList?.Count > 1000)
+                {
+                    throw new Exception("Maximum DimensionValueList count of 1000 exceeded.");
+                }
+
                 //If the exact same query is running then wait until it is cached and then process this one
                 var runningQueryWaitTime = CheckRunningQuery(repositoryId, query, queryKey);
 
@@ -606,6 +612,30 @@ namespace Gravitybox.Datastore.Server.Core
                             cacheHit = false;
                             isCore = false;
                         }
+
+                        #region Determine if this a full dimension dump and do not care about records or counts
+                        if (query.IsDimensionDump())
+                        {
+                            retval = SqlHelper.DimensionDump(query, schema);
+                            retval.DimensionList.RemoveAll(x => query.SkipDimensions?.Contains(x.DIdx) == true);
+                            var logMsg = "Query: ID=" + repositoryId +
+                                ", Cache=" + (cacheHit ? "1" : "0") +
+                                ", CoreHit=" + (isCore ? "1" : "0") +
+                                ", Elapsed=" + timer.ElapsedMilliseconds +
+                                ", LockTime=" + lockTime +
+                                ", WorkTime=" + CalcWorkTime(timer, lockTime) +
+                                (waitingLocks > 0 ? ", WaitLocks=" + waitingLocks : string.Empty) +
+                                ", PO=" + query.PageOffset + ", RPP=" + query.RecordsPerPage +
+                                ", Count=" + retval.RecordList.Count +
+                                ", Total=" + retval.TotalRecordCount +
+                                (runningQueryWaitTime > 0 ? ", WaitTime=" + runningQueryWaitTime : string.Empty) +
+                                (string.IsNullOrEmpty(executeHistory) ? string.Empty : ", EH=" + executeHistory);
+                            logMsg += $", QueryString=\"{queryString}\"";
+                            LoggerCQ.LogDebug(logMsg);
+                            return retval;
+                        }
+                        #endregion
+
                         var recordMultiplier = 0;
                         var originalQuery = Utilities.Clone(query);
                         //If there was no cache hit or just a core hit then have to hit the DB

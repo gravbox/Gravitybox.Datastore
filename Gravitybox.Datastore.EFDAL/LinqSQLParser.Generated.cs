@@ -183,6 +183,8 @@ namespace Gravitybox.Datastore.EFDAL
 			if (parentTable == "AppliedPatch") realTable = Gravitybox.Datastore.EFDAL.Entity.AppliedPatch.GetTableFromFieldNameSqlMapping(field);
 			else if (parentTable == "CacheInvalidate") realTable = Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.GetTableFromFieldNameSqlMapping(field);
 			else if (parentTable == "ConfigurationSetting") realTable = Gravitybox.Datastore.EFDAL.Entity.ConfigurationSetting.GetTableFromFieldNameSqlMapping(field);
+			else if (parentTable == "DeleteQueue") realTable = Gravitybox.Datastore.EFDAL.Entity.DeleteQueue.GetTableFromFieldNameSqlMapping(field);
+			else if (parentTable == "DeleteQueueItem") realTable = Gravitybox.Datastore.EFDAL.Entity.DeleteQueueItem.GetTableFromFieldNameSqlMapping(field);
 			else if (parentTable == "Housekeeping") realTable = Gravitybox.Datastore.EFDAL.Entity.Housekeeping.GetTableFromFieldNameSqlMapping(field);
 			else if (parentTable == "LockStat") realTable = Gravitybox.Datastore.EFDAL.Entity.LockStat.GetTableFromFieldNameSqlMapping(field);
 			else if (parentTable == "Repository") realTable = Gravitybox.Datastore.EFDAL.Entity.Repository.GetTableFromFieldNameSqlMapping(field);
@@ -262,12 +264,12 @@ namespace Gravitybox.Datastore.EFDAL
 					var sql = "declare @totalcount int ; set @totalcount = 0;";
 					foreach (var field in parser.FieldList)
 					{
-						sql += "UPDATE [" + parser.GetTableAlias(field.Name, leafTable) + "]\r\n";
+						sql += "UPDATE [" + parser.GetTableFromField(field.Name, leafTable) + "]\r\n";
 						var value = newValue.GetType().GetProperty(field.Name).GetValue(newValue, null);
-						sql += "SET [" + parser.GetTableAlias(field.Name, leafTable) + "].[" + field.Name + "] = @newValue" + index + "\r\n";
+						sql += "SET [" + parser.GetTableFromField(field.Name, leafTable) + "].[" + field.Name + "] = @newValue" + index + "\r\n";
 
-						if (hasModifyAudit && (field.Name != "ModifiedBy")) sql += ", [" + parser.GetTableAlias(field.Name, leafTable) + "].[ModifiedBy] = NULL\r\n";
-						if (hasModifyAudit && (field.Name != "ModifiedDate")) sql += ", [" + parser.GetTableAlias(field.Name, leafTable) + "].[ModifiedDate] = sysdatetime()\r\n";
+						if (hasModifyAudit && (field.Name != "ModifiedBy")) sql += ", [" + parser.GetTableFromField(field.Name, leafTable) + "].[ModifiedBy] = NULL\r\n";
+						if (hasModifyAudit && (field.Name != "ModifiedDate")) sql += ", [" + parser.GetTableFromField(field.Name, leafTable) + "].[ModifiedDate] = sysdatetime()\r\n";
 						sql += parser.GetFromClause(new QueryOptimizer()) + "\r\n";
 						sql += parser.GetWhereClause() + ";";
 						if (value == null) cmd.Parameters.Add(new System.Data.SqlClient.SqlParameter("newValue" + index, System.DBNull.Value));
@@ -279,7 +281,6 @@ namespace Gravitybox.Datastore.EFDAL
 					}
 
 					sql += "select @totalcount";
-					sql = "set ansi_nulls off;" + sql;
 					cmd.CommandText = sql;
 					
 					object p = cmd.ExecuteScalar();
@@ -384,14 +385,13 @@ namespace Gravitybox.Datastore.EFDAL
 						cmd.Transaction = transaction;
 					var parser = LinqSQLParser.Create(cmd.CommandText, LinqSQLParser.ObjectTypeConstants.Table);
 					var fieldName = parser.GetSelectClause();
-					var sql = "UPDATE [" + parser.GetTableAlias(fieldName, leafTable) + "]\r\n";
-					sql += "SET [" + parser.GetTableAlias(fieldName, leafTable) + "].[" + fieldName + "] = @newValue\r\n";
-					if (hasModifyAudit && (fieldName != "ModifiedBy")) sql += ", [" + parser.GetTableAlias(fieldName, leafTable) + "].[ModifiedBy] = NULL\r\n";
-					if (hasModifyAudit && (fieldName != "ModifiedDate")) sql += ", [" + parser.GetTableAlias(fieldName, leafTable) + "].[ModifiedDate] = sysdatetime()\r\n";
+					var sql = "UPDATE [" + parser.GetTableFromField(fieldName, leafTable) + "]\r\n";
+					sql += "SET [" + parser.GetTableFromField(fieldName, leafTable) + "].[" + fieldName + "] = @newValue\r\n";
+					if (hasModifyAudit && (fieldName != "ModifiedBy")) sql += ", [" + parser.GetTableFromField(fieldName, leafTable) + "].[ModifiedBy] = NULL\r\n";
+					if (hasModifyAudit && (fieldName != "ModifiedDate")) sql += ", [" + parser.GetTableFromField(fieldName, leafTable) + "].[ModifiedDate] = sysdatetime()\r\n";
 					sql += parser.GetFromClause(new QueryOptimizer()) + "\r\n";
 					sql += parser.GetWhereClause();
 					sql += ";select @@rowcount";
-					sql = "set ansi_nulls off;" + sql;
 					cmd.CommandText = sql;
 					if (newValue == null) cmd.Parameters.Add(new System.Data.SqlClient.SqlParameter("newValue", System.DBNull.Value));
 					else cmd.Parameters.Add(new System.Data.SqlClient.SqlParameter("newValue", newValue));
@@ -496,6 +496,14 @@ namespace Gravitybox.Datastore.EFDAL
 					{
 						childTables.Add(fromClause);
 					}
+					if (fromClause.TableName == "DeleteQueue")
+					{
+						childTables.Add(fromClause);
+					}
+					if (fromClause.TableName == "DeleteQueueItem")
+					{
+						childTables.Add(fromClause);
+					}
 					if (fromClause.TableName == "Housekeeping")
 					{
 						childTables.Add(fromClause);
@@ -553,6 +561,8 @@ namespace Gravitybox.Datastore.EFDAL
 					if (clause.TableName == "AppliedPatch") realTable = Gravitybox.Datastore.EFDAL.Entity.AppliedPatch.GetTableFromFieldAliasSqlMapping(field.Alias);
 					else if (clause.TableName == "CacheInvalidate") realTable = Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.GetTableFromFieldAliasSqlMapping(field.Alias);
 					else if (clause.TableName == "ConfigurationSetting") realTable = Gravitybox.Datastore.EFDAL.Entity.ConfigurationSetting.GetTableFromFieldAliasSqlMapping(field.Alias);
+					else if (clause.TableName == "DeleteQueue") realTable = Gravitybox.Datastore.EFDAL.Entity.DeleteQueue.GetTableFromFieldAliasSqlMapping(field.Alias);
+					else if (clause.TableName == "DeleteQueueItem") realTable = Gravitybox.Datastore.EFDAL.Entity.DeleteQueueItem.GetTableFromFieldAliasSqlMapping(field.Alias);
 					else if (clause.TableName == "Housekeeping") realTable = Gravitybox.Datastore.EFDAL.Entity.Housekeeping.GetTableFromFieldAliasSqlMapping(field.Alias);
 					else if (clause.TableName == "LockStat") realTable = Gravitybox.Datastore.EFDAL.Entity.LockStat.GetTableFromFieldAliasSqlMapping(field.Alias);
 					else if (clause.TableName == "Repository") realTable = Gravitybox.Datastore.EFDAL.Entity.Repository.GetTableFromFieldAliasSqlMapping(field.Alias);
@@ -590,6 +600,8 @@ namespace Gravitybox.Datastore.EFDAL
 					case "AppliedPatch": return Gravitybox.Datastore.EFDAL.Entity.AppliedPatch.GetRemappedLinqSql(whereClause, tableInfo.Alias, fromLinkList);
 					case "CacheInvalidate": return Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.GetRemappedLinqSql(whereClause, tableInfo.Alias, fromLinkList);
 					case "ConfigurationSetting": return Gravitybox.Datastore.EFDAL.Entity.ConfigurationSetting.GetRemappedLinqSql(whereClause, tableInfo.Alias, fromLinkList);
+					case "DeleteQueue": return Gravitybox.Datastore.EFDAL.Entity.DeleteQueue.GetRemappedLinqSql(whereClause, tableInfo.Alias, fromLinkList);
+					case "DeleteQueueItem": return Gravitybox.Datastore.EFDAL.Entity.DeleteQueueItem.GetRemappedLinqSql(whereClause, tableInfo.Alias, fromLinkList);
 					case "Housekeeping": return Gravitybox.Datastore.EFDAL.Entity.Housekeeping.GetRemappedLinqSql(whereClause, tableInfo.Alias, fromLinkList);
 					case "LockStat": return Gravitybox.Datastore.EFDAL.Entity.LockStat.GetRemappedLinqSql(whereClause, tableInfo.Alias, fromLinkList);
 					case "Repository": return Gravitybox.Datastore.EFDAL.Entity.Repository.GetRemappedLinqSql(whereClause, tableInfo.Alias, fromLinkList);
@@ -681,6 +693,8 @@ namespace Gravitybox.Datastore.EFDAL
 						case "AppliedPatch": alias = Gravitybox.Datastore.EFDAL.Entity.AppliedPatch.GetFieldAliasFromFieldNameSqlMapping(field); break;
 						case "CacheInvalidate": alias = Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.GetFieldAliasFromFieldNameSqlMapping(field); break;
 						case "ConfigurationSetting": alias = Gravitybox.Datastore.EFDAL.Entity.ConfigurationSetting.GetFieldAliasFromFieldNameSqlMapping(field); break;
+						case "DeleteQueue": alias = Gravitybox.Datastore.EFDAL.Entity.DeleteQueue.GetFieldAliasFromFieldNameSqlMapping(field); break;
+						case "DeleteQueueItem": alias = Gravitybox.Datastore.EFDAL.Entity.DeleteQueueItem.GetFieldAliasFromFieldNameSqlMapping(field); break;
 						case "Housekeeping": alias = Gravitybox.Datastore.EFDAL.Entity.Housekeeping.GetFieldAliasFromFieldNameSqlMapping(field); break;
 						case "LockStat": alias = Gravitybox.Datastore.EFDAL.Entity.LockStat.GetFieldAliasFromFieldNameSqlMapping(field); break;
 						case "Repository": alias = Gravitybox.Datastore.EFDAL.Entity.Repository.GetFieldAliasFromFieldNameSqlMapping(field); break;
@@ -751,9 +765,18 @@ namespace Gravitybox.Datastore.EFDAL
 			else return string.Empty;
 		}
 
-		public string GetTableAlias(string fieldName, string tableName)
+		public string GetTableFromField(string fieldName, string tableName)
 		{
-			return (from x in this.FieldList where x.Name == fieldName select x).FirstOrDefault().Table;
+			return GetTableAlias((from x in this.FieldList where x.Name == fieldName select x).FirstOrDefault().Table);
+		}
+
+		public static string GetTableAlias(string tableName)
+		{
+			tableName = tableName.Replace("[", string.Empty).Replace("]", string.Empty);
+			switch (tableName)
+			{
+			}
+ 		return tableName;
 		}
 
 		#endregion

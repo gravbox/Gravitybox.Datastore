@@ -162,6 +162,79 @@ namespace Gravitybox.Datastore.EFDAL
 
 	#endregion
 
+	#region DeleteQueueQuery
+
+	/// <summary>
+	/// This is a helper object for running LINQ queries on the DeleteQueue collection.
+	/// </summary>
+	[Serializable]
+	[Table(Name = "DeleteQueue")]
+	[System.CodeDom.Compiler.GeneratedCode("nHydrateModelGenerator", "6.0.0")]
+	public partial class DeleteQueueQuery : IBusinessObjectLINQQuery
+	{
+		#region Properties
+		/// <summary>
+		/// Determine if this item is ready to be processed
+		/// (Maps to the 'DeleteQueue.IsReady' database field)
+		/// </summary>
+		[Column(Name = "IsReady", DbType = "Bit", CanBeNull = false, IsPrimaryKey = false)]
+		[System.Diagnostics.DebuggerNonUserCode()]
+		public virtual bool IsReady { get; set; }
+		/// <summary>
+		/// (Maps to the 'DeleteQueue.RepositoryId' database field)
+		/// </summary>
+		[Column(Name = "RepositoryId", DbType = "Int", CanBeNull = false, IsPrimaryKey = false)]
+		[System.Diagnostics.DebuggerNonUserCode()]
+		public virtual int RepositoryId { get; set; }
+		/// <summary>
+		/// (Maps to the 'DeleteQueue.RowId' database field)
+		/// </summary>
+		[Column(Name = "RowId", DbType = "BigInt", CanBeNull = false, IsPrimaryKey = true)]
+		[System.Diagnostics.DebuggerNonUserCode()]
+		public virtual long RowId { get; set; }
+
+		#endregion
+
+	}
+
+	#endregion
+
+	#region DeleteQueueItemQuery
+
+	/// <summary>
+	/// This is a helper object for running LINQ queries on the DeleteQueueItem collection.
+	/// </summary>
+	[Serializable]
+	[Table(Name = "DeleteQueueItem")]
+	[System.CodeDom.Compiler.GeneratedCode("nHydrateModelGenerator", "6.0.0")]
+	public partial class DeleteQueueItemQuery : IBusinessObjectLINQQuery
+	{
+		#region Properties
+		/// <summary>
+		/// (Maps to the 'DeleteQueueItem.ParentRowId' database field)
+		/// </summary>
+		[Column(Name = "ParentRowId", DbType = "BigInt", CanBeNull = false, IsPrimaryKey = true)]
+		[System.Diagnostics.DebuggerNonUserCode()]
+		public virtual long ParentRowId { get; set; }
+		/// <summary>
+		/// (Maps to the 'DeleteQueueItem.RecordIdx' database field)
+		/// </summary>
+		[Column(Name = "RecordIdx", DbType = "BigInt", CanBeNull = false, IsPrimaryKey = true)]
+		[System.Diagnostics.DebuggerNonUserCode()]
+		public virtual long RecordIdx { get; set; }
+		/// <summary>
+		/// This is a mapping of the relationship with the DeleteQueue entity.
+		/// </summary>
+		[Association(ThisKey = "ParentRowId", OtherKey = "RowId")]
+		public Gravitybox.Datastore.EFDAL.DeleteQueueQuery DeleteQueue { get; private set; }
+
+
+		#endregion
+
+	}
+
+	#endregion
+
 	#region HousekeepingQuery
 
 	/// <summary>

@@ -56,6 +56,46 @@ namespace Gravitybox.Datastore.EFDAL
 
 	#endregion
 
+	#region DeleteQueueInclude
+
+	/// <summary>
+	/// This is a helper object for creating LINQ definitions for context includes on the DeleteQueue collection.
+	/// </summary>
+	[Serializable]
+	[Table(Name = "DeleteQueue")]
+	[System.CodeDom.Compiler.GeneratedCode("nHydrateModelGenerator", "6.0.0")]
+	public partial class DeleteQueueInclude : Gravitybox.Datastore.EFDAL.IContextInclude
+	{
+		/// <summary>
+		/// This is a mapping of the relationship with the DeleteQueueItem entity.
+		/// </summary>
+		[Association(ThisKey = "RowId", OtherKey = "ParentRowId")]
+		public Gravitybox.Datastore.EFDAL.DeleteQueueItemInclude DeleteQueueItemList { get; private set; }
+
+	}
+
+	#endregion
+
+	#region DeleteQueueItemInclude
+
+	/// <summary>
+	/// This is a helper object for creating LINQ definitions for context includes on the DeleteQueueItem collection.
+	/// </summary>
+	[Serializable]
+	[Table(Name = "DeleteQueueItem")]
+	[System.CodeDom.Compiler.GeneratedCode("nHydrateModelGenerator", "6.0.0")]
+	public partial class DeleteQueueItemInclude : Gravitybox.Datastore.EFDAL.IContextInclude
+	{
+		/// <summary>
+		/// This is a mapping of the relationship with the DeleteQueue entity.
+		/// </summary>
+		[Association(ThisKey = "ParentRowId", OtherKey = "RowId")]
+		public Gravitybox.Datastore.EFDAL.DeleteQueueInclude DeleteQueue { get; private set; }
+
+	}
+
+	#endregion
+
 	#region HousekeepingInclude
 
 	/// <summary>

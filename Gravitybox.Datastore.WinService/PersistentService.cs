@@ -299,7 +299,7 @@ namespace Gravitybox.Datastore.WinService
                     MaxStringContentLength = int.MaxValue,
                 },
                 OpenTimeout = new TimeSpan(0, 0, 10),
-                ReceiveTimeout = new TimeSpan(0, 0, 120),
+                ReceiveTimeout = new TimeSpan(0, 5, 0),
                 CloseTimeout = new TimeSpan(0, 0, 120),
             };
             myBinding.Security.Mode = SecurityMode.None;

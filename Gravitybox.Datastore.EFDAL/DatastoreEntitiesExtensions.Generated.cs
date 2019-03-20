@@ -29,10 +29,19 @@ namespace Gravitybox.Datastore.EFDAL
 			where T : BaseEntity
 			where R : IContextInclude
 		{
-			var strings = new List<string>(query.Body.ToString().Split('.'));
-			strings.RemoveAt(0);
+			var builder = new List<string>();
+			var zz = query.Body as MemberExpression;
+			while (zz != null)
+			{
+				var tt = zz.Member.GetCustomAttributes(typeof(EntityMap), true).FirstOrDefault() as EntityMap;
+				if (tt != null) builder.Add(tt.Name);
+				else builder.Add(zz.Member.Name);
+				zz = zz.Expression as MemberExpression;
+			}
+			builder.Reverse();
+
 			var compoundString = string.Empty;
-			foreach (var s in strings)
+			foreach (var s in builder)
 			{
 				if (!string.IsNullOrEmpty(compoundString)) compoundString += ".";
 				compoundString += s;
@@ -59,6 +68,46 @@ namespace Gravitybox.Datastore.EFDAL
 				tempItem = tempItem.Include(compoundString);
 			}
 			return tempItem;
+		}
+
+		/// <summary>
+		/// Specifies the related objects to include in the query results.
+		/// </summary>
+		/// <param name="item">Related object to return in query results</param>
+		/// <param name="query">The LINQ expresssion that maps an include path</param>
+		public static System.Data.Entity.Infrastructure.DbQuery<Gravitybox.Datastore.EFDAL.Entity.DeleteQueue> Include(this System.Data.Entity.Infrastructure.DbQuery<Gravitybox.Datastore.EFDAL.Entity.DeleteQueue> item, Expression<Func<Gravitybox.Datastore.EFDAL.DeleteQueueInclude, Gravitybox.Datastore.EFDAL.IContextInclude>> query)
+		{
+			return GetInclude<Gravitybox.Datastore.EFDAL.Entity.DeleteQueue, Gravitybox.Datastore.EFDAL.DeleteQueueInclude>(item, query);
+		}
+
+		/// <summary>
+		/// Specifies the related objects to include in the query results.
+		/// </summary>
+		/// <param name="item">Related object to return in query results</param>
+		/// <param name="query">The LINQ expresssion that maps an include path</param>
+		public static IQueryable<Gravitybox.Datastore.EFDAL.Entity.DeleteQueue> Include(this IQueryable<Gravitybox.Datastore.EFDAL.Entity.DeleteQueue> item, Expression<Func<Gravitybox.Datastore.EFDAL.DeleteQueueInclude, Gravitybox.Datastore.EFDAL.IContextInclude>> query)
+		{
+			return GetInclude<Gravitybox.Datastore.EFDAL.Entity.DeleteQueue, Gravitybox.Datastore.EFDAL.DeleteQueueInclude>(item, query);
+		}
+
+		/// <summary>
+		/// Specifies the related objects to include in the query results.
+		/// </summary>
+		/// <param name="item">Related object to return in query results</param>
+		/// <param name="query">The LINQ expresssion that maps an include path</param>
+		public static System.Data.Entity.Infrastructure.DbQuery<Gravitybox.Datastore.EFDAL.Entity.DeleteQueueItem> Include(this System.Data.Entity.Infrastructure.DbQuery<Gravitybox.Datastore.EFDAL.Entity.DeleteQueueItem> item, Expression<Func<Gravitybox.Datastore.EFDAL.DeleteQueueItemInclude, Gravitybox.Datastore.EFDAL.IContextInclude>> query)
+		{
+			return GetInclude<Gravitybox.Datastore.EFDAL.Entity.DeleteQueueItem, Gravitybox.Datastore.EFDAL.DeleteQueueItemInclude>(item, query);
+		}
+
+		/// <summary>
+		/// Specifies the related objects to include in the query results.
+		/// </summary>
+		/// <param name="item">Related object to return in query results</param>
+		/// <param name="query">The LINQ expresssion that maps an include path</param>
+		public static IQueryable<Gravitybox.Datastore.EFDAL.Entity.DeleteQueueItem> Include(this IQueryable<Gravitybox.Datastore.EFDAL.Entity.DeleteQueueItem> item, Expression<Func<Gravitybox.Datastore.EFDAL.DeleteQueueItemInclude, Gravitybox.Datastore.EFDAL.IContextInclude>> query)
+		{
+			return GetInclude<Gravitybox.Datastore.EFDAL.Entity.DeleteQueueItem, Gravitybox.Datastore.EFDAL.DeleteQueueItemInclude>(item, query);
 		}
 
 		/// <summary>
@@ -136,6 +185,10 @@ namespace Gravitybox.Datastore.EFDAL
 				return Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.GetFieldType((Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants)field);
 			if (field is Gravitybox.Datastore.EFDAL.Entity.ConfigurationSetting.FieldNameConstants)
 				return Gravitybox.Datastore.EFDAL.Entity.ConfigurationSetting.GetFieldType((Gravitybox.Datastore.EFDAL.Entity.ConfigurationSetting.FieldNameConstants)field);
+			if (field is Gravitybox.Datastore.EFDAL.Entity.DeleteQueue.FieldNameConstants)
+				return Gravitybox.Datastore.EFDAL.Entity.DeleteQueue.GetFieldType((Gravitybox.Datastore.EFDAL.Entity.DeleteQueue.FieldNameConstants)field);
+			if (field is Gravitybox.Datastore.EFDAL.Entity.DeleteQueueItem.FieldNameConstants)
+				return Gravitybox.Datastore.EFDAL.Entity.DeleteQueueItem.GetFieldType((Gravitybox.Datastore.EFDAL.Entity.DeleteQueueItem.FieldNameConstants)field);
 			if (field is Gravitybox.Datastore.EFDAL.Entity.Housekeeping.FieldNameConstants)
 				return Gravitybox.Datastore.EFDAL.Entity.Housekeeping.GetFieldType((Gravitybox.Datastore.EFDAL.Entity.Housekeeping.FieldNameConstants)field);
 			if (field is Gravitybox.Datastore.EFDAL.Entity.LockStat.FieldNameConstants)
@@ -189,6 +242,8 @@ namespace Gravitybox.Datastore.EFDAL
 				case EntityMappingConstants.AppliedPatch: return typeof(Gravitybox.Datastore.EFDAL.Entity.AppliedPatch);
 				case EntityMappingConstants.CacheInvalidate: return typeof(Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate);
 				case EntityMappingConstants.ConfigurationSetting: return typeof(Gravitybox.Datastore.EFDAL.Entity.ConfigurationSetting);
+				case EntityMappingConstants.DeleteQueue: return typeof(Gravitybox.Datastore.EFDAL.Entity.DeleteQueue);
+				case EntityMappingConstants.DeleteQueueItem: return typeof(Gravitybox.Datastore.EFDAL.Entity.DeleteQueueItem);
 				case EntityMappingConstants.Housekeeping: return typeof(Gravitybox.Datastore.EFDAL.Entity.Housekeeping);
 				case EntityMappingConstants.LockStat: return typeof(Gravitybox.Datastore.EFDAL.Entity.LockStat);
 				case EntityMappingConstants.Repository: return typeof(Gravitybox.Datastore.EFDAL.Entity.Repository);
@@ -524,6 +579,24 @@ namespace Gravitybox.Datastore.EFDAL
 				sb.AppendLine("on [X].[ID] = [Extent2].[ID]");
 				sb.AppendLine("select @@ROWCOUNT");
 			}
+			else if (typeof(T) == typeof(Gravitybox.Datastore.EFDAL.Entity.DeleteQueue))
+			{
+				sb.AppendLine("set rowcount " + optimizer.ChunkSize + ";");
+				sb.AppendLine("delete [X] from [dbo].[DeleteQueue] [X] inner join (");
+				sb.AppendLine(((IQueryable<Gravitybox.Datastore.EFDAL.Entity.DeleteQueue>)query).Select(x => new { x.RowId }).ToString());
+				sb.AppendLine(") AS [Extent2]");
+				sb.AppendLine("on [X].[RowId] = [Extent2].[RowId]");
+				sb.AppendLine("select @@ROWCOUNT");
+			}
+			else if (typeof(T) == typeof(Gravitybox.Datastore.EFDAL.Entity.DeleteQueueItem))
+			{
+				sb.AppendLine("set rowcount " + optimizer.ChunkSize + ";");
+				sb.AppendLine("delete [X] from [dbo].[DeleteQueueItem] [X] inner join (");
+				sb.AppendLine(((IQueryable<Gravitybox.Datastore.EFDAL.Entity.DeleteQueueItem>)query).Select(x => new { x.ParentRowId, x.RecordIdx }).ToString());
+				sb.AppendLine(") AS [Extent2]");
+				sb.AppendLine("on [X].[ParentRowId] = [Extent2].[ParentRowId] AND [X].[RecordIdx] = [Extent2].[RecordIdx]");
+				sb.AppendLine("select @@ROWCOUNT");
+			}
 			else if (typeof(T) == typeof(Gravitybox.Datastore.EFDAL.Entity.Housekeeping))
 			{
 				sb.AppendLine("set rowcount " + optimizer.ChunkSize + ";");
@@ -636,6 +709,12 @@ namespace Gravitybox.Datastore.EFDAL
 		#endregion
 
 		#region Update Extensions
+
+	    private static readonly string[] _updateableAuditFields = new[]
+	    {
+	        "ModifiedBy",
+	        "ModifiedDate"
+	    };
 
 		/// <summary />
 		public static void Update<T>(this IQueryable<T> query, Expression<Func<T, T>> obj)
@@ -847,7 +926,15 @@ namespace Gravitybox.Datastore.EFDAL
 			do
 			{
 				var md = theObj.GetMetaData();
-				mapping.Add(new UpdateSqlMapItem { TableName = md.GetTableName(), FieldList = md.GetFields(), Schema = md.Schema(), Metadata = md });
+			    var mdFields = md.GetFields();
+				var audit = theObj as IAuditable;
+				if (audit != null && audit.IsModifyAuditImplemented)
+				{
+					// For auditable entities, we need to include the updateable fields in the field list so that
+					// the SQl generator can find them.
+					mdFields.AddRange(_updateableAuditFields);
+				}
+				mapping.Add(new UpdateSqlMapItem { TableName = md.GetTableName(), FieldList = mdFields, Schema = md.Schema(), Metadata = md });
 				var newT = md.InheritsFrom();
 				if (newT == null)
 					theObj = default(T);
@@ -886,155 +973,183 @@ namespace Gravitybox.Datastore.EFDAL
 			#region Per table code
 			if (typeof(T) == typeof(Gravitybox.Datastore.EFDAL.Entity.AppliedPatch))
 			{
-				sb.AppendLine("set rowcount " + optimizer.ChunkSize + ";");
+				sb.AppendLine("SET ROWCOUNT " + optimizer.ChunkSize + ";");
 				foreach (var item in mapping.Where(x => x.SqlList.Any()).ToList())
 				{
 					sb.AppendLine("UPDATE [X] SET");
 					sb.AppendLine(string.Join(", ", item.SqlList));
-					sb.AppendLine("FROM [" + item.Schema + "].[" + item.TableName + "] AS [X] INNER JOIN (");
+					sb.AppendLine("FROM [" + item.Schema + "].[" + LinqSQLParser.GetTableAlias(item.TableName) + "] AS [X] INNER JOIN (");
 					sb.AppendLine(((IQueryable<Gravitybox.Datastore.EFDAL.Entity.AppliedPatch>)query).Select(x => new { x.ID }).ToString());
 					sb.AppendLine(") AS [Extent2]");
-					sb.AppendLine("on [X].[ID] = [Extent2].[ID]");
+					sb.AppendLine("ON [X].[ID] = [Extent2].[ID]");
 					sb.AppendLine("select @@ROWCOUNT");
 				}
 			}
 			else if (typeof(T) == typeof(Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate))
 			{
-				sb.AppendLine("set rowcount " + optimizer.ChunkSize + ";");
+				sb.AppendLine("SET ROWCOUNT " + optimizer.ChunkSize + ";");
 				foreach (var item in mapping.Where(x => x.SqlList.Any()).ToList())
 				{
 					sb.AppendLine("UPDATE [X] SET");
 					sb.AppendLine(string.Join(", ", item.SqlList));
-					sb.AppendLine("FROM [" + item.Schema + "].[" + item.TableName + "] AS [X] INNER JOIN (");
+					sb.AppendLine("FROM [" + item.Schema + "].[" + LinqSQLParser.GetTableAlias(item.TableName) + "] AS [X] INNER JOIN (");
 					sb.AppendLine(((IQueryable<Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate>)query).Select(x => new { x.RowId }).ToString());
 					sb.AppendLine(") AS [Extent2]");
-					sb.AppendLine("on [X].[RowId] = [Extent2].[RowId]");
+					sb.AppendLine("ON [X].[RowId] = [Extent2].[RowId]");
 					sb.AppendLine("select @@ROWCOUNT");
 				}
 			}
 			else if (typeof(T) == typeof(Gravitybox.Datastore.EFDAL.Entity.ConfigurationSetting))
 			{
-				sb.AppendLine("set rowcount " + optimizer.ChunkSize + ";");
+				sb.AppendLine("SET ROWCOUNT " + optimizer.ChunkSize + ";");
 				foreach (var item in mapping.Where(x => x.SqlList.Any()).ToList())
 				{
 					sb.AppendLine("UPDATE [X] SET");
 					sb.AppendLine(string.Join(", ", item.SqlList));
-					sb.AppendLine("FROM [" + item.Schema + "].[" + item.TableName + "] AS [X] INNER JOIN (");
+					sb.AppendLine("FROM [" + item.Schema + "].[" + LinqSQLParser.GetTableAlias(item.TableName) + "] AS [X] INNER JOIN (");
 					sb.AppendLine(((IQueryable<Gravitybox.Datastore.EFDAL.Entity.ConfigurationSetting>)query).Select(x => new { x.ID }).ToString());
 					sb.AppendLine(") AS [Extent2]");
-					sb.AppendLine("on [X].[ID] = [Extent2].[ID]");
+					sb.AppendLine("ON [X].[ID] = [Extent2].[ID]");
+					sb.AppendLine("select @@ROWCOUNT");
+				}
+			}
+			else if (typeof(T) == typeof(Gravitybox.Datastore.EFDAL.Entity.DeleteQueue))
+			{
+				sb.AppendLine("SET ROWCOUNT " + optimizer.ChunkSize + ";");
+				foreach (var item in mapping.Where(x => x.SqlList.Any()).ToList())
+				{
+					sb.AppendLine("UPDATE [X] SET");
+					sb.AppendLine(string.Join(", ", item.SqlList));
+					sb.AppendLine("FROM [" + item.Schema + "].[" + LinqSQLParser.GetTableAlias(item.TableName) + "] AS [X] INNER JOIN (");
+					sb.AppendLine(((IQueryable<Gravitybox.Datastore.EFDAL.Entity.DeleteQueue>)query).Select(x => new { x.RowId }).ToString());
+					sb.AppendLine(") AS [Extent2]");
+					sb.AppendLine("ON [X].[RowId] = [Extent2].[RowId]");
+					sb.AppendLine("select @@ROWCOUNT");
+				}
+			}
+			else if (typeof(T) == typeof(Gravitybox.Datastore.EFDAL.Entity.DeleteQueueItem))
+			{
+				sb.AppendLine("SET ROWCOUNT " + optimizer.ChunkSize + ";");
+				foreach (var item in mapping.Where(x => x.SqlList.Any()).ToList())
+				{
+					sb.AppendLine("UPDATE [X] SET");
+					sb.AppendLine(string.Join(", ", item.SqlList));
+					sb.AppendLine("FROM [" + item.Schema + "].[" + LinqSQLParser.GetTableAlias(item.TableName) + "] AS [X] INNER JOIN (");
+					sb.AppendLine(((IQueryable<Gravitybox.Datastore.EFDAL.Entity.DeleteQueueItem>)query).Select(x => new { x.ParentRowId, x.RecordIdx }).ToString());
+					sb.AppendLine(") AS [Extent2]");
+					sb.AppendLine("ON [X].[ParentRowId] = [Extent2].[ParentRowId] AND [X].[RecordIdx] = [Extent2].[RecordIdx]");
 					sb.AppendLine("select @@ROWCOUNT");
 				}
 			}
 			else if (typeof(T) == typeof(Gravitybox.Datastore.EFDAL.Entity.Housekeeping))
 			{
-				sb.AppendLine("set rowcount " + optimizer.ChunkSize + ";");
+				sb.AppendLine("SET ROWCOUNT " + optimizer.ChunkSize + ";");
 				foreach (var item in mapping.Where(x => x.SqlList.Any()).ToList())
 				{
 					sb.AppendLine("UPDATE [X] SET");
 					sb.AppendLine(string.Join(", ", item.SqlList));
-					sb.AppendLine("FROM [" + item.Schema + "].[" + item.TableName + "] AS [X] INNER JOIN (");
+					sb.AppendLine("FROM [" + item.Schema + "].[" + LinqSQLParser.GetTableAlias(item.TableName) + "] AS [X] INNER JOIN (");
 					sb.AppendLine(((IQueryable<Gravitybox.Datastore.EFDAL.Entity.Housekeeping>)query).Select(x => new { x.ID }).ToString());
 					sb.AppendLine(") AS [Extent2]");
-					sb.AppendLine("on [X].[ID] = [Extent2].[ID]");
+					sb.AppendLine("ON [X].[ID] = [Extent2].[ID]");
 					sb.AppendLine("select @@ROWCOUNT");
 				}
 			}
 			else if (typeof(T) == typeof(Gravitybox.Datastore.EFDAL.Entity.LockStat))
 			{
-				sb.AppendLine("set rowcount " + optimizer.ChunkSize + ";");
+				sb.AppendLine("SET ROWCOUNT " + optimizer.ChunkSize + ";");
 				foreach (var item in mapping.Where(x => x.SqlList.Any()).ToList())
 				{
 					sb.AppendLine("UPDATE [X] SET");
 					sb.AppendLine(string.Join(", ", item.SqlList));
-					sb.AppendLine("FROM [" + item.Schema + "].[" + item.TableName + "] AS [X] INNER JOIN (");
+					sb.AppendLine("FROM [" + item.Schema + "].[" + LinqSQLParser.GetTableAlias(item.TableName) + "] AS [X] INNER JOIN (");
 					sb.AppendLine(((IQueryable<Gravitybox.Datastore.EFDAL.Entity.LockStat>)query).Select(x => new { x.LockStatId }).ToString());
 					sb.AppendLine(") AS [Extent2]");
-					sb.AppendLine("on [X].[LockStatId] = [Extent2].[LockStatId]");
+					sb.AppendLine("ON [X].[LockStatId] = [Extent2].[LockStatId]");
 					sb.AppendLine("select @@ROWCOUNT");
 				}
 			}
 			else if (typeof(T) == typeof(Gravitybox.Datastore.EFDAL.Entity.Repository))
 			{
-				sb.AppendLine("set rowcount " + optimizer.ChunkSize + ";");
+				sb.AppendLine("SET ROWCOUNT " + optimizer.ChunkSize + ";");
 				foreach (var item in mapping.Where(x => x.SqlList.Any()).ToList())
 				{
 					sb.AppendLine("UPDATE [X] SET");
 					sb.AppendLine(string.Join(", ", item.SqlList));
-					sb.AppendLine("FROM [" + item.Schema + "].[" + item.TableName + "] AS [X] INNER JOIN (");
+					sb.AppendLine("FROM [" + item.Schema + "].[" + LinqSQLParser.GetTableAlias(item.TableName) + "] AS [X] INNER JOIN (");
 					sb.AppendLine(((IQueryable<Gravitybox.Datastore.EFDAL.Entity.Repository>)query).Select(x => new { x.RepositoryId }).ToString());
 					sb.AppendLine(") AS [Extent2]");
-					sb.AppendLine("on [X].[RepositoryId] = [Extent2].[RepositoryId]");
+					sb.AppendLine("ON [X].[RepositoryId] = [Extent2].[RepositoryId]");
 					sb.AppendLine("select @@ROWCOUNT");
 				}
 			}
 			else if (typeof(T) == typeof(Gravitybox.Datastore.EFDAL.Entity.RepositoryLog))
 			{
-				sb.AppendLine("set rowcount " + optimizer.ChunkSize + ";");
+				sb.AppendLine("SET ROWCOUNT " + optimizer.ChunkSize + ";");
 				foreach (var item in mapping.Where(x => x.SqlList.Any()).ToList())
 				{
 					sb.AppendLine("UPDATE [X] SET");
 					sb.AppendLine(string.Join(", ", item.SqlList));
-					sb.AppendLine("FROM [" + item.Schema + "].[" + item.TableName + "] AS [X] INNER JOIN (");
+					sb.AppendLine("FROM [" + item.Schema + "].[" + LinqSQLParser.GetTableAlias(item.TableName) + "] AS [X] INNER JOIN (");
 					sb.AppendLine(((IQueryable<Gravitybox.Datastore.EFDAL.Entity.RepositoryLog>)query).Select(x => new { x.RepositoryLogId }).ToString());
 					sb.AppendLine(") AS [Extent2]");
-					sb.AppendLine("on [X].[RepositoryLogId] = [Extent2].[RepositoryLogId]");
+					sb.AppendLine("ON [X].[RepositoryLogId] = [Extent2].[RepositoryLogId]");
 					sb.AppendLine("select @@ROWCOUNT");
 				}
 			}
 			else if (typeof(T) == typeof(Gravitybox.Datastore.EFDAL.Entity.RepositoryStat))
 			{
-				sb.AppendLine("set rowcount " + optimizer.ChunkSize + ";");
+				sb.AppendLine("SET ROWCOUNT " + optimizer.ChunkSize + ";");
 				foreach (var item in mapping.Where(x => x.SqlList.Any()).ToList())
 				{
 					sb.AppendLine("UPDATE [X] SET");
 					sb.AppendLine(string.Join(", ", item.SqlList));
-					sb.AppendLine("FROM [" + item.Schema + "].[" + item.TableName + "] AS [X] INNER JOIN (");
+					sb.AppendLine("FROM [" + item.Schema + "].[" + LinqSQLParser.GetTableAlias(item.TableName) + "] AS [X] INNER JOIN (");
 					sb.AppendLine(((IQueryable<Gravitybox.Datastore.EFDAL.Entity.RepositoryStat>)query).Select(x => new { x.RepositoryStatId }).ToString());
 					sb.AppendLine(") AS [Extent2]");
-					sb.AppendLine("on [X].[RepositoryStatId] = [Extent2].[RepositoryStatId]");
+					sb.AppendLine("ON [X].[RepositoryStatId] = [Extent2].[RepositoryStatId]");
 					sb.AppendLine("select @@ROWCOUNT");
 				}
 			}
 			else if (typeof(T) == typeof(Gravitybox.Datastore.EFDAL.Entity.Server))
 			{
-				sb.AppendLine("set rowcount " + optimizer.ChunkSize + ";");
+				sb.AppendLine("SET ROWCOUNT " + optimizer.ChunkSize + ";");
 				foreach (var item in mapping.Where(x => x.SqlList.Any()).ToList())
 				{
 					sb.AppendLine("UPDATE [X] SET");
 					sb.AppendLine(string.Join(", ", item.SqlList));
-					sb.AppendLine("FROM [" + item.Schema + "].[" + item.TableName + "] AS [X] INNER JOIN (");
+					sb.AppendLine("FROM [" + item.Schema + "].[" + LinqSQLParser.GetTableAlias(item.TableName) + "] AS [X] INNER JOIN (");
 					sb.AppendLine(((IQueryable<Gravitybox.Datastore.EFDAL.Entity.Server>)query).Select(x => new { x.ServerId }).ToString());
 					sb.AppendLine(") AS [Extent2]");
-					sb.AppendLine("on [X].[ServerId] = [Extent2].[ServerId]");
+					sb.AppendLine("ON [X].[ServerId] = [Extent2].[ServerId]");
 					sb.AppendLine("select @@ROWCOUNT");
 				}
 			}
 			else if (typeof(T) == typeof(Gravitybox.Datastore.EFDAL.Entity.ServerStat))
 			{
-				sb.AppendLine("set rowcount " + optimizer.ChunkSize + ";");
+				sb.AppendLine("SET ROWCOUNT " + optimizer.ChunkSize + ";");
 				foreach (var item in mapping.Where(x => x.SqlList.Any()).ToList())
 				{
 					sb.AppendLine("UPDATE [X] SET");
 					sb.AppendLine(string.Join(", ", item.SqlList));
-					sb.AppendLine("FROM [" + item.Schema + "].[" + item.TableName + "] AS [X] INNER JOIN (");
+					sb.AppendLine("FROM [" + item.Schema + "].[" + LinqSQLParser.GetTableAlias(item.TableName) + "] AS [X] INNER JOIN (");
 					sb.AppendLine(((IQueryable<Gravitybox.Datastore.EFDAL.Entity.ServerStat>)query).Select(x => new { x.ServerStatId }).ToString());
 					sb.AppendLine(") AS [Extent2]");
-					sb.AppendLine("on [X].[ServerStatId] = [Extent2].[ServerStatId]");
+					sb.AppendLine("ON [X].[ServerStatId] = [Extent2].[ServerStatId]");
 					sb.AppendLine("select @@ROWCOUNT");
 				}
 			}
 			else if (typeof(T) == typeof(Gravitybox.Datastore.EFDAL.Entity.ServiceInstance))
 			{
-				sb.AppendLine("set rowcount " + optimizer.ChunkSize + ";");
+				sb.AppendLine("SET ROWCOUNT " + optimizer.ChunkSize + ";");
 				foreach (var item in mapping.Where(x => x.SqlList.Any()).ToList())
 				{
 					sb.AppendLine("UPDATE [X] SET");
 					sb.AppendLine(string.Join(", ", item.SqlList));
-					sb.AppendLine("FROM [" + item.Schema + "].[" + item.TableName + "] AS [X] INNER JOIN (");
+					sb.AppendLine("FROM [" + item.Schema + "].[" + LinqSQLParser.GetTableAlias(item.TableName) + "] AS [X] INNER JOIN (");
 					sb.AppendLine(((IQueryable<Gravitybox.Datastore.EFDAL.Entity.ServiceInstance>)query).Select(x => new { x.RowId }).ToString());
 					sb.AppendLine(") AS [Extent2]");
-					sb.AppendLine("on [X].[RowId] = [Extent2].[RowId]");
+					sb.AppendLine("ON [X].[RowId] = [Extent2].[RowId]");
 					sb.AppendLine("select @@ROWCOUNT");
 				}
 			}

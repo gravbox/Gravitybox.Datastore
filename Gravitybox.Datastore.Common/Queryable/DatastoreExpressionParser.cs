@@ -117,6 +117,10 @@ namespace Gravitybox.Datastore.Common.Queryable
             {
                 this.Query.IncludeEmptyDimensions = true;
             }
+            else if (node.Method.Name == "ExcludeDimensionCount")
+            {
+                this.Query.ExcludeDimensionCount = true;
+            }
             else if (node.Method.Name == "AggregateMin")
             {
                 HandleAggregateShortcutExpression(node.Arguments, AggregateOperationConstants.Min);
@@ -861,6 +865,7 @@ namespace Gravitybox.Datastore.Common.Queryable
                     this.Query.ExcludeCount = u.ExcludeCount;
                     this.Query.IncludeDimensions = u.IncludeDimensions;
                     this.Query.IncludeEmptyDimensions = u.IncludeEmptyDimensions;
+                    this.Query.ExcludeDimensionCount = u.ExcludeDimensionCount;
                     this.Query.IncludeRecords = u.IncludeRecords;
                     this.Query.NonParsedFieldList = u.NonParsedFieldList;
 
@@ -905,6 +910,7 @@ namespace Gravitybox.Datastore.Common.Queryable
                     this.Query.ExcludeCount = u.ExcludeCount;
                     this.Query.IncludeDimensions = u.IncludeDimensions;
                     this.Query.IncludeEmptyDimensions = u.IncludeEmptyDimensions;
+                    this.Query.ExcludeDimensionCount = u.ExcludeDimensionCount;
                     this.Query.IncludeRecords = u.IncludeRecords;
                     this.Query.NonParsedFieldList = u.NonParsedFieldList;
 

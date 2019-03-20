@@ -390,5 +390,20 @@ namespace Gravitybox.Datastore.Server.Core
                 throw;
             }
         }
+
+        /// <summary />
+        internal static bool IsDimensionDump(this DataQuery query)
+        {
+            if (query == null) return false;
+            if (query.IncludeRecords) return false;
+            if (!query.IncludeDimensions) return false;
+            if (!query.ExcludeDimensionCount) return false;
+            if (query.FieldFilters?.Any() == true) return false;
+            if (query.FieldSelects?.Any() == true) return false;
+            if (query.GroupFields?.Any() == true) return false;
+            if (query.DerivedFieldList?.Any() == true) return false;
+            if (query.DimensionValueList?.Any() == true) return false;
+            return true;
+        }
     }
 }

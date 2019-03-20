@@ -60,8 +60,7 @@ namespace Gravitybox.Datastore.Server.Core
             }
             catch (Exception ex)
             {
-                //LoggerCQ.LogError(ex);
-                //throw;
+                LoggerCQ.LogWarning($"QueryLogManager: Error={ex.Message}");
             }
         }
 

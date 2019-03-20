@@ -42,6 +42,14 @@ namespace Gravitybox.Datastore.EFDAL
 		/// </summary>
 		ConfigurationSetting,
 		/// <summary>
+		/// A mapping for the the DeleteQueue entity
+		/// </summary>
+		DeleteQueue,
+		/// <summary>
+		/// A mapping for the the DeleteQueueItem entity
+		/// </summary>
+		DeleteQueueItem,
+		/// <summary>
 		/// A mapping for the the Housekeeping entity
 		/// </summary>
 		Housekeeping,
@@ -116,7 +124,7 @@ namespace Gravitybox.Datastore.EFDAL
 		private static Dictionary<string, SequentialIdGenerator> _sequentialIdGeneratorCache = new Dictionary<string, SequentialIdGenerator>();
 		private static object _seqCacheLock = new object();
 
-		private const string _version = "2.1.0.0.65";
+		private const string _version = "2.1.0.0.66";
 		private const string _modelKey = "c4808261-57ef-4c4b-9c5c-b199c70e73ae";
 
 		/// <summary />
@@ -283,6 +291,8 @@ namespace Gravitybox.Datastore.EFDAL
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.AppliedPatch>().ToTable("AppliedPatch", "dbo");
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate>().ToTable("CacheInvalidate", "dbo");
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.ConfigurationSetting>().ToTable("ConfigurationSetting", "dbo");
+			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.DeleteQueue>().ToTable("DeleteQueue", "dbo");
+			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.DeleteQueueItem>().ToTable("DeleteQueueItem", "dbo");
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.Housekeeping>().ToTable("Housekeeping", "dbo");
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.LockStat>().ToTable("LockStat", "dbo");
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.Repository>().ToTable("Repository", "dbo");
@@ -312,6 +322,15 @@ namespace Gravitybox.Datastore.EFDAL
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.ConfigurationSetting>().Property(d => d.Name).IsRequired().HasMaxLength(50);
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.ConfigurationSetting>().Property(d => d.Value).IsRequired().HasMaxLength(2147483647);
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.ConfigurationSetting>().Property(d => d.Timestamp).IsConcurrencyToken(true);
+
+			//Field setup for DeleteQueue entity
+			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.DeleteQueue>().Property(d => d.IsReady).IsRequired();
+			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.DeleteQueue>().Property(d => d.RepositoryId).IsRequired();
+			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.DeleteQueue>().Property(d => d.RowId).IsRequired().HasDatabaseGeneratedOption(System.ComponentModel.DataAnnotations.Schema.DatabaseGeneratedOption.Identity);
+
+			//Field setup for DeleteQueueItem entity
+			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.DeleteQueueItem>().Property(d => d.ParentRowId).IsRequired().HasDatabaseGeneratedOption(System.ComponentModel.DataAnnotations.Schema.DatabaseGeneratedOption.None);
+			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.DeleteQueueItem>().Property(d => d.RecordIdx).IsRequired().HasDatabaseGeneratedOption(System.ComponentModel.DataAnnotations.Schema.DatabaseGeneratedOption.None);
 
 			//Field setup for Housekeeping entity
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.Housekeeping>().Property(d => d.Data).IsRequired();
@@ -410,19 +429,26 @@ namespace Gravitybox.Datastore.EFDAL
 
 			#region Relations
 
+			//Relation DeleteQueue -> DeleteQueueItem
+			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.DeleteQueueItem>()
+				.HasRequired(a => a.DeleteQueue)
+				.WithMany(b => b.DeleteQueueItemList)
+				.HasForeignKey(u => new { u.ParentRowId })
+				.WillCascadeOnDelete(false);
+
 			//Relation RepositoryActionType -> RepositoryStat
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.RepositoryStat>()
-							 .HasRequired(a => a.RepositoryActionType)
-							 .WithMany(b => b.RepositoryStatList)
-							 .HasForeignKey(u => new { u.RepositoryActionTypeId })
-							 .WillCascadeOnDelete(false);
+				.HasRequired(a => a.RepositoryActionType)
+				.WithMany(b => b.RepositoryStatList)
+				.HasForeignKey(u => new { u.RepositoryActionTypeId })
+				.WillCascadeOnDelete(false);
 
 			//Relation Server -> ServerStat
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.ServerStat>()
-							 .HasRequired(a => a.Server)
-							 .WithMany(b => b.ServerStatList)
-							 .HasForeignKey(u => new { u.ServerId })
-							 .WillCascadeOnDelete(false);
+				.HasRequired(a => a.Server)
+				.WithMany(b => b.ServerStatList)
+				.HasForeignKey(u => new { u.ServerId })
+				.WillCascadeOnDelete(false);
 
 			#endregion
 
@@ -436,6 +462,8 @@ namespace Gravitybox.Datastore.EFDAL
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.AppliedPatch>().HasKey(x => new { x.ID });
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate>().HasKey(x => new { x.RowId });
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.ConfigurationSetting>().HasKey(x => new { x.ID });
+			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.DeleteQueue>().HasKey(x => new { x.RowId });
+			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.DeleteQueueItem>().HasKey(x => new { x.ParentRowId, x.RecordIdx });
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.Housekeeping>().HasKey(x => new { x.ID });
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.LockStat>().HasKey(x => new { x.LockStatId });
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.Repository>().HasKey(x => new { x.RepositoryId });
@@ -482,6 +510,11 @@ namespace Gravitybox.Datastore.EFDAL
 			}
 		}
 
+        private List<Tuple<string, string>> GetTableHierarchyForUpdate(object entity)
+        {
+            var retval = new List<Tuple<string, string>>();
+            return retval.Distinct().ToList();
+        }
 		/// <summary>
 		/// Persists all updates to the data source and resets change tracking in the object context.
 		/// </summary>
@@ -520,6 +553,7 @@ namespace Gravitybox.Datastore.EFDAL
 			}
 			this.OnBeforeSaveAddedEntity(new EventArguments.EntityListEventArgs { List = addedList });
 
+			var extraScripts = new List<string>();
 			//Process modified list
 			var modifiedList = this.ObjectContext.ObjectStateManager.GetObjectStateEntries(System.Data.Entity.EntityState.Modified);
 			foreach (var item in modifiedList)
@@ -533,6 +567,9 @@ namespace Gravitybox.Datastore.EFDAL
 						if (audit != null) audit.ResetModifiedBy(this.ContextStartup.Modifer);
 					}
 					audit.ModifiedDate = markedTime;
+					//var updateObjects = GetTableHierarchyForUpdate(item.Entity);
+					//foreach (var uo in updateObjects)
+					//	extraScripts.Add($"UPDATE [{uo.Item1}] SET [{uo.Item2}] = @__modifiedDate");
 				}
 			}
 			this.OnBeforeSaveModifiedEntity(new EventArguments.EntityListEventArgs { List = modifiedList });
@@ -547,6 +584,7 @@ namespace Gravitybox.Datastore.EFDAL
 				retval += QueryPreCache.ExecuteDeletes(this);
 				retval += base.SaveChanges();
 				retval += QueryPreCache.ExecuteUpdates(this);
+				QueryPreCache.ExecuteModifiedScripts(this, extraScripts, markedTime);
 				if (customTrans != null)
 					customTrans.Commit();
 			}
@@ -593,6 +631,16 @@ namespace Gravitybox.Datastore.EFDAL
 		/// Entity set for ConfigurationSetting
 		/// </summary>
 		public virtual DbSet<Gravitybox.Datastore.EFDAL.Entity.ConfigurationSetting> ConfigurationSetting { get; set; }
+
+		/// <summary>
+		/// Entity set for DeleteQueue
+		/// </summary>
+		public virtual DbSet<Gravitybox.Datastore.EFDAL.Entity.DeleteQueue> DeleteQueue { get; set; }
+
+		/// <summary>
+		/// Entity set for DeleteQueueItem
+		/// </summary>
+		public virtual DbSet<Gravitybox.Datastore.EFDAL.Entity.DeleteQueueItem> DeleteQueueItem { get; set; }
 
 		/// <summary>
 		/// Entity set for Housekeeping
@@ -779,6 +827,14 @@ namespace Gravitybox.Datastore.EFDAL
 			{
 				this.ConfigurationSetting.Add((Gravitybox.Datastore.EFDAL.Entity.ConfigurationSetting)entity);
 			}
+			else if (entity is Gravitybox.Datastore.EFDAL.Entity.DeleteQueue)
+			{
+				this.DeleteQueue.Add((Gravitybox.Datastore.EFDAL.Entity.DeleteQueue)entity);
+			}
+			else if (entity is Gravitybox.Datastore.EFDAL.Entity.DeleteQueueItem)
+			{
+				this.DeleteQueueItem.Add((Gravitybox.Datastore.EFDAL.Entity.DeleteQueueItem)entity);
+			}
 			else if (entity is Gravitybox.Datastore.EFDAL.Entity.Housekeeping)
 			{
 				this.Housekeeping.Add((Gravitybox.Datastore.EFDAL.Entity.Housekeeping)entity);
@@ -907,6 +963,18 @@ namespace Gravitybox.Datastore.EFDAL
 		}
 
 		/// <summary />
+		IQueryable<Gravitybox.Datastore.EFDAL.Entity.DeleteQueue> Gravitybox.Datastore.EFDAL.IDatastoreEntities.DeleteQueue
+		{
+			get { return this.DeleteQueue.AsQueryable(); }
+		}
+
+		/// <summary />
+		IQueryable<Gravitybox.Datastore.EFDAL.Entity.DeleteQueueItem> Gravitybox.Datastore.EFDAL.IDatastoreEntities.DeleteQueueItem
+		{
+			get { return this.DeleteQueueItem.AsQueryable(); }
+		}
+
+		/// <summary />
 		IQueryable<Gravitybox.Datastore.EFDAL.Entity.Housekeeping> Gravitybox.Datastore.EFDAL.IDatastoreEntities.Housekeeping
 		{
 			get { return this.Housekeeping.AsQueryable(); }
@@ -993,6 +1061,8 @@ namespace Gravitybox.Datastore.EFDAL
 			if (field is Gravitybox.Datastore.EFDAL.Entity.AppliedPatch.FieldNameConstants) return Gravitybox.Datastore.EFDAL.EntityMappingConstants.AppliedPatch;
 			if (field is Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants) return Gravitybox.Datastore.EFDAL.EntityMappingConstants.CacheInvalidate;
 			if (field is Gravitybox.Datastore.EFDAL.Entity.ConfigurationSetting.FieldNameConstants) return Gravitybox.Datastore.EFDAL.EntityMappingConstants.ConfigurationSetting;
+			if (field is Gravitybox.Datastore.EFDAL.Entity.DeleteQueue.FieldNameConstants) return Gravitybox.Datastore.EFDAL.EntityMappingConstants.DeleteQueue;
+			if (field is Gravitybox.Datastore.EFDAL.Entity.DeleteQueueItem.FieldNameConstants) return Gravitybox.Datastore.EFDAL.EntityMappingConstants.DeleteQueueItem;
 			if (field is Gravitybox.Datastore.EFDAL.Entity.Housekeeping.FieldNameConstants) return Gravitybox.Datastore.EFDAL.EntityMappingConstants.Housekeeping;
 			if (field is Gravitybox.Datastore.EFDAL.Entity.LockStat.FieldNameConstants) return Gravitybox.Datastore.EFDAL.EntityMappingConstants.LockStat;
 			if (field is Gravitybox.Datastore.EFDAL.Entity.Repository.FieldNameConstants) return Gravitybox.Datastore.EFDAL.EntityMappingConstants.Repository;
@@ -1019,6 +1089,8 @@ namespace Gravitybox.Datastore.EFDAL
 				case Gravitybox.Datastore.EFDAL.EntityMappingConstants.AppliedPatch: return new Gravitybox.Datastore.EFDAL.Entity.Metadata.AppliedPatchMetadata();
 				case Gravitybox.Datastore.EFDAL.EntityMappingConstants.CacheInvalidate: return new Gravitybox.Datastore.EFDAL.Entity.Metadata.CacheInvalidateMetadata();
 				case Gravitybox.Datastore.EFDAL.EntityMappingConstants.ConfigurationSetting: return new Gravitybox.Datastore.EFDAL.Entity.Metadata.ConfigurationSettingMetadata();
+				case Gravitybox.Datastore.EFDAL.EntityMappingConstants.DeleteQueue: return new Gravitybox.Datastore.EFDAL.Entity.Metadata.DeleteQueueMetadata();
+				case Gravitybox.Datastore.EFDAL.EntityMappingConstants.DeleteQueueItem: return new Gravitybox.Datastore.EFDAL.Entity.Metadata.DeleteQueueItemMetadata();
 				case Gravitybox.Datastore.EFDAL.EntityMappingConstants.Housekeeping: return new Gravitybox.Datastore.EFDAL.Entity.Metadata.HousekeepingMetadata();
 				case Gravitybox.Datastore.EFDAL.EntityMappingConstants.LockStat: return new Gravitybox.Datastore.EFDAL.Entity.Metadata.LockStatMetadata();
 				case Gravitybox.Datastore.EFDAL.EntityMappingConstants.Repository: return new Gravitybox.Datastore.EFDAL.Entity.Metadata.RepositoryMetadata();

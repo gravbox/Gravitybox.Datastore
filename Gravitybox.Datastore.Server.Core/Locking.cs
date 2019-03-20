@@ -45,7 +45,7 @@ namespace Gravitybox.Datastore.Server.Core
         private static long _counter = 0;
         private long _lockIndex = 0;
         private DateTime _initTime = DateTime.Now;
-        private const int TimeOut = 60000;
+        private const int TimeOut = 60000 * 5;
         private bool _inError = false;
         private Guid _id;
 
@@ -147,7 +147,7 @@ namespace Gravitybox.Datastore.Server.Core
         private DatastoreLock m_Lock = null;
         private bool m_Disposed = false;
         private DateTime _initTime = DateTime.Now;
-        private const int TimeOut = 60000;
+        private const int TimeOut = 60000 * 5;
         private bool _inError = false;
 
         public AcquireWriterLock(Guid id)

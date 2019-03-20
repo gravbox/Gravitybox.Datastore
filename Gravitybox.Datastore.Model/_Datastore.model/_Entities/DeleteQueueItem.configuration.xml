@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<configuration type="entity" name="DeleteQueueItem" id="20c8e8cc-d7ae-45fe-b9b9-11974bd2f5ee" allowaudittracking="0" allowcreateaudit="0" allowmodifyaudit="0" allowtimestamp="0" codefacade="" immutable="0" enforceprimarykey="1" isassociative="0" typedentity="None" schema="" generatesdoublederived="0" isgenerated="1" isTenant="0">
+		<summary><![CDATA[]]></summary>
+		<fieldset>
+				<field id="b2ab1c5a-d74e-44c0-908d-94a1d4d5455c" name="ParentRowId" nullable="0" datatype="BigInt" identity="None" codefacade="" dataformatstring="" default="" defaultisfunc="0" formula="" isgenerated="1" isindexed="1" isprimarykey="1" Iscalculated="0" isunique="1" length="8" scale="0" sortorder="1" isreadonly="0" category="" collate="" friendlyname="" isbrowsable="1" max="NaN" min="NaN" validationexpression="" obsolete="0">
+						<summary><![CDATA[]]></summary>
+				</field>
+				<field id="82efe099-8cf1-491c-8613-e36385c2a498" name="RecordIdx" nullable="0" datatype="BigInt" identity="None" codefacade="" dataformatstring="" default="" defaultisfunc="0" formula="" isgenerated="1" isindexed="1" isprimarykey="1" Iscalculated="0" isunique="1" length="8" scale="0" sortorder="2" isreadonly="0" category="" collate="" friendlyname="" isbrowsable="1" max="NaN" min="NaN" validationexpression="" obsolete="0">
+						<summary><![CDATA[]]></summary>
+				</field>
+		</fieldset>
+</configuration>

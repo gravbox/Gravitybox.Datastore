@@ -59,6 +59,12 @@ namespace Gravitybox.Datastore.Common
                             else if (values[1] == "0" || values[1] == "false")
                                 this.IncludeEmptyDimensions = false;
                             break;
+                        case "_edc":
+                            if (values[1] == "1" || values[1] == "true")
+                                this.ExcludeDimensionCount = true;
+                            else if (values[1] == "0" || values[1] == "false")
+                                this.ExcludeDimensionCount = false;
+                            break;
                         case "_ec":
                             if (values[1] == "1" || values[1] == "true")
                                 this.ExcludeCount = true;
@@ -216,6 +222,7 @@ namespace Gravitybox.Datastore.Common
             this.IncludeDimensions = true;
             this.IncludeAllDimensions = false;
             this.IncludeEmptyDimensions = false;
+            this.ExcludeDimensionCount = false;
             this.IncludeRecords = true;
             this.SkipDimensions = new List<long>();
         }
@@ -253,6 +260,10 @@ namespace Gravitybox.Datastore.Common
         /// <summary />
         [DataMember]
         public bool IncludeEmptyDimensions { get; set; }
+
+        /// <summary />
+        [DataMember]
+        public bool ExcludeDimensionCount { get; set; }
 
         /// <summary />
         [DataMember]
@@ -386,6 +397,9 @@ namespace Gravitybox.Datastore.Common
             if (this.IncludeEmptyDimensions)
                 hash.Append("_ied|");
 
+            if (this.ExcludeDimensionCount)
+                hash.Append("_edc|");
+
             if ((this.NonParsedFieldList == null) || (this.NonParsedFieldList.Count == 0))
                 hash.Append("NULL|");
             else
@@ -398,6 +412,7 @@ namespace Gravitybox.Datastore.Common
             hash.Append((this.IncludeAllDimensions ? "1" : "0") + "|");
             hash.Append((this.IncludeRecords ? "1" : "0") + "|");
             hash.Append((this.IncludeEmptyDimensions ? "1" : "0") + "|");
+            hash.Append((this.ExcludeDimensionCount ? "1" : "0") + "|");
             hash.Append((this.ExcludeCount ? "1" : "0") + "|");
 
             if (this.UserList != null)
@@ -453,10 +468,14 @@ namespace Gravitybox.Datastore.Common
             if (this.IncludeEmptyDimensions)
                 hash.Append("_ied|");
 
+            if (this.ExcludeDimensionCount)
+                hash.Append("_edc|");
+
             hash.Append((this.IncludeDimensions ? "1" : "0") + "|");
             hash.Append((this.IncludeAllDimensions ? "1" : "0") + "|");
             hash.Append((this.IncludeRecords ? "1" : "0") + "|");
             hash.Append((this.IncludeEmptyDimensions ? "1" : "0") + "|");
+            hash.Append((this.ExcludeDimensionCount ? "1" : "0") + "|");
             hash.Append((this.ExcludeCount ? "1" : "0") + "|");
 
             if (this.UserList != null)
@@ -586,6 +605,8 @@ namespace Gravitybox.Datastore.Common
                 retval.Append("&rpp=" + this.RecordsPerPage);
             if (this.IncludeEmptyDimensions)
                 retval.Append("&_ied=1");
+            if (this.ExcludeDimensionCount)
+                retval.Append("&_edc=1");
             if (!this.IncludeRecords)
                 retval.Append("&_ir=0");
             if (!this.IncludeDimensions)

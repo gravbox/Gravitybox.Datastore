@@ -761,20 +761,16 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 						}
 
 						var parser = LinqSQLParser.Create(cmd.CommandText, LinqSQLParser.ObjectTypeConstants.Table);
-						var sql = "CREATE TABLE #t ([RepositoryLogId] [BigInt])";
-						sql += "set rowcount " + optimizer.ChunkSize + ";";
-						sql += "INSERT INTO #t ([RepositoryLogId])";
-						sql += "SELECT [t0].[RepositoryLogId] #t\r\n";
-						sql += parser.GetFromClause(optimizer) + "\r\n";
-						sql += parser.GetWhereClause();
-						sql += "\r\n";
-
-						var noLock = string.Empty;
-						noLock = (optimizer.NoLocking ? "WITH (READUNCOMMITTED) " : string.Empty);
-						sql += "DELETE [RepositoryLog] FROM [dbo].[RepositoryLog] " + noLock + "INNER JOIN #t ON [dbo].[RepositoryLog].[RepositoryLogId] = #t.[RepositoryLogId]\r\n";
-						sql += ";select @@rowcount";
-						sql = "set ansi_nulls off;" + sql + ";drop table #t;";
-						cmd.CommandText = sql;
+                        var sb = new StringBuilder();
+                        sb.AppendLine("SET ROWCOUNT " + optimizer.ChunkSize + ";");
+                        sb.AppendLine("delete [X] from [dbo].[RepositoryLog] [X] inner join (");
+                        sb.AppendLine("SELECT [t0].[RepositoryLogId]");
+                        sb.AppendLine(parser.GetFromClause(optimizer));
+                        sb.AppendLine(parser.GetWhereClause());
+                        sb.AppendLine(") AS [Extent2]");
+                        sb.AppendLine("ON [X].[RepositoryLogId] = [Extent2].[RepositoryLogId]");
+                        sb.AppendLine("select @@ROWCOUNT");
+						cmd.CommandText = sb.ToString();
 						dc.Connection.Open();
 						var startTime = DateTime.Now;
 						var affected = 0;

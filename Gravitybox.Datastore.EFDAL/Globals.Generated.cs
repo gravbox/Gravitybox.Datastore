@@ -427,6 +427,15 @@ namespace Gravitybox.Datastore.EFDAL
 	}
 	#endregion
 
+	#region EntityMap
+	/// <summary />
+ [AttributeUsage(AttributeTargets.Property)]
+	public class EntityMap : System.Attribute
+	{
+		public string Name { get; set; }
+	}
+	#endregion
+
 	#region IContext
 	/// <summary>
 	/// The interface for a context object
@@ -947,6 +956,41 @@ namespace Gravitybox.Datastore.EFDAL
 				throw;
 			}
 		}
+
+        internal static int ExecuteModifiedScripts(IContext context, List<string> list, DateTime modifiedDate)
+        {
+            if (list == null || !list.Any()) return 0;
+            try
+            {
+                var count = 0;
+                foreach (var sql in list)
+                {
+                    var affected = 0;
+                    var connection = (SqlConnection)(context.ObjectContext.Connection as EntityConnection).StoreConnection;
+                    if (connection != null)
+                    {
+                        if (connection.State == System.Data.ConnectionState.Closed)
+                            connection.Open();
+
+                        using (var cmd = connection.CreateCommand())
+                        {
+                            if (!context.ContextStartup.DefaultTimeout && context.ContextStartup.CommandTimeout > 0) cmd.CommandTimeout = context.ContextStartup.CommandTimeout;
+                            else if (context.ObjectContext.CommandTimeout != null) cmd.CommandTimeout = context.ObjectContext.CommandTimeout.Value;
+                            cmd.CommandText = sql;
+                            cmd.Transaction = FetchTransaction(connection);
+                            cmd.Parameters.Add(new SqlParameter { DbType = DbType.DateTime2, Value = modifiedDate, ParameterName = "__modifiedDate" });
+                            count = (int)cmd.ExecuteNonQuery();
+                            affected += count;
+                        }
+                    }
+                }
+                return count;
+            }
+            catch
+            {
+                throw;
+            }
+        }
 
 		internal static void RemoveDeletes(Guid instanceKey)
 		{

@@ -80,8 +80,6 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
             var cacheKey = didx + "|" + query.CoreWhereHashCode();
             var rLookup = _cache.GetOrAdd(repositoryId, key => new ConcurrentDictionary<string, LDCacheItem>());
             var b = rLookup.TryAdd(cacheKey, new LDCacheItem { Cache = data });
-
-            //LoggerCQ.LogInfo("ListDimensionCache.Add: RepositoryId=" + repositoryId + ", Count=" + rLookup.Count);
         }
 
         public static Dictionary<long, IRefinementItem> Get(int repositoryId, long didx, DataQuery query)
