@@ -374,6 +374,22 @@ namespace Gravitybox.Datastore.Server.Core
                     PatchApply(currentGuid, "Fix ApplyFix_ListTableCK");
                 }
 
+                currentGuid = new Guid("74211345-1900-4Fd5-7231-A89ead325F83");
+                if (!IsPatchApplied(currentGuid))
+                {
+                    LoggerCQ.LogInfo("Applying fix: ApplyFix_RemoveDIdxTables");
+                    PatchesDomain.ApplyFix_RemoveDIdxTables(ConfigHelper.ConnectionString);
+                    PatchApply(currentGuid, "Fix ApplyFix_RemoveDIdxTables");
+                }
+
+                currentGuid = new Guid("71191345-2019-d6a4-7231-A89ead325F83");
+                if (!IsPatchApplied(currentGuid))
+                {
+                    LoggerCQ.LogInfo("Applying fix: ApplyFix_RemoveDimensionValueTableExtraIndex");
+                    PatchesDomain.ApplyFix_RemoveDimensionValueTableExtraIndex(ConfigHelper.ConnectionString);
+                    PatchApply(currentGuid, "Fix ApplyFix_RemoveDimensionValueTableExtraIndex");
+                }
+
                 if (!IsPatchApplied(DataManager.FullIndexPatch))
                 {
                     DataManager.StartFullIndex();

@@ -23,11 +23,11 @@ namespace Gravitybox.Datastore.Server.Core.Housekeeping
             try
             {
                 var sb = new StringBuilder();
-                sb.AppendLine("SET ROWCOUNT 5000");
+                sb.AppendLine("SET ROWCOUNT 5000;");
                 if (this.PivotDate == null)
-                    sb.AppendLine($"DELETE FROM [RepositoryLog] WHERE [RepositoryId] = {this.RepositoryId}");
+                    sb.AppendLine($"DELETE FROM [RepositoryLog] WHERE [RepositoryId] = {this.RepositoryId};");
                 else
-                    sb.AppendLine($"DELETE FROM [RepositoryLog] WHERE [RepositoryId] = {this.RepositoryId} AND [CreatedDate] <= '{this.PivotDate.Value.ToString(DimensionItem.DateTimeFormat)}'");
+                    sb.AppendLine($"DELETE FROM [RepositoryLog] WHERE [RepositoryId] = {this.RepositoryId} AND [CreatedDate] <= '{this.PivotDate.Value.ToString(DimensionItem.DateTimeFormat)}';");
 
                 var count = 0;
                 var tempCount = 0;

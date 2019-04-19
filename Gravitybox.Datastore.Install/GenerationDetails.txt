@@ -11,11 +11,13 @@ TABLE LIST
 AppliedPatch, ColumnCount=2, IsTenant=False
     Field: [AppliedPatch].[Description], Field Length: 50, Nullable
     Field: [AppliedPatch].[ID], Not Nullable, Primary Key, Unique, Indexed, Default Value: newid
-CacheInvalidate, ColumnCount=4, IsTenant=False
+CacheInvalidate, ColumnCount=6, IsTenant=False
     Field: [CacheInvalidate].[AddedDate], Field Length: 2, Not Nullable, Indexed, Default Value: getdate()
     Field: [CacheInvalidate].[Count], Not Nullable, Default Value: 0
+    Field: [CacheInvalidate].[Reason], Field Length: 20, Nullable
     Field: [CacheInvalidate].[RepositoryId], Not Nullable, Indexed
     Field: [CacheInvalidate].[RowId], Not Nullable, Primary Key, AutoNumber, Unique, Indexed
+    Field: [CacheInvalidate].[Subkey], Field Length: 50, Nullable
 ConfigurationSetting, ColumnCount=3, IsTenant=False
     Field: [ConfigurationSetting].[ID], Not Nullable, Primary Key, AutoNumber, Unique, Indexed
     Field: [ConfigurationSetting].[Name], Field Length: 50, Not Nullable

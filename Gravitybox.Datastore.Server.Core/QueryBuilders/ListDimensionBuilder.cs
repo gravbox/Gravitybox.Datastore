@@ -45,13 +45,11 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
 
                 //Each loop must determine if this dimension field is in base/inherited table
                 var dimensionValueTableLoop = _configuration.dimensionValueTable;
-                var dimensionTableLoop = _configuration.dimensionTable;
 
                 if (_configuration.parentSchema != null && _configuration.parentSchema.DimensionList.Any(x => x.DIdx == _newDimension.DIdx))
                 {
                     listTable = SqlHelper.GetListTableName(_configuration.schema.ParentID.Value, _newDimension.DIdx);
                     dimensionValueTableLoop = _configuration.dimensionValueTableParent;
-                    dimensionTableLoop = _configuration.dimensionTableParent;
                 }
 
                 _listParameters = _configuration.parameters.ToList();
@@ -91,12 +89,9 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
                         sb.AppendLine($"    ORDER BY {_configuration.orderByClause}");
                         sb.AppendLine("    OFFSET (@startindex-1) ROWS FETCH FIRST (@endindex-@startindex) ROWS ONLY");
                         sb.AppendLine($"), S ([{SqlHelper.RecordIdxField}]) AS ( select distinct T.[{SqlHelper.RecordIdxField}] from T )");
-                        sb.AppendLine($"SELECT Z.{SqlHelper.RecordIdxField}, DV.DVIdx, DV.Value");
+                        sb.AppendLine($"SELECT Z.{SqlHelper.RecordIdxField}, Y.DVIdx");
                         sb.AppendLine($"FROM S Z " + SqlHelper.NoLockText());
                         sb.AppendLine($"inner join [{listTable}] Y {SqlHelper.NoLockText()} ON Y.{SqlHelper.RecordIdxField} = Z.{SqlHelper.RecordIdxField}");
-                        sb.AppendLine($"inner join [{dimensionValueTableLoop}] DV {SqlHelper.NoLockText()} ON DV.DVIdx = Y.DVIdx AND DV.DIdx = {listParamValue.ParameterName}");
-                        sb.AppendLine($"inner join [{dimensionTableLoop}] D {SqlHelper.NoLockText()} ON DV.DIdx = D.DIdx");
-                        sb.AppendLine($"WHERE D.DIdx = {listParamValue.ParameterName}");
                         sb.AppendLine(";");
                     }
                     sb.AppendLine();
@@ -107,12 +102,9 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
                         {
                             //If there is no WHERE clause then we can skip the whole Z table and 10x performance
                             sb.AppendLine($"--MARKER 45" + _configuration.QueryPlanDebug);
-                            sb.AppendLine("SELECT DV.DVIdx, COUNT(DV.DVIdx)");
+                            sb.AppendLine("SELECT Y.DVIdx, COUNT(Y.DVIdx)");
                             sb.AppendLine($"FROM [{listTable}] Y {SqlHelper.NoLockText()}");
-                            sb.AppendLine($"inner join [{dimensionValueTableLoop}] DV {SqlHelper.NoLockText()} ON DV.DVIdx = Y.DVIdx AND DV.DIdx = {listParamValue.ParameterName}");
-                            sb.AppendLine($"inner join [{dimensionTableLoop}] D {SqlHelper.NoLockText()} ON DV.DIdx = D.DIdx");
-                            sb.AppendLine($"WHERE D.DIdx = {listParamValue.ParameterName}");
-                            sb.AppendLine($"GROUP BY DV.DVIdx");
+                            sb.AppendLine($"GROUP BY Y.DVIdx");
                         }
                         else
                         {
@@ -125,13 +117,10 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
                             sb.AppendLine(_configuration.innerJoinClause);
                             sb.AppendLine($"    WHERE {_configuration.whereClause}");
                             sb.AppendLine(")");
-                            sb.AppendLine("SELECT DV.DVIdx, COUNT(DV.DVIdx)");
+                            sb.AppendLine("SELECT Y.DVIdx, COUNT(Y.DVIdx)");
                             sb.AppendLine($"FROM [{listTable}] Y {SqlHelper.NoLockText()}");
-                            sb.AppendLine($"inner join [{dimensionValueTableLoop}] DV {SqlHelper.NoLockText()} ON DV.DVIdx = Y.DVIdx AND DV.DIdx = {listParamValue.ParameterName}");
-                            sb.AppendLine($"inner join [{dimensionTableLoop}] D {SqlHelper.NoLockText()} ON DV.DIdx = D.DIdx");
                             sb.AppendLine($"inner join S Z {SqlHelper.NoLockText()} ON Y.{SqlHelper.RecordIdxField} = Z.{SqlHelper.RecordIdxField}");
-                            sb.AppendLine($"WHERE D.DIdx = {listParamValue.ParameterName}");
-                            sb.AppendLine("GROUP BY DV.DVIdx");
+                            sb.AppendLine("GROUP BY Y.DVIdx");
                         }
                     }
 
@@ -146,7 +135,7 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
                     else
                     {
                         sb.AppendLine($"--MARKER 11" + _configuration.QueryPlanDebug);
-                        sb.AppendLine($"SELECT Z.{SqlHelper.RecordIdxField}, DV.DVIdx, DV.Value, [__RowNum] FROM (");
+                        sb.AppendLine($"SELECT Z.{SqlHelper.RecordIdxField}, Y.DVIdx, [__RowNum] FROM (");
                         sb.AppendLine($"    SELECT [Z].[{SqlHelper.RecordIdxField}], [__RowNum] FROM (");
                         sb.AppendLine($"    SELECT ROW_NUMBER() OVER ( ORDER BY {_configuration.orderByClause} ) AS [__RowNum], [Z].[{SqlHelper.RecordIdxField}]");
                         sb.AppendLine($"    FROM [{_configuration.dataTable}] Z {SqlHelper.NoLockText()}");
@@ -156,9 +145,6 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
                         sb.AppendLine("WHERE ([Z].[__RowNum] >= @startindex AND [Z].[__RowNum] < @endindex)");
                         sb.AppendLine(") as Z");
                         sb.AppendLine($"inner join [{listTable}] Y {SqlHelper.NoLockText()} ON Y.{SqlHelper.RecordIdxField} = Z.{SqlHelper.RecordIdxField}");
-                        sb.AppendLine($"inner join [{dimensionValueTableLoop}] DV {SqlHelper.NoLockText()} ON DV.DVIdx = Y.DVIdx AND DV.DIdx = {listParamValue.ParameterName}");
-                        sb.AppendLine($"inner join [{dimensionTableLoop}] D {SqlHelper.NoLockText()} ON DV.DIdx = D.DIdx");
-                        sb.AppendLine($"WHERE D.DIdx = {listParamValue.ParameterName}");
                         sb.AppendLine("ORDER BY [__RowNum];");
                     }
                     sb.AppendLine();
@@ -167,15 +153,12 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
                     {
                         //TODO: This must be optimized with paging!!!!!! Really bad on 2008 machines with large # of refinements
                         sb.AppendLine($"--MARKER 12" + _configuration.QueryPlanDebug);
-                        sb.AppendLine("SELECT DV.DVIdx, COUNT(DV.DVIdx)");
+                        sb.AppendLine("SELECT Y.DVIdx, COUNT(Y.DVIdx)");
                         sb.AppendLine($"FROM [{_configuration.dataTable}] Z {SqlHelper.NoLockText()}");
                         sb.AppendLine(_configuration.innerJoinClause);
                         sb.AppendLine($"inner join [{listTable}] Y {SqlHelper.NoLockText()} ON Y.{SqlHelper.RecordIdxField} = Z.{SqlHelper.RecordIdxField}");
-                        sb.AppendLine($"inner join [{dimensionValueTableLoop}] DV {SqlHelper.NoLockText()} ON DV.DVIdx = Y.DVIdx AND DV.DIdx = {listParamValue.ParameterName}");
-                        sb.AppendLine($"inner join [{dimensionTableLoop}] D {SqlHelper.NoLockText()} ON DV.DIdx = D.DIdx");
                         sb.AppendLine($"WHERE {_configuration.whereClause}");
-                        sb.AppendLine($"    AND D.DIdx = {listParamValue.ParameterName}");
-                        sb.AppendLine("GROUP BY DV.DVIdx");
+                        sb.AppendLine("GROUP BY Y.DVIdx");
                     }
                 }
                 #endregion
@@ -226,6 +209,10 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
 
                 if (_dsList.Tables.Count > 0)
                 {
+                    //Put these in a lookup dictionary as there maybe thousands or more
+                    //It makes lookup below much faster for these large sets
+                    _lookupRefinement = _newDimension.RefinementList.ToDictionary(x => x.DVIdx, z => z);
+
                     var recordCache = new Dictionary<long, List<string>>();
                     if (_configuration.query.IncludeRecords)
                     {
@@ -233,19 +220,14 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
                         {
                             var recordIdx = (long)dr[0];
                             var dvidx = (long)dr[1];
-                            var value = (string)dr[2];
                             if (!recordCache.ContainsKey(recordIdx))
                                 recordCache.Add(recordIdx, new List<string>());
-                            recordCache[recordIdx].Add(value);
+                            recordCache[recordIdx].Add(_lookupRefinement[dvidx].FieldValue);
                         }
                     }
 
                     if (!this.IsCachehit)
                     {
-                        //Put these in a lookup dictionary as there maybe thousands or more
-                        //It makes lookup below much faster for these large sets
-                        _lookupRefinement = _newDimension.RefinementList.ToDictionary(x => x.DVIdx, z => z);
-
                         foreach (DataRow dr in _dsList.Tables[1].Rows)
                         {
                             var dvidx = (long)dr[0];

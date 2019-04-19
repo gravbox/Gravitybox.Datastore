@@ -43,7 +43,15 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
                 {
                     var firstGroup = true;
                     var tempDimList = _configuration.nonListDimensionDefs.ToList();
-                    var subList = tempDimList.Take(GBSize).Select(x => "[Z].[__d" + x.TokenName + "]").ToList();
+
+                    //Remove normal dimensions that are already in the Query "DimensionValueList" since these will not show up in the returned dimension list
+                    //These would cause a useless query where any data returned is ignored anyway
+                    if (_configuration.query.DimensionValueList?.Any() == true && !_configuration.query.IncludeAllDimensions && !_configuration.query.IncludeEmptyDimensions)
+                    {
+                        _configuration.query.DimensionValueList.ForEach(x => tempDimList.RemoveAll(z => z.DIdx == Extensions.GetDIdxFromDVIdx(x)));
+                    }
+
+                    var subList = tempDimList.Take(GBSize).Select(x => $"[Z].[__d{x.TokenName}]").ToList();
                     while (subList.Count > 0)
                     {
                         if (_configuration.hasFilteredListDims)
@@ -220,6 +228,7 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
 
                         }
                     }
+
                     _configuration.PerfLoadNDim = true;
                 } //IncludeDimensions
                 //Console.WriteLine("NormalDimensionBuilder:Load:Complete");

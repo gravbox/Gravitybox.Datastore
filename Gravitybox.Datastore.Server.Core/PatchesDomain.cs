@@ -265,10 +265,7 @@ namespace Gravitybox.Datastore.Server.Core
                     foreach (var r in list)
                     {
                         var sb = new StringBuilder();
-                        var dimensionTableName = SqlHelper.GetDimensionTableName(r.UniqueKey);
                         var dimensionValueTableName = SqlHelper.GetDimensionValueTableName(r.UniqueKey);
-                        sb.AppendLine("if not exists(select * from [" + dimensionTableName + "])");
-                        sb.AppendLine("INSERT INTO [" + dimensionTableName + "] ([DIdx]) SELECT [DIdx] FROM [Dimension] WHERE [RepositoryId] = " + r.RepositoryId);
                         sb.AppendLine("if not exists(select * from [" + dimensionValueTableName + "])");
                         sb.AppendLine("INSERT INTO [" + dimensionValueTableName + "] ([DIdx], [DVIdx], [Value]) select d.DIdx, v.DVIdx, v.Value from [Dimension] d inner join [DimensionValue] v on D.DimensionId = v.DimensionId WHERE [RepositoryId] = " + r.RepositoryId);
 
@@ -1112,6 +1109,97 @@ namespace Gravitybox.Datastore.Server.Core
             {
                 timer.Stop();
                 LoggerCQ.LogInfo($"ApplyFix_ListTableCK: Processed={processed}, Elapsed={timer.ElapsedMilliseconds}");
+            }
+        }
+
+        public static void ApplyFix_RemoveDIdxTables(string connectionString)
+        {
+            var timer = Stopwatch.StartNew();
+            var processed = 0;
+            try
+            {
+                var repoIndex = 0;
+                using (var context = new DatastoreEntities(connectionString))
+                {
+                    var repositorylist = context.Repository
+                        .OrderByDescending(x => x.ItemCount)
+                        .Select(x => x.UniqueKey)
+                        .ToList();
+
+                    foreach (var r in repositorylist)
+                    {
+                        var tableName = SqlHelper.GetDimensionTableName(r);
+                        var sb = new StringBuilder();
+                        sb.AppendLine($"if exists (select * from sys.objects where name = '{tableName}' and type = 'U')");
+                        sb.AppendLine($"DROP TABLE [{tableName}]");                        
+                        try
+                        {
+                            var c = SqlHelper.ExecuteSql(connectionString, sb.ToString(), null, false, false);
+                        }
+                        catch (Exception ex)
+                        {
+                            LoggerCQ.LogError(ex);
+                        }
+                        repoIndex++;
+                        LoggerCQ.LogInfo($"ApplyFix_RemoveDIdxTables: ID={r}, Progress:{repoIndex}/{repositorylist.Count}");
+
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggerCQ.LogError(ex);
+            }
+            finally
+            {
+                timer.Stop();
+                LoggerCQ.LogInfo($"ApplyFix_RemoveDIdxTables: Processed={processed}, Elapsed={timer.ElapsedMilliseconds}");
+            }
+        }
+
+        public static void ApplyFix_RemoveDimensionValueTableExtraIndex(string connectionString)
+        {
+            var timer = Stopwatch.StartNew();
+            var processed = 0;
+            try
+            {
+                var repoIndex = 0;
+                using (var context = new DatastoreEntities(connectionString))
+                {
+                    var repositorylist = context.Repository
+                        .OrderByDescending(x => x.ItemCount)
+                        .Select(x => x.UniqueKey)
+                        .ToList();
+
+                    foreach (var r in repositorylist)
+                    {
+                        var tableName = SqlHelper.GetDimensionValueTableName(r);
+                        var sb = new StringBuilder();
+                        var indexName = $"{tableName}_DIDX";
+                        sb.AppendLine($"if exists(select * from sys.indexes where name = '{indexName}')");
+                        sb.AppendLine($"DROP INDEX [{indexName}] ON [{tableName}]");
+                        try
+                        {
+                            var c = SqlHelper.ExecuteSql(connectionString, sb.ToString(), null, false, false);
+                        }
+                        catch (Exception ex)
+                        {
+                            LoggerCQ.LogError(ex);
+                        }
+                        repoIndex++;
+                        LoggerCQ.LogInfo($"ApplyFix_RemoveDimensionValueTableExtraIndex: ID={r}, Progress:{repoIndex}/{repositorylist.Count}");
+
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggerCQ.LogError(ex);
+            }
+            finally
+            {
+                timer.Stop();
+                LoggerCQ.LogInfo($"ApplyFix_RemoveDimensionValueTableExtraIndex: Processed={processed}, Elapsed={timer.ElapsedMilliseconds}");
             }
         }
 

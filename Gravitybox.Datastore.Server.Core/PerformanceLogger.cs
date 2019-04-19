@@ -12,7 +12,7 @@ namespace Gravitybox.Datastore.Server.Core
         public PerformanceLogger(string message)
         {
             _message = message;
-            LoggerCQ.LogTrace($"BEGIN {_message}");
+            //LoggerCQ.LogTrace($"BEGIN {_message}");
 
             _timer = Stopwatch.StartNew();
         }
@@ -22,7 +22,7 @@ namespace Gravitybox.Datastore.Server.Core
             if (_timer.IsRunning)
             {
                 _timer.Stop();
-                LoggerCQ.LogTrace($"END {_message}: Elapsed={_timer.ElapsedMilliseconds}");
+                //LoggerCQ.LogTrace($"END {_message}: Elapsed={_timer.ElapsedMilliseconds}");
             }
         }
     }

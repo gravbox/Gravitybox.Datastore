@@ -69,9 +69,7 @@ namespace Gravitybox.Datastore.Server.Core
         {
             try
             {
-                var dimensionTableName = SqlHelper.GetDimensionTableName(schema.ID);
                 var dimensionValueTableName = SqlHelper.GetDimensionValueTableName(schema.ID);
-                var dimensionTableNameParent = string.Empty;
                 var dimensionValueTableNameParent = string.Empty;
 
                 lock (_cache)
@@ -96,7 +94,6 @@ namespace Gravitybox.Datastore.Server.Core
                                 var parentSchema = RepositoryManager.GetSchema(schema.ParentID.Value);
                                 _parentSchemaCache.Add(schema.ID, schema.Subtract(parentSchema));
                             }
-                            dimensionTableNameParent = SqlHelper.GetDimensionTableName(schema.ParentID.Value);
                             dimensionValueTableNameParent = SqlHelper.GetDimensionValueTableName(schema.ParentID.Value);
                         }
                         #endregion
@@ -105,16 +102,27 @@ namespace Gravitybox.Datastore.Server.Core
                         _cache.Add(retval);
 
                         var sb = new StringBuilder();
-                        sb.AppendLine("select d.DIdx, v.DVIdx, v.Value from [" + dimensionTableName + "] d left join [" + dimensionValueTableName + "] v on D.DIdx = v.DIdx");
+                        sb.AppendLine($"select v.DIdx, v.DVIdx, v.Value from [{dimensionValueTableName}] v");
                         
                         //If there is a parent schema then UNION its dimension tables
                         if (schema.ParentID != null)
-                            sb.AppendLine("union select d.DIdx, v.DVIdx, v.Value from [" + dimensionTableNameParent + "] d left join [" + dimensionValueTableNameParent + "] v on D.DIdx = v.DIdx");
+                            sb.AppendLine($"union select v.DIdx, v.DVIdx, v.Value from [{dimensionValueTableNameParent}] v");
 
                         sb.AppendLine("order by DIdx, DVIdx");
 
                         var ds = SqlHelper.GetDataset(ConfigHelper.ConnectionString, sb.ToString(), null);
                         retval.Results = new List<DimensionItem>();
+
+                        //Load all dimensions
+                        foreach (var dimension in schema.DimensionList)
+                        {
+                            retval.Results.Add(new DimensionItem
+                            {
+                                DIdx = dimension.DIdx,
+                                Name = dimension.Name,
+                            });
+                        }                        
+
                         foreach (DataRow dr in ds.Tables[0].Rows)
                         {
                             var didx = (long)dr["DIdx"];
@@ -165,9 +173,7 @@ namespace Gravitybox.Datastore.Server.Core
 
             try
             {
-                var dimensionTableName = SqlHelper.GetDimensionTableName(schema.ID);
                 var dimensionValueTableName = SqlHelper.GetDimensionValueTableName(schema.ID);
-                var dimensionTableNameParent = string.Empty;
                 var dimensionValueTableNameParent = string.Empty;
                 var saveCount = 0;
 
@@ -186,68 +192,7 @@ namespace Gravitybox.Datastore.Server.Core
                             _parentSchemaCache.Add(schema.ID, schema.Subtract(parentSchema));
                         }
                         diff = _parentSchemaCache[schema.ID];
-                        dimensionTableNameParent = SqlHelper.GetDimensionTableName(schema.ParentID.Value);
                         dimensionValueTableNameParent = SqlHelper.GetDimensionValueTableName(schema.ParentID.Value);
-                    }
-                    #endregion
-
-                    #region Create the dimensions if need be
-                    {
-                        var needSave = false;
-                        if (diff == null)
-                        {
-                            //This is for stand-alone tables. There is only one dimension table
-                            var sb = new StringBuilder();
-                            var parameters = new List<SqlParameter>();
-                            var didxParam = 0;
-                            foreach (var dimensionDef in schema.DimensionList)
-                            {
-                                if (!retval.Results.Any(x => x.DIdx == dimensionDef.DIdx))
-                                {
-                                    var param = new SqlParameter { DbType = DbType.Int64, IsNullable = false, ParameterName = "@__didx" + didxParam, Value = dimensionDef.DIdx };
-                                    parameters.Add(param);
-                                    sb.AppendLine("insert into [" + dimensionTableName + "] (DIdx) values (" + param.ParameterName + ")");
-                                    didxParam++;
-                                    needSave = true;
-                                }
-                            }
-                            if (needSave)
-                                SqlHelper.ExecuteSql(ConfigHelper.ConnectionString, sb.ToString(), parameters, false);
-                        }
-                        else
-                        {
-                            //This is for inherited tables. Figure out which dimension table to use
-                            var sb = new StringBuilder();
-                            var parameters = new List<SqlParameter>();
-                            var didxParam = 0;
-                            foreach (var dimensionDef in schema.DimensionList)
-                            {
-                                var tempTable = dimensionTableNameParent;
-                                if (diff.DimensionList.Any(x => x.DIdx == dimensionDef.DIdx))
-                                    tempTable = dimensionTableName;
-
-                                if (!retval.Results.Any(x => x.DIdx == dimensionDef.DIdx))
-                                {
-                                    var param = new SqlParameter { DbType = DbType.Int64, IsNullable = false, ParameterName = "@__didx" + didxParam, Value = dimensionDef.DIdx };
-                                    parameters.Add(param);
-                                    sb.AppendLine("insert into [" + tempTable + "] (DIdx) values (" + param.ParameterName + ")");
-                                    didxParam++;
-                                    needSave = true;
-                                }
-                            }
-                            if (needSave)
-                                SqlHelper.ExecuteSql(ConfigHelper.ConnectionString, sb.ToString(), parameters, false);
-                        }
-
-                        #region Save so far
-                        if (needSave)
-                        {
-                            Clear(id);
-                            SqlHelper.MarkDimensionsChanged(id);
-                            retval = GetCache(context, id, schema);
-                            needSave = false;
-                        }
-                        #endregion
                     }
                     #endregion
 
@@ -320,7 +265,7 @@ namespace Gravitybox.Datastore.Server.Core
                                         baseDVIdx = ((dimension.DIdx - Constants.DGROUP) + 1) * Constants.DVALUEGROUP; //Normal
 
                                     var dbDimension = retval.Results.FirstOrDefault(x => x.DIdx == dimension.DIdx);
-                                    if (!dbDimension.RefinementList.Any(x => x.FieldValue == v))
+                                    if (dbDimension != null && !dbDimension.RefinementList.Any(x => x.FieldValue == v))
                                     {
                                         if (!_nextKeys.ContainsKey(dbDimension)) //If was empty then default to base index
                                             _nextKeys.Add(dbDimension, baseDVIdx);
@@ -330,22 +275,22 @@ namespace Gravitybox.Datastore.Server.Core
                                         var nextDVIdx = _nextKeys[dbDimension];
                                         _nextKeys[dbDimension]++;
 
-                                        var newParam = new SqlParameter { DbType = DbType.String, IsNullable = false, ParameterName = "@__z" + paramIndex, Value = v };
+                                        var newParam = new SqlParameter { DbType = DbType.String, IsNullable = false, ParameterName = $"@__z{paramIndex}", Value = v };
                                         parameters.Add(newParam);
                                         paramIndex++;
 
                                         if (diff == null)
                                         {
                                             //This is for stand-alone tables. There is only one dimension table
-                                            var paramDIdx = new SqlParameter { DbType = DbType.Int64, IsNullable = false, ParameterName = "@__didx" + didxParam, Value = dimension.DIdx };
+                                            var paramDIdx = new SqlParameter { DbType = DbType.Int64, IsNullable = false, ParameterName = $"@__didx{didxParam}", Value = dimension.DIdx };
                                             parameters.Add(paramDIdx);
-                                            var paramDVIdx = new SqlParameter { DbType = DbType.Int64, IsNullable = false, ParameterName = "@__dvidx" + dvidxParam, Value = nextDVIdx };
+                                            var paramDVIdx = new SqlParameter { DbType = DbType.Int64, IsNullable = false, ParameterName = $"@__dvidx{dvidxParam}", Value = nextDVIdx };
                                             parameters.Add(paramDVIdx);
                                             didxParam++;
                                             dvidxParam++;
 
-                                            sb.AppendLine("if not exists(select * from [" + dimensionValueTableName + "] where [DIdx] = " + paramDIdx.ParameterName + " and [DVIdx] = " + paramDVIdx.ParameterName + ")");
-                                            sb.AppendLine("insert into [" + dimensionValueTableName + "] ([DIdx], [DVIdx], [Value]) values (" + paramDIdx.ParameterName + ", " + paramDVIdx.ParameterName + ", " + newParam.ParameterName + ")");
+                                            sb.AppendLine($"if not exists(select * from [{dimensionValueTableName}] where [DIdx] = {paramDIdx.ParameterName} and [DVIdx] = {paramDVIdx.ParameterName})");
+                                            sb.AppendLine($"insert into [{dimensionValueTableName}] ([DIdx], [DVIdx], [Value]) values ({paramDIdx.ParameterName}, {paramDVIdx.ParameterName}, {newParam.ParameterName})");
                                         }
                                         else
                                         {
@@ -361,8 +306,8 @@ namespace Gravitybox.Datastore.Server.Core
                                             didxParam++;
                                             dvidxParam++;
 
-                                            sb.AppendLine("if not exists(select * from [" + tempTable + "] where [DIdx] = " + paramDIdx.ParameterName + " and [DVIdx] = " + paramDVIdx.ParameterName + ")");
-                                            sb.AppendLine("insert into [" + tempTable + "] ([DIdx], [DVIdx], [Value]) values (" + paramDIdx.ParameterName + ", " + paramDVIdx.ParameterName + ", " + newParam.ParameterName + ")");
+                                            sb.AppendLine($"if not exists(select * from [{tempTable}] where [DIdx] = {paramDIdx.ParameterName} and [DVIdx] = {paramDVIdx.ParameterName})");
+                                            sb.AppendLine($"insert into [{tempTable}] ([DIdx], [DVIdx], [Value]) values ({paramDIdx.ParameterName}, {paramDVIdx.ParameterName}, {newParam.ParameterName})");
                                         }
                                         needSave = true;
                                     }
@@ -402,9 +347,7 @@ namespace Gravitybox.Datastore.Server.Core
 
             try
             {
-                var dimensionTableName = SqlHelper.GetDimensionTableName(schema.ID);
                 var dimensionValueTableName = SqlHelper.GetDimensionValueTableName(schema.ID);
-                var dimensionTableNameParent = string.Empty;
                 var dimensionValueTableNameParent = string.Empty;
                 var parameters = new List<SqlParameter>();
                 var didxParam = 0;
@@ -412,7 +355,6 @@ namespace Gravitybox.Datastore.Server.Core
                 lock (_cache)
                 {
                     var retval = GetCache(context, id, schema);
-                    var needSave = false;
 
                     #region Do this after "GetCache" call as it will flush the cache if need be
                     //If there is a parent repository then get parent schema as will will need to know which dimension table to use for different fields
@@ -425,60 +367,11 @@ namespace Gravitybox.Datastore.Server.Core
                             _parentSchemaCache.Add(schema.ID, schema.Subtract(parentSchema));
                         }
                         diff = _parentSchemaCache[schema.ID];
-                        dimensionTableNameParent = SqlHelper.GetDimensionTableName(schema.ParentID.Value);
                         dimensionValueTableNameParent = SqlHelper.GetDimensionValueTableName(schema.ParentID.Value);
                     }
                     #endregion
 
-                    #region Create the dimensions if need be
                     var sb = new StringBuilder();
-                    if (diff == null)
-                    {
-                        //This is for stand-alone tables. There is only one dimension table
-                        foreach (var dimensionDef in schema.DimensionList)
-                        {
-                            if (!retval.Results.Any(x => x.DIdx == dimensionDef.DIdx))
-                            {
-                                var param = new SqlParameter { DbType = DbType.Int64, IsNullable = false, ParameterName = "@__didx" + didxParam, Value = dimensionDef.DIdx };
-                                parameters.Add(param);
-                                sb.AppendLine("insert into [" + dimensionTableName + "] (DIdx) values (" + param.ParameterName + ")");
-                                didxParam++;
-                                needSave = true;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        //This is for inherited tables. Figure out which dimension table to use
-                        foreach (var dimensionDef in schema.DimensionList)
-                        {
-                            var tempTable = dimensionTableNameParent;
-                            if (diff.DimensionList.Any(x => x.DIdx == dimensionDef.DIdx))
-                                tempTable = dimensionTableName;
-
-                            if (!retval.Results.Any(x => x.DIdx == dimensionDef.DIdx))
-                            {
-                                var param = new SqlParameter { DbType = DbType.Int64, IsNullable = false, ParameterName = "@__didx" + didxParam, Value = dimensionDef.DIdx };
-                                parameters.Add(param);
-                                sb.AppendLine("insert into [" + tempTable + "] (DIdx) values (" + param.ParameterName + ")");
-                                didxParam++;
-                                needSave = true;
-                            }
-                        }
-                    }
-                    #endregion
-
-                    #region Save so far
-                    if (needSave)
-                    {
-                        SqlHelper.ExecuteSql(ConfigHelper.ConnectionString, sb.ToString(), parameters, false);
-                        Clear(id);
-                        SqlHelper.MarkDimensionsChanged(id);
-                        retval = GetCache(context, id, schema);
-                        needSave = false;
-                    }
-                    #endregion
-                    sb = new StringBuilder();
                     parameters = new List<SqlParameter>();
                     didxParam = 0;
                     var dvidxParam = 0;
@@ -491,6 +384,7 @@ namespace Gravitybox.Datastore.Server.Core
                     retval.Results.ForEach(z => _nextKeys.Add(z, z.RefinementList.OrderByDescending(x => x.DVIdx).Select(x => x.DVIdx).FirstOrDefault() + 1));
 
                     var paramIndex = 0;
+                    var needSave = false;
                     if (list != null)
                     {
                         foreach (var item in list.Where(x => x.FieldValue != null))

@@ -57,6 +57,11 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 			[System.ComponentModel.Description("Field mapping for the 'Count' property")]
 			Count,
 			/// <summary>
+			/// Field mapping for the 'Reason' property
+			/// </summary>
+			[System.ComponentModel.Description("Field mapping for the 'Reason' property")]
+			Reason,
+			/// <summary>
 			/// Field mapping for the 'RepositoryId' property
 			/// </summary>
 			[System.ComponentModel.Description("Field mapping for the 'RepositoryId' property")]
@@ -68,6 +73,11 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 			[System.ComponentModel.ReadOnly(true)]
 			[System.ComponentModel.Description("Field mapping for the 'RowId' property")]
 			RowId,
+			/// <summary>
+			/// Field mapping for the 'Subkey' property
+			/// </summary>
+			[System.ComponentModel.Description("Field mapping for the 'Subkey' property")]
+			Subkey,
 		}
 		#endregion
 
@@ -123,6 +133,24 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 		}
 
 		/// <summary>
+		/// The property that maps back to the database 'CacheInvalidate.Reason' field.
+		/// </summary>
+		/// <remarks>Field: [CacheInvalidate].[Reason], Field Length: 20, Nullable</remarks>
+		[DataMember]
+		[System.ComponentModel.Browsable(true)]
+		[System.ComponentModel.DisplayName("Reason")]
+		[System.Diagnostics.DebuggerNonUserCode()]
+		public virtual string Reason
+		{
+			get { return _reason; }
+			set
+			{
+				if ((value != null) && (value.Length > GetMaxLength(Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants.Reason))) throw new Exception(string.Format(GlobalValues.ERROR_DATA_TOO_BIG, value, "CacheInvalidate.Reason", GetMaxLength(Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants.Reason)));
+				_reason = value;
+			}
+		}
+
+		/// <summary>
 		/// The property that maps back to the database 'CacheInvalidate.RepositoryId' field.
 		/// </summary>
 		/// <remarks>Field: [CacheInvalidate].[RepositoryId], Not Nullable, Indexed</remarks>
@@ -159,6 +187,24 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 			}
 		}
 
+		/// <summary>
+		/// The property that maps back to the database 'CacheInvalidate.Subkey' field.
+		/// </summary>
+		/// <remarks>Field: [CacheInvalidate].[Subkey], Field Length: 50, Nullable</remarks>
+		[DataMember]
+		[System.ComponentModel.Browsable(true)]
+		[System.ComponentModel.DisplayName("Subkey")]
+		[System.Diagnostics.DebuggerNonUserCode()]
+		public virtual string Subkey
+		{
+			get { return _subkey; }
+			set
+			{
+				if ((value != null) && (value.Length > GetMaxLength(Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants.Subkey))) throw new Exception(string.Format(GlobalValues.ERROR_DATA_TOO_BIG, value, "CacheInvalidate.Subkey", GetMaxLength(Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants.Subkey)));
+				_subkey = value;
+			}
+		}
+
 		#endregion
 
 		#region Property Holders
@@ -168,9 +214,13 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 		/// <summary />
 		protected int _count;
 		/// <summary />
+		protected string _reason;
+		/// <summary />
 		protected int _repositoryId;
 		/// <summary />
 		protected long _rowId;
+		/// <summary />
+		protected string _subkey;
 
 		#endregion
 
@@ -187,10 +237,14 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 					return 0;
 				case Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants.Count:
 					return 0;
+				case Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants.Reason:
+					return 20;
 				case Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants.RepositoryId:
 					return 0;
 				case Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants.RowId:
 					return 0;
+				case Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants.Subkey:
+					return 50;
 			}
 			return 0;
 		}
@@ -225,8 +279,10 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 			{
 				case Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants.AddedDate: return typeof(DateTime);
 				case Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants.Count: return typeof(int);
+				case Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants.Reason: return typeof(string);
 				case Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants.RepositoryId: return typeof(int);
 				case Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants.RowId: return typeof(long);
+				case Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants.Subkey: return typeof(string);
 			}
 			return null;
 		}
@@ -313,8 +369,10 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 			var newItem = new CacheInvalidate();
 			newItem.AddedDate = item.AddedDate;
 			newItem.Count = item.Count;
+			newItem.Reason = item.Reason;
 			newItem.RepositoryId = item.RepositoryId;
 			newItem.RowId = item.RowId;
+			newItem.Subkey = item.Subkey;
 			return newItem;
 		}
 
@@ -339,10 +397,14 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 				return this.AddedDate;
 			if (field == Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants.Count)
 				return this.Count;
+			if (field == Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants.Reason)
+				return ((this.Reason == null) ? defaultValue : this.Reason);
 			if (field == Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants.RepositoryId)
 				return this.RepositoryId;
 			if (field == Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants.RowId)
 				return this.RowId;
+			if (field == Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants.Subkey)
+				return ((this.Subkey == null) ? defaultValue : this.Subkey);
 			throw new Exception("Field '" + field.ToString() + "' not found!");
 		}
 
@@ -376,6 +438,10 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 			{
 				this.Count = GlobalValues.SetValueHelperIntNotNullableInternal(newValue, "Field 'Count' does not allow null values!");
 			}
+			else if (field == Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants.Reason)
+			{
+				this.Reason = GlobalValues.SetValueHelperInternal((string)newValue, fixLength, GetMaxLength(field));
+			}
 			else if (field == Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants.RepositoryId)
 			{
 				this.RepositoryId = GlobalValues.SetValueHelperIntNotNullableInternal(newValue, "Field 'RepositoryId' does not allow null values!");
@@ -383,6 +449,10 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 			else if (field == Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants.RowId)
 			{
 				throw new Exception("Field '" + field.ToString() + "' is a primary key and cannot be set!");
+			}
+			else if (field == Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate.FieldNameConstants.Subkey)
+			{
+				this.Subkey = GlobalValues.SetValueHelperInternal((string)newValue, fixLength, GetMaxLength(field));
 			}
 			else
 				throw new Exception("Field '" + field.ToString() + "' not found!");
@@ -403,8 +473,10 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 			{
 				case "addeddate": return "addeddate";
 				case "count": return "count";
+				case "reason": return "reason";
 				case "repositoryid": return "repositoryid";
 				case "rowid": return "rowid";
+				case "subkey": return "subkey";
 				default: throw new Exception("The select clause is not valid.");
 			}
 		}
@@ -415,8 +487,10 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 			{
 				case "addeddate": return "CacheInvalidate";
 				case "count": return "CacheInvalidate";
+				case "reason": return "CacheInvalidate";
 				case "repositoryid": return "CacheInvalidate";
 				case "rowid": return "CacheInvalidate";
+				case "subkey": return "CacheInvalidate";
 				default: throw new Exception("The select clause is not valid.");
 			}
 		}
@@ -427,8 +501,10 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 			{
 				case "addeddate": return "CacheInvalidate";
 				case "count": return "CacheInvalidate";
+				case "reason": return "CacheInvalidate";
 				case "repositoryid": return "CacheInvalidate";
 				case "rowid": return "CacheInvalidate";
+				case "subkey": return "CacheInvalidate";
 				default: throw new Exception("The select clause is not valid.");
 			}
 		}
@@ -437,8 +513,10 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 		{
 			sql = System.Text.RegularExpressions.Regex.Replace(sql, "\\[" + parentAlias + "\\]\\.\\[addeddate\\]", "[" + childTables.GetBaseAliasTable(parentAlias, "CacheInvalidate") + "].[addeddate]", RegexOptions.IgnoreCase);
 			sql = System.Text.RegularExpressions.Regex.Replace(sql, "\\[" + parentAlias + "\\]\\.\\[count\\]", "[" + childTables.GetBaseAliasTable(parentAlias, "CacheInvalidate") + "].[count]", RegexOptions.IgnoreCase);
+			sql = System.Text.RegularExpressions.Regex.Replace(sql, "\\[" + parentAlias + "\\]\\.\\[reason\\]", "[" + childTables.GetBaseAliasTable(parentAlias, "CacheInvalidate") + "].[reason]", RegexOptions.IgnoreCase);
 			sql = System.Text.RegularExpressions.Regex.Replace(sql, "\\[" + parentAlias + "\\]\\.\\[repositoryid\\]", "[" + childTables.GetBaseAliasTable(parentAlias, "CacheInvalidate") + "].[repositoryid]", RegexOptions.IgnoreCase);
 			sql = System.Text.RegularExpressions.Regex.Replace(sql, "\\[" + parentAlias + "\\]\\.\\[rowid\\]", "[" + childTables.GetBaseAliasTable(parentAlias, "CacheInvalidate") + "].[rowid]", RegexOptions.IgnoreCase);
+			sql = System.Text.RegularExpressions.Regex.Replace(sql, "\\[" + parentAlias + "\\]\\.\\[subkey\\]", "[" + childTables.GetBaseAliasTable(parentAlias, "CacheInvalidate") + "].[subkey]", RegexOptions.IgnoreCase);
 			return sql;
 		}
 
@@ -638,8 +716,10 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 			{
 				case "AddedDate": return "AddedDate";
 				case "Count": return "Count";
+				case "Reason": return "Reason";
 				case "RepositoryId": return "RepositoryId";
 				case "RowId": return "RowId";
+				case "Subkey": return "Subkey";
 			}
 			return string.Empty;
 		}
@@ -658,8 +738,10 @@ namespace Gravitybox.Datastore.EFDAL.Entity
 			return (
 				other.AddedDate == this.AddedDate &&
 				other.Count == this.Count &&
+				other.Reason == this.Reason &&
 				other.RepositoryId == this.RepositoryId &&
-				other.RowId == this.RowId
+				other.RowId == this.RowId &&
+				other.Subkey == this.Subkey
 				);
 		}
 
@@ -703,6 +785,13 @@ namespace Gravitybox.Datastore.EFDAL.Entity.Metadata
 		public object Count;
 
 		/// <summary>
+		/// Metadata information for the 'Reason' parameter
+		/// </summary>
+		[System.ComponentModel.DataAnnotations.StringLength(20, ErrorMessage = "The property 'Reason' has a maximum length of 20")]
+		[System.ComponentModel.DataAnnotations.Display(Description = "", Name = "Reason", AutoGenerateField = true)]
+		public object Reason;
+
+		/// <summary>
 		/// Metadata information for the 'RepositoryId' parameter
 		/// </summary>
 		[System.ComponentModel.DataAnnotations.Required(ErrorMessage = "'RepositoryId' is required.", AllowEmptyStrings = true)]
@@ -717,6 +806,13 @@ namespace Gravitybox.Datastore.EFDAL.Entity.Metadata
 		[System.ComponentModel.ReadOnly(true)]
 		[System.ComponentModel.DataAnnotations.Display(Description = "", Name = "RowId", AutoGenerateField = true)]
 		public object RowId;
+
+		/// <summary>
+		/// Metadata information for the 'Subkey' parameter
+		/// </summary>
+		[System.ComponentModel.DataAnnotations.StringLength(50, ErrorMessage = "The property 'Subkey' has a maximum length of 50")]
+		[System.ComponentModel.DataAnnotations.Display(Description = "", Name = "Subkey", AutoGenerateField = true)]
+		public object Subkey;
 
 		#endregion
 
@@ -737,8 +833,10 @@ namespace Gravitybox.Datastore.EFDAL.Entity.Metadata
 			var retval = new List<string>();
 			retval.Add("AddedDate");
 			retval.Add("Count");
+			retval.Add("Reason");
 			retval.Add("RepositoryId");
 			retval.Add("RowId");
+			retval.Add("Subkey");
 			return retval;
 		}
 
@@ -767,8 +865,10 @@ namespace Gravitybox.Datastore.EFDAL.Entity.Metadata
 			{
 				case "AddedDate": return "AddedDate";
 				case "Count": return "Count";
+				case "Reason": return "Reason";
 				case "RepositoryId": return "RepositoryId";
 				case "RowId": return "RowId";
+				case "Subkey": return "Subkey";
 			}
 			return string.Empty;
 		}

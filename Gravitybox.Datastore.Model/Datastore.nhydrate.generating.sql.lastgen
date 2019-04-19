@@ -142,6 +142,9 @@
 								<c key="e421276c-324b-426b-844b-6881f6f31e04" name="ReadLockCount" dataFieldSortOrder="9" default="0" id="682421188" type="8" allowNull="0">
 										<pt key="65c859b0-9d8a-4bc1-95cb-97868b167853" ref="1097915898" refType="1" />
 								</c>
+								<c key="5bd55f81-327e-49cb-957e-62405932fac3" name="Reason" dataFieldSortOrder="5" length="20" id="1028723178" type="22">
+										<pt key="0def976b-da96-4b15-80d0-980f9701addd" ref="1193161485" refType="1" />
+								</c>
 								<c key="82efe099-8cf1-491c-8613-e36385c2a498" primaryKey="1" name="RecordIdx" dataFieldSortOrder="2" isIndexed="1" isUnique="1" id="947314868" type="0" allowNull="0">
 										<pt key="20c8e8cc-d7ae-45fe-b9b9-11974bd2f5ee" ref="1895902331" refType="1" />
 								</c>
@@ -160,6 +163,9 @@
 								<c key="0f787c33-1573-40d8-80ba-cc1d29441b45" name="RepositoryId" dataFieldSortOrder="2" isIndexed="1" id="186080095" type="8" allowNull="0">
 										<pt key="0def976b-da96-4b15-80d0-980f9701addd" ref="1193161485" refType="1" />
 								</c>
+								<c key="996c0b1f-8f16-4f6d-bf83-b6c9ae50750c" name="RepositoryId" dataFieldSortOrder="2" id="1123825496" type="8" allowNull="0">
+										<pt key="b4471c3d-8e5f-455e-96c1-6048e60c7884" ref="1146035816" refType="1" />
+								</c>
 								<c key="8e601f2b-8998-4e35-b7a0-ad86e47c5601" primaryKey="1" identity="1" name="RepositoryId" dataFieldSortOrder="1" isIndexed="1" isUnique="1" id="104468358" type="8" allowNull="0">
 										<pt key="5b0293c0-a352-41ee-9688-cb9ea27b3823" ref="168493840" refType="1" />
 								</c>
@@ -168,9 +174,6 @@
 								</c>
 								<c key="4955f5df-b642-4e6e-a419-3f79c0bae4bb" name="RepositoryId" dataFieldSortOrder="2" id="1285215222" type="8" allowNull="0">
 										<pt key="65c859b0-9d8a-4bc1-95cb-97868b167853" ref="1097915898" refType="1" />
-								</c>
-								<c key="996c0b1f-8f16-4f6d-bf83-b6c9ae50750c" name="RepositoryId" dataFieldSortOrder="2" id="1123825496" type="8" allowNull="0">
-										<pt key="b4471c3d-8e5f-455e-96c1-6048e60c7884" ref="1146035816" refType="1" />
 								</c>
 								<c key="b3744500-2db1-477f-be0d-da3521bfa4d0" name="RepositoryLoadDelta" dataFieldSortOrder="5" id="207070419" type="8" allowNull="0">
 										<pt key="9fe58257-9f30-46fb-8e06-dc7681dd72de" ref="1285279716" refType="1" />
@@ -190,11 +193,11 @@
 								<c key="e5ac5ce9-675f-4fac-ae7b-025402b8c86a" primaryKey="1" identity="1" name="RowId" dataFieldSortOrder="1" isIndexed="1" isUnique="1" id="533837904" type="0" allowNull="0">
 										<pt key="0def976b-da96-4b15-80d0-980f9701addd" ref="1193161485" refType="1" />
 								</c>
-								<c key="7a341017-38a5-4d45-bb6c-e5deb98f7357" primaryKey="1" name="RowId" description="There is only one record and it is always RowId = 1" dataFieldSortOrder="1" default="1" isIndexed="1" isUnique="1" id="2025010755" type="8" allowNull="0">
-										<pt key="bec25185-9308-472e-b8e9-35354ee36797" ref="104381028" refType="1" />
-								</c>
 								<c key="16f0f177-c7ce-4f2f-8811-465badda6809" primaryKey="1" identity="1" name="RowId" dataFieldSortOrder="1" isIndexed="1" isUnique="1" id="286667010" type="0" allowNull="0">
 										<pt key="b4471c3d-8e5f-455e-96c1-6048e60c7884" ref="1146035816" refType="1" />
+								</c>
+								<c key="7a341017-38a5-4d45-bb6c-e5deb98f7357" primaryKey="1" name="RowId" description="There is only one record and it is always RowId = 1" dataFieldSortOrder="1" default="1" isIndexed="1" isUnique="1" id="2025010755" type="8" allowNull="0">
+										<pt key="bec25185-9308-472e-b8e9-35354ee36797" ref="104381028" refType="1" />
 								</c>
 								<c key="9cf993a1-b1e1-4f0c-b1ed-b2534c95d641" primaryKey="1" identity="1" name="ServerId" dataFieldSortOrder="1" isIndexed="1" isUnique="1" id="1054024029" type="8" allowNull="0">
 										<pt key="32b513f0-3ede-416d-92d7-5a202cc89fce" ref="225803044" refType="1" />
@@ -204,6 +207,9 @@
 								</c>
 								<c key="030b0a14-7e62-493a-adb9-90ec316ba8f7" primaryKey="1" identity="1" name="ServerStatId" dataFieldSortOrder="1" isIndexed="1" isUnique="1" id="1647546836" type="0" allowNull="0">
 										<pt key="9fe58257-9f30-46fb-8e06-dc7681dd72de" ref="1285279716" refType="1" />
+								</c>
+								<c key="3941af92-f7e5-4e5a-9db3-3f924bbcd2ac" name="Subkey" dataFieldSortOrder="6" id="317764581" type="22">
+										<pt key="0def976b-da96-4b15-80d0-980f9701addd" ref="1193161485" refType="1" />
 								</c>
 								<c key="e90b6bae-a1c1-4d89-b3a2-da0eb67acf13" name="ThreadId" dataFieldSortOrder="2" id="1892456458" type="8" allowNull="0">
 										<pt key="617eb474-1224-42f5-9bf0-549042892c0f" ref="1781545979" refType="1" />
@@ -244,6 +250,16 @@
 						<customretrieveruleparameters key="00000000-0000-0000-0000-000000000000" />
 						<functionparameters key="00000000-0000-0000-0000-000000000000" />
 						<relations key="00000000-0000-0000-0000-000000000000">
+								<r key="ad3e16c1-b5ef-484d-a7ef-5a61d3affb73" enforce="1" id="2106137490">
+										<crl>
+												<cr>
+														<pt key="16f0f177-c7ce-4f2f-8811-465badda6809" ref="286667010" refType="0" />
+														<ct key="b2ab1c5a-d74e-44c0-908d-94a1d4d5455c" ref="477769028" refType="0" />
+												</cr>
+										</crl>
+										<ct key="20c8e8cc-d7ae-45fe-b9b9-11974bd2f5ee" ref="1895902331" refType="1" />
+										<pt key="b4471c3d-8e5f-455e-96c1-6048e60c7884" ref="1146035816" refType="1" />
+								</r>
 								<r key="3a0b5ce3-b742-47c6-aefc-309445f1cd8b" enforce="1" id="1399944847">
 										<crl>
 												<cr>
@@ -263,16 +279,6 @@
 										</crl>
 										<ct key="9fe58257-9f30-46fb-8e06-dc7681dd72de" ref="1285279716" refType="1" />
 										<pt key="32b513f0-3ede-416d-92d7-5a202cc89fce" ref="225803044" refType="1" />
-								</r>
-								<r key="ad3e16c1-b5ef-484d-a7ef-5a61d3affb73" enforce="1" id="2106137490">
-										<crl>
-												<cr>
-														<pt key="16f0f177-c7ce-4f2f-8811-465badda6809" ref="286667010" refType="0" />
-														<ct key="b2ab1c5a-d74e-44c0-908d-94a1d4d5455c" ref="477769028" refType="0" />
-												</cr>
-										</crl>
-										<ct key="20c8e8cc-d7ae-45fe-b9b9-11974bd2f5ee" ref="1895902331" refType="1" />
-										<pt key="b4471c3d-8e5f-455e-96c1-6048e60c7884" ref="1146035816" refType="1" />
 								</r>
 						</relations>
 						<viewrelations key="00000000-0000-0000-0000-000000000000" />
@@ -316,6 +322,8 @@
 												<f key="0f787c33-1573-40d8-80ba-cc1d29441b45" ref="186080095" refType="0" />
 												<f key="0a90455f-2b36-49f2-ac4c-0e363c4afb1f" ref="660410402" refType="0" />
 												<f key="7c23e9fc-5dec-4abb-bed7-375fb48df76e" ref="1290240232" refType="0" />
+												<f key="5bd55f81-327e-49cb-957e-62405932fac3" ref="1028723178" refType="0" />
+												<f key="3941af92-f7e5-4e5a-9db3-3f924bbcd2ac" ref="317764581" refType="0" />
 										</c>
 										<security key="00000000-0000-0000-0000-000000000000" sql="">
 												<parameters key="00000000-0000-0000-0000-000000000000" />
@@ -729,7 +737,7 @@
 						<customstoredprocedures key="00000000-0000-0000-0000-000000000000" />
 				</database>
 				<versionHistoryList>
-						<version createdDate="2019-03-03 11:46:32" version="2.1.0.0" />
+						<version createdDate="2019-04-17 10:14:16" version="2.1.0.0" />
 				</versionHistoryList>
 		</ModelRoot>
 </modelRoot>

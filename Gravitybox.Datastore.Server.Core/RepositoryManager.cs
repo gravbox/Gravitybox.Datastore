@@ -215,7 +215,7 @@ namespace Gravitybox.Datastore.Server.Core
 
                     SqlHelper.RemoveRepository(ConfigHelper.ConnectionString, repositoryId);
                     this.RepositoryCacheRemove(repositoryId);
-                    QueryCache.Clear(schema.InternalID, schema.ID);
+                    QueryCache.Clear(schema.InternalID, schema.ID, "RemoveRepository");
                     ClearSchemaCache(schema.ID);
                 }
 
@@ -288,7 +288,7 @@ namespace Gravitybox.Datastore.Server.Core
                     var schema2 = GetSchema(schema.ID, true);
                     if (schema2 != null)
                     {
-                        QueryCache.Clear(schema2.InternalID, schema2.ID);
+                        QueryCache.Clear(schema2.InternalID, schema2.ID, "AddRepository");
                         RepositoryCacheAdd(schema2.ID);
                     }
                 }
@@ -349,13 +349,15 @@ namespace Gravitybox.Datastore.Server.Core
                     {
                         waitingLocks = q.WaitingLocksOnEntry;
                         readLockCount = q.ReadLockCount;
-                        var results = SqlHelper.DeleteData(schema, list, ConfigHelper.ConnectionString);
+
+                        string cacheSubKey = null;
+                        var results = SqlHelper.DeleteData(schema, list, out cacheSubKey);
                         count = results.AffectedCount;
                         schema = GetSchema(schema.ID);
 
                         //Only clear the cache if something happened
                         if (count > 0)
-                            QueryCache.Clear(schema.InternalID, schema.ID);
+                            QueryCache.Clear(schema.InternalID, schema.ID, "DeleteItems", cacheSubKey);
 
                         timer.Stop();
                         retval.ComputeTime = timer.ElapsedMilliseconds;
@@ -441,12 +443,27 @@ namespace Gravitybox.Datastore.Server.Core
                             lockTime = q.LockTime;
                             schema = GetSchema(schema.ID);
                             var dimensionList = _dimensionCache.Get(context, schema, schema.InternalID, new List<DataItem>());
-                            var results = SqlHelper.DeleteData(schema, query, dimensionList, ConfigHelper.ConnectionString);
+                            var results = SqlHelper.DeleteData(schema, query, dimensionList);
                             count = results.AffectedCount;
+
+                            //Find the cache subkey if one exists
+                            string cacheSubKey = null;
+                            if (query.FieldFilters != null)
+                            {
+                                var groupingField = schema.FieldList.FirstOrDefault(x => x.IsDataGrouping);
+                                if (groupingField != null)
+                                {
+                                    var ff = query.FieldFilters.FirstOrDefault(x => x.Name.Match(groupingField.Name));
+                                    if (ff != null && ff.Comparer == ComparisonConstants.Equals && ff.Value != null)
+                                    {
+                                        cacheSubKey = ff.Value.ToString();
+                                    }
+                                }
+                            }
 
                             //Only clear the cache if something happened
                             if (count > 0)
-                                QueryCache.Clear(schema.InternalID, schema.ID);
+                                QueryCache.Clear(schema.InternalID, schema.ID, "DeleteData", cacheSubKey);
                         }
                         timer.Stop();
                         retval.ComputeTime = timer.ElapsedMilliseconds;
@@ -518,7 +535,7 @@ namespace Gravitybox.Datastore.Server.Core
                         lockTime = q.LockTime;
                         var schema = GetSchema(repositoryId);
                         retval.Count = SqlHelper.Clear(schema, ConfigHelper.ConnectionString);
-                        QueryCache.Clear(schema.InternalID, schema.ID);
+                        QueryCache.Clear(schema.InternalID, schema.ID, "Clear");
                         retval.LockTime = q.LockTime;
                         retval.IsSuccess = true;
                     }
@@ -563,15 +580,6 @@ namespace Gravitybox.Datastore.Server.Core
             var queryString = query.ToString();
             var queryKey = $"{queryString}|{repositoryId}";
 
-            #region Log
-            if (!isInternal)
-            {
-                LoggerCQ.LogTrace($"Query begin: ID={repositoryId}" +
-                                  $", PO={query.PageOffset}, RPP={query.RecordsPerPage}" +
-                                  $", QueryString=\"{queryString}\"");
-            }
-            #endregion
-
             var lockTime = 0;
             var timer = Stopwatch.StartNew();
             try
@@ -605,7 +613,7 @@ namespace Gravitybox.Datastore.Server.Core
                         var id = schema.InternalID;
                         var isCore = false;
                         if (ConfigHelper.AllowCaching) //only check if allow caching. this is used for debugging/performance testing
-                            retval = QueryCache.Get(context, query, id, schema.ID, out isCore);
+                            retval = QueryCache.Get(context, schema, query, id, schema.ID, out isCore);
                         var cacheHit = (retval != null) && !isCore;
                         if (isInternal)
                         {
@@ -614,10 +622,12 @@ namespace Gravitybox.Datastore.Server.Core
                         }
 
                         #region Determine if this a full dimension dump and do not care about records or counts
-                        if (query.IsDimensionDump())
+                        if (!cacheHit && query.IsDimensionDump())
                         {
                             retval = SqlHelper.DimensionDump(query, schema);
                             retval.DimensionList.RemoveAll(x => query.SkipDimensions?.Contains(x.DIdx) == true);
+                            QueryCache.Set(context, schema, query, id, schema.ID, retval);
+
                             var logMsg = "Query: ID=" + repositoryId +
                                 ", Cache=" + (cacheHit ? "1" : "0") +
                                 ", CoreHit=" + (isCore ? "1" : "0") +
@@ -687,8 +697,14 @@ namespace Gravitybox.Datastore.Server.Core
                                 if (!isMasterResults && !hasFilters && !hasGeo && !hasKeyword && query.RecordsPerPage <= 100 && query.IncludeRecords)
                                 {
                                     //Only look ahead if there are a small amount of records to cache
-                                    if (query.RecordsPerPage <= 100)
+                                    if (query.RecordsPerPage <= 100 && query.PageOffset <= 10)
                                         recordMultiplier = 3;
+                                    else if (query.RecordsPerPage <= 100 && query.PageOffset <= 50) //page 11-50 cache 5 pages
+                                        recordMultiplier = 5;
+                                    else if (query.RecordsPerPage <= 100 && query.PageOffset <= 100) //page 51-100 cache 10 pages
+                                        recordMultiplier = 10;
+                                    else if (query.RecordsPerPage <= 100) //page >100 cache 20 pages
+                                        recordMultiplier = 20;
                                     forwardLoad = true;
                                     retval = SqlHelper.Query(schema, id, query, dimensionList, out executeHistory, query.RecordsPerPage * (recordMultiplier - 1));
                                     //If this was cache hit but only find a core match then need to replace the records
@@ -753,9 +769,9 @@ namespace Gravitybox.Datastore.Server.Core
                                             {
                                                 allDimTask?.Wait(SqlHelper.ThreadTimeout); //ensure this calculation is completed before use
                                                 newR.AllDimensionList = allDimensions;
-                                                if (!isInternal)
-                                                    QueryCache.Set(context, q2, id, schema.ID, newR);
                                             }
+                                            if (!isInternal)
+                                                QueryCache.Set(context, schema, q2, id, schema.ID, newR);
                                         });
                                         if (ii == 0) firstTask = task; //this must be finished before results are returned
                                         else otherTasks.Add(task);
@@ -777,7 +793,7 @@ namespace Gravitybox.Datastore.Server.Core
                                     allDimTask?.Wait(SqlHelper.ThreadTimeout); //ensure this calculation is completed before use
                                     retval.AllDimensionList = allDimensions;
                                     if (!isInternal)
-                                        QueryCache.Set(context, query, id, schema.ID, retval);
+                                        QueryCache.Set(context, schema, query, id, schema.ID, retval);
                                 }
                                 #endregion
                             } //Query Lock
@@ -962,7 +978,6 @@ namespace Gravitybox.Datastore.Server.Core
             if (!IsServerMaster())
                 throw new NotMasterInstanceException();
 
-            LoggerCQ.LogTrace($"GetItemCount begin: RepositoryId={repositoryId}");
             try
             {
                 using (var q = new AcquireReaderLock(repositoryId, "GetItemCount"))
@@ -974,7 +989,6 @@ namespace Gravitybox.Datastore.Server.Core
             }
             catch (Exception ex)
             {
-                LoggerCQ.LogError(ex, $"GetItemCount failed: RepositoryId={repositoryId}");
                 throw new FaultException(ex.Message);
             }
         }
@@ -1152,8 +1166,7 @@ namespace Gravitybox.Datastore.Server.Core
                 return retval;
             }
 
-            LoggerCQ.LogTrace($"UpdateData begin: RepositoryId={schema.ID}");
-            
+           
             var errorList = new List<string>();
             var schema1 = GetSchema(schema.ID);
             if (schema1 == null)
@@ -1182,7 +1195,8 @@ namespace Gravitybox.Datastore.Server.Core
                             var id = schema.InternalID;
                             var dimensionList = _dimensionCache.Get(context, schema, id, list);
 
-                            var results = SqlHelper.UpdateData(schema, dimensionList, list, ConfigHelper.ConnectionString);
+                            string cacheSubKey = null;
+                            var results = SqlHelper.UpdateData(schema, dimensionList, list, out cacheSubKey);
                             timer.Stop();
                             retval.LockTime = q.LockTime;
                             retval.ComputeTime = timer.ElapsedMilliseconds;
@@ -1197,9 +1211,6 @@ namespace Gravitybox.Datastore.Server.Core
                                 $", Cached={(itemCount - results.AffectedCount)}" +
                                 $", Count={itemCount}");
 
-                            if (results.AffectedCount > 0)
-                                QueryCache.Clear(id, schema.ID);
-
                             _system.LogRepositoryPerf(new RepositorySummmaryStats
                             {
                                 ActionType = RepositoryActionConstants.SaveData,
@@ -1210,6 +1221,10 @@ namespace Gravitybox.Datastore.Server.Core
                                 WaitingLocksOnEntry = q.WaitingLocksOnEntry,
                                 ReadLockCount = q.ReadLockCount,
                             });
+
+                            //Clear cache
+                            if (results.AffectedCount > 0)
+                                QueryCache.Clear(id, schema.ID, "UpdateData", cacheSubKey);
 
                         }
                     }
@@ -1299,8 +1314,6 @@ namespace Gravitybox.Datastore.Server.Core
                 return retval;
             }
 
-            LoggerCQ.LogTrace($"UpdateDataWhere begin: RepositoryId={schema.ID}, Query=\"{query.ToString()}\"");
-
             var schema1 = GetSchema(schema.ID);
             if (schema1 == null)
             {
@@ -1343,7 +1356,7 @@ namespace Gravitybox.Datastore.Server.Core
                                 $", Count={results.AffectedCount}" +
                                 $", Fields={string.Join("|", list.Where(x => x != null).Select(x => x.FieldName))}" +
                                 $", QueryString=\"{query.ToString()}\"");
-                            QueryCache.Clear(id, schema.ID);
+                            QueryCache.Clear(id, schema.ID, "UpdateDataWhere");
 
                             _system.LogRepositoryPerf(new RepositorySummmaryStats
                             {
@@ -1447,7 +1460,6 @@ namespace Gravitybox.Datastore.Server.Core
                                     if (target == null)
                                     {
                                         var sb = new StringBuilder();
-                                        sb.AppendLine($"delete from [{SqlHelper.GetDimensionTableName(newSchema.ID)}] where [DIdx] = {item.DIdx}");
                                         sb.AppendLine($"delete from [{SqlHelper.GetDimensionValueTableName(newSchema.ID)}] where [DIdx] = {item.DIdx}");
                                         SqlHelper.ExecuteSql(ConfigHelper.ConnectionString, sb.ToString(), null, false);
                                     }
@@ -1495,15 +1507,15 @@ namespace Gravitybox.Datastore.Server.Core
                                 if (useIndex)
                                 {
                                     var indexName = SqlHelper.GetIndexName(field, dataTable);
-                                    sbFields.AppendLine($"if not exists(select * from sys.indexes where name = '" + indexName + "')");
-                                    sbFields.AppendLine($"CREATE NONCLUSTERED INDEX [" + indexName + "] ON [" + dataTable + "] ([" + field.Name + "] ASC);");
+                                    sbFields.AppendLine($"if not exists(select * from sys.indexes where name = '{indexName}')");
+                                    sbFields.AppendLine($"CREATE NONCLUSTERED INDEX [{indexName}] ON [{dataTable}] ([{field.Name}] ASC);");
                                     sbFields.AppendLine();
                                 }
                                 else
                                 {
                                     var indexName = SqlHelper.GetIndexName(field, dataTable);
-                                    sbFields.AppendLine($"if exists(select * from sys.indexes where name = '" + indexName + "')");
-                                    sbFields.AppendLine($"DROP INDEX [" + indexName + "] ON [" + dataTable + "]");
+                                    sbFields.AppendLine($"if exists(select * from sys.indexes where name = '{indexName}')");
+                                    sbFields.AppendLine($"DROP INDEX [{indexName}] ON [{dataTable}]");
                                     sbFields.AppendLine();
                                 }
                             }
@@ -1544,7 +1556,7 @@ namespace Gravitybox.Datastore.Server.Core
                                         repository.VersionHash = newSchema.VersionHash;
                                         repository.DefinitionData = newSchema.ToXml();
                                         context.SaveChanges();
-                                        QueryCache.Clear(repositoryId, newSchema.ID);
+                                        QueryCache.Clear(repositoryId, newSchema.ID, "UpdateSchema");
                                     }
                                 }
 
@@ -1598,7 +1610,7 @@ namespace Gravitybox.Datastore.Server.Core
                             }
                         } while (!isFinish && tryCount < maxTries);
 
-                        QueryCache.Clear(repositoryId, newSchema.ID);
+                        QueryCache.Clear(repositoryId, newSchema.ID, "UpdateSchema");
                         _dimensionCache.Clear(repositoryId);
 
                         timer.Stop();
@@ -1809,8 +1821,6 @@ namespace Gravitybox.Datastore.Server.Core
             if (!IsServerMaster())
                 throw new NotMasterInstanceException();
 
-            LoggerCQ.LogTrace($"GetDataVersion begin: RepositoryId={repositoryId}");
-
             try
             {
                 //Do not call RepositoryExists since this does the same thing
@@ -1861,7 +1871,7 @@ namespace Gravitybox.Datastore.Server.Core
                     {
                         var dimensionList = _dimensionCache.Get(context, schema, schema.InternalID, new List<DataItem>());
                         var retval = SqlHelper.UpdateDimensionValue(schema, dimensionList, dvidx, value);
-                        QueryCache.Clear(schema.InternalID, schema.ID);
+                        QueryCache.Clear(schema.InternalID, schema.ID, "ResetDimensionValue");
                         _dimensionCache.Clear(schema.InternalID);
                         return retval;
                     }
@@ -1899,7 +1909,7 @@ namespace Gravitybox.Datastore.Server.Core
                         {
                             var retval = SqlHelper.DeleteDimensionValue(schema, dimensionList, dvidx);
                             d.RefinementList.RemoveAll(x => x.DVIdx == dvidx);
-                            QueryCache.Clear(schema.InternalID, schema.ID);
+                            QueryCache.Clear(schema.InternalID, schema.ID, "DeleteDimensionValue");
                             _dimensionCache.Clear(schema.InternalID);
                             return retval;
                         }
@@ -2028,7 +2038,7 @@ namespace Gravitybox.Datastore.Server.Core
                             .ForEach(x => SqlHelper.ClearPermissions(schema, x));
 
                         SqlHelper.AddPermission(schema, list);
-                        QueryCache.Clear(schema.InternalID, schema.ID);
+                        QueryCache.Clear(schema.InternalID, schema.ID, "AddPermission");
                     }
                     timer.Stop();
                 }
@@ -2064,7 +2074,7 @@ namespace Gravitybox.Datastore.Server.Core
                     using (var q = new AcquireWriterLock(ServerUtilities.RandomizeGuid(repositoryId, RSeedPermissions), "DeletePermission"))
                     {
                         SqlHelper.DeletePermission(schema, list);
-                        QueryCache.Clear(schema.InternalID, schema.ID);
+                        QueryCache.Clear(schema.InternalID, schema.ID, "DeletePermission");
                     }
                 }
             }
@@ -2104,7 +2114,7 @@ namespace Gravitybox.Datastore.Server.Core
                         {
                             lockTime = q.LockTime;
                             SqlHelper.ClearPermissions(schema, fieldValue);
-                            QueryCache.Clear(schema.InternalID, schema.ID);
+                            QueryCache.Clear(schema.InternalID, schema.ID, "ClearPermissions");
                         }
                     }
                     timer.Stop();
@@ -2149,7 +2159,7 @@ namespace Gravitybox.Datastore.Server.Core
                         {
                             lockTime = q.LockTime;
                             SqlHelper.ClearUserPermissions(schema, userId);
-                            QueryCache.Clear(schema.InternalID, schema.ID);
+                            QueryCache.Clear(schema.InternalID, schema.ID, "ClearUserPermissions");
                         }
                     }
                     timer.Stop();
@@ -2259,13 +2269,13 @@ namespace Gravitybox.Datastore.Server.Core
             newQuery.NonParsedFieldList = query.NonParsedFieldList;
 
             bool isCore;
-            var retval = QueryCache.Get(context, newQuery, id, schema.ID, out isCore);
+            var retval = QueryCache.Get(context, schema, newQuery, id, schema.ID, out isCore);
             if (retval == null)
             {
                 retval = SqlHelper.Query(schema, id, newQuery, dimensionList);
                 if (newQuery.SkipDimensions.Any())
                     retval.DimensionList.RemoveAll(x => newQuery.SkipDimensions.Contains(x.DIdx));
-                QueryCache.Set(context, newQuery, id, schema.ID, retval);
+                QueryCache.Set(context, schema, newQuery, id, schema.ID, retval);
             }
             return retval.DimensionList;
         }

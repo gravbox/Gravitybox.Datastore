@@ -26,6 +26,8 @@ CREATE TABLE [dbo].[CacheInvalidate] (
 	[RepositoryId] [Int] NOT NULL ,
 	[AddedDate] [DateTime2] (2) NOT NULL CONSTRAINT [DF__CACHEINVALIDATE_ADDEDDATE] DEFAULT (GetDate()),
 	[Count] [Int] NOT NULL CONSTRAINT [DF__CACHEINVALIDATE_COUNT] DEFAULT (0),
+	[Reason] [VarChar] (20) NULL ,
+	[Subkey] [VarChar] (50) NULL ,
 	CONSTRAINT [PK_CACHEINVALIDATE] PRIMARY KEY CLUSTERED
 	(
 		[RowId]

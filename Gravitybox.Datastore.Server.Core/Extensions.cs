@@ -122,6 +122,34 @@ namespace Gravitybox.Datastore.Server.Core
             return string.Join(separator, list);
         }
 
+        /// <summary>
+        /// Concatenates the members of a list into a string with a separator
+        /// </summary>
+        internal static string ToStringList(this Array list, string separator)
+        {
+            if (list == null || list.Length == 0) return string.Empty;
+            return string.Join(separator, list.ToList<object>());
+        }
+
+        /// <summary>
+        /// Determines if the specified object can be converted to a string list
+        /// </summary>
+        /// <param name="obj"></param>
+        /// <returns></returns>
+        internal static bool CanConvertStringList(object obj)
+        {
+            if (obj == null) return false;
+            if (obj.GetType() == typeof(bool[]))
+                return true;
+            else if (obj.GetType() == typeof(int[]))
+                return true;
+            else if (obj.GetType() == typeof(long[]))
+                return true;
+            else if (obj.GetType() == typeof(string[]))
+                return true;
+            return false;
+        }
+
         /// <summary />
         internal static long? ToInt64(this string v)
         {
@@ -404,6 +432,24 @@ namespace Gravitybox.Datastore.Server.Core
             if (query.DerivedFieldList?.Any() == true) return false;
             if (query.DimensionValueList?.Any() == true) return false;
             return true;
+        }
+
+        internal static Dictionary<string, int> GetSchemaFieldMap(RepositorySchema schema, RepositorySchema parentSchema)
+        {
+            var fieldIndexPrimaryMap = new Dictionary<string, int>();
+
+            var fieldIndex = 0;
+            if (parentSchema != null)
+                parentSchema.FieldList.ForEach(x => fieldIndexPrimaryMap.Add(x.Name, fieldIndex++));
+            if (schema != null)
+                schema.FieldList.Where(x => !fieldIndexPrimaryMap.ContainsKey(x.Name)).ToList().ForEach(x => fieldIndexPrimaryMap.Add(x.Name, fieldIndex++));
+
+            return fieldIndexPrimaryMap;
+        }
+
+        internal static long GetDIdxFromDVIdx(long dvidx)
+        {
+            return ((dvidx / Constants.DVALUEGROUP) - 1) + Constants.DGROUP;
         }
     }
 }

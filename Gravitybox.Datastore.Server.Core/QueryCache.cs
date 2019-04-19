@@ -76,6 +76,7 @@ namespace Gravitybox.Datastore.Server.Core
         #region Members
         private int _maxItems = 0; //Number of cache items to keep
         private List<CacheResultsSlice> _cacheSlice = new List<CacheResultsSlice>();
+        private Dictionary<int, FieldDefinition> _schemaDatagrouping = new Dictionary<int, FieldDefinition>();
         private System.Timers.Timer _timer = null;
         private readonly Guid QueryCacheID = new Guid("19A552CA-C94A-4FC5-8DD2-A897F0035BEE");
         private const int CacheExpireMinutes = 20;
@@ -163,7 +164,7 @@ namespace Gravitybox.Datastore.Server.Core
         #endregion
 
         #region Methods
-        public DataQueryResults Get(DatastoreEntities context, DataQuery query, int repositoryId, Guid id, out bool isCore)
+        public DataQueryResults Get(DatastoreEntities context, RepositorySchema schema, DataQuery query, int repositoryId, Guid id, out bool isCore)
         {
             isCore = false;
             if (!ConfigHelper.AllowCaching)
@@ -235,7 +236,7 @@ namespace Gravitybox.Datastore.Server.Core
             }
         }
 
-        public void Set(DatastoreEntities context, DataQuery query, int repositoryId, Guid id, DataQueryResults results)
+        public void Set(DatastoreEntities context, RepositorySchema schema, DataQuery query, int repositoryId, Guid id, DataQueryResults results)
         {
             if (!ConfigHelper.AllowCaching) return;
             if (results == null) return;
@@ -250,6 +251,7 @@ namespace Gravitybox.Datastore.Server.Core
             long lockTime = 0;
             var changeStamp = 0;
             var queryHash = 0;
+            var subCacheKey = GetSubKey(schema, query);
             try
             {
                 //Some queries should be cached a long time
@@ -280,33 +282,33 @@ namespace Gravitybox.Datastore.Server.Core
                     {
                         item.Results = results;
                         item.Timestamp = DateTime.Now.AddMinutes(extraMinutes);
+                        item.SubKey = subCacheKey;
                         return;
                     }
                 }
 
                 lock (cache)
-                using (var q = new AcquireWriterLock(ServerUtilities.RandomizeGuid(cache.ID, RSeed), "QueryCache"))
                 {
-                    lockTime += q.LockTime;
-
-                    //Remove previous cache
-                    cache.RemoveAll(x => x.QueryHash == queryHash);
-
-                    //Create a new cache item
-                    item = new CacheResultsQuery()
+                    using (var q = new AcquireWriterLock(ServerUtilities.RandomizeGuid(cache.ID, RSeed), "QueryCache"))
                     {
-                        QueryHash = queryHash,
-                        QueryCoreHash = coreHash,
-                        RepositoryId = repositoryId,
-                        ChangeStamp = changeStamp,
-                        Results = results,
-                        QueryString = query.ToString(),
-                        ParentId = RepositoryManager.GetSchemaParentId(repositoryId),
-                        Timestamp = DateTime.Now.AddMinutes(extraMinutes),
-                    };
-                    cache.Add(item);
-                }
+                        lockTime += q.LockTime;
 
+                        //Create a new cache item
+                        item = new CacheResultsQuery()
+                        {
+                            QueryHash = queryHash,
+                            QueryCoreHash = coreHash,
+                            RepositoryId = repositoryId,
+                            ChangeStamp = changeStamp,
+                            Results = results,
+                            QueryString = query.ToString(),
+                            ParentId = RepositoryManager.GetSchemaParentId(repositoryId),
+                            Timestamp = DateTime.Now.AddMinutes(extraMinutes),
+                            SubKey = subCacheKey,
+                        };
+                        cache.Add(item);
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -319,7 +321,39 @@ namespace Gravitybox.Datastore.Server.Core
                 timer.Stop();
                 if (timer.ElapsedMilliseconds > 50)
                     LoggerCQ.LogWarning($"Slow cache set: Elapsed={timer.ElapsedMilliseconds}, LockTime={lockTime}, Count={cache.Count}, ID={id}, Query=\"{query.ToString()}\"");
+                LoggerCQ.LogTrace($"QueryCache: Set: SubCacheKey={subCacheKey}");
             }
+        }
+
+        /// <summary>
+        /// Find the cache subkey. This only exists if there is a FieldFilter with the "GroupingField=Value"
+        /// </summary>
+        private string GetSubKey(RepositorySchema schema, DataQuery query)
+        {
+            FieldDefinition groupingField = null;
+
+            //Get the data grouping field for this schema and cache
+            lock (_schemaDatagrouping)
+            {
+                if (schema.ParentID == null && !_schemaDatagrouping.TryGetValue(schema.InternalID, out groupingField))
+                {
+                    groupingField = schema.FieldList.FirstOrDefault(x => x.IsDataGrouping);
+                    if (groupingField == null) groupingField = new FieldDefinition();
+                    _schemaDatagrouping.Add(schema.InternalID, groupingField);
+                }
+            }
+
+            //If there is a grouping field then use it to narrow search
+            if (groupingField != null)
+            {
+                var ff = query.FieldFilters.FirstOrDefault(x => x.Name.Match(groupingField.Name));
+                if (ff != null && ff.Comparer == ComparisonConstants.Equals && ff.Value != null)
+                {
+                    return ff.Value.ToString().ToLower();
+                }
+            }
+
+            return null;
         }
 
         public SummarySliceValue GetSlice(DatastoreEntities context, SummarySlice slice, int repositoryId)
@@ -392,7 +426,7 @@ namespace Gravitybox.Datastore.Server.Core
         /// <summary>
         /// Invalidate the cache for a specific Repository
         /// </summary>
-        public void Clear(int repositoryId, Guid id)
+        public void Clear(int repositoryId, Guid id, string reason, string cacheSubKey = null)
         {
             try
             {
@@ -403,8 +437,21 @@ namespace Gravitybox.Datastore.Server.Core
 
                 using (var q = new AcquireWriterLock(ServerUtilities.RandomizeGuid(cache.ID, RSeed), "QueryCache"))
                 {
-                    count += cache.Count;
-                    cache.Clear();
+                    if (cacheSubKey == null)
+                    {
+                        count += cache.Count;
+                        cache.Clear(); //Clear entire cache
+                        LoggerCQ.LogTrace($"QueryCache: Clear Full, ID={id}, Count={count}");
+                    }
+                    else
+                    {
+                        //Clear all based on subkey AND with no key since it is unknown what data is in those
+                        count += cache.RemoveAll(x => x.SubKey == cacheSubKey.ToLower() || x.SubKey == null);
+                        LoggerCQ.LogTrace($"QueryCache: SubKey={cacheSubKey}, ID={id}, Count={count}");
+                    }
+                        
+                    if (_schemaDatagrouping.ContainsKey(repositoryId))
+                        _schemaDatagrouping.Remove(repositoryId);
                 }
 
                 //Find caches where this is the parent and clear them all too
@@ -425,14 +472,17 @@ namespace Gravitybox.Datastore.Server.Core
                 }
 
                 //If the query cache is being cleared then the List dimension count cache should be too
-                QueryBuilders.ListDimensionCache.Clear(repositoryId);
+                ListDimensionCache.Clear(repositoryId);
 
                 //Log the invalidation
                 Task.Factory.StartNew(() =>
                 {
                     using (var context = new DatastoreEntities(ConfigHelper.ConnectionString))
                     {
-                        context.AddItem(new EFDAL.Entity.CacheInvalidate { Count = count, RepositoryId = repositoryId });
+                        var newItem = new EFDAL.Entity.CacheInvalidate { Count = count, RepositoryId = repositoryId };
+                        newItem.SetValue(EFDAL.Entity.CacheInvalidate.FieldNameConstants.Reason, reason, true);
+                        newItem.SetValue(EFDAL.Entity.CacheInvalidate.FieldNameConstants.Subkey, cacheSubKey, true);
+                        context.AddItem(newItem);
                         context.SaveChanges();
                     }
                 });
@@ -487,6 +537,10 @@ namespace Gravitybox.Datastore.Server.Core
             public int QueryHash { get; set; }
             public int QueryCoreHash { get; set; }
             public string QueryString { get; set; }
+            /// <summary>
+            /// This is used to further allow for sub-invalidation instead of entire list
+            /// </summary>
+            public string SubKey { get; set; }
             protected DateTime _lastUsed = DateTime.Now;
         }
         #endregion

@@ -1,8 +1,10 @@
 <?xml version="1.0"?>
 <configuration type="diagram">
 		<element id="c4b64d28-387e-410b-bac4-2356afc6856c" bounds="12,4.375,2.5" />
-		<element id="0def976b-da96-4b15-80d0-980f9701addd" bounds="4,9.875,2.625" />
+		<element id="0def976b-da96-4b15-80d0-980f9701addd" bounds="3.5,9.875,3.125" />
 		<element id="831ebe6d-76be-45d5-a873-80ffdfc111dc" bounds="0.75,1.125,2.5" />
+		<element id="b4471c3d-8e5f-455e-96c1-6048e60c7884" bounds="3.375,15.5,2.5" />
+		<element id="20c8e8cc-d7ae-45fe-b9b9-11974bd2f5ee" bounds="8.5,15.5,2.625" />
 		<element id="a47ce1a5-2ec2-4833-9435-129cb61be8af" bounds="11.25,6.75,2.625" />
 		<element id="617eb474-1224-42f5-9bf0-549042892c0f" bounds="4.5,1.375,2.75" />
 		<element id="5b0293c0-a352-41ee-9688-cb9ea27b3823" bounds="2.5,6.125,3.375" />
@@ -12,6 +14,4 @@
 		<element id="32b513f0-3ede-416d-92d7-5a202cc89fce" bounds="7.5,11.5,2.875" />
 		<element id="9fe58257-9f30-46fb-8e06-dc7681dd72de" bounds="7,7.75,3.125" />
 		<element id="bec25185-9308-472e-b8e9-35354ee36797" bounds="1.75,12,3" />
-		<element id="b4471c3d-8e5f-455e-96c1-6048e60c7884" bounds="3.375,15.5,2.5" />
-		<element id="20c8e8cc-d7ae-45fe-b9b9-11974bd2f5ee" bounds="8.5,15.5,2.625" />
 </configuration>

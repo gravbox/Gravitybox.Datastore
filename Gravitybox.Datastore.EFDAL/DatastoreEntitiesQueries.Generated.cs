@@ -102,6 +102,12 @@ namespace Gravitybox.Datastore.EFDAL
 		[System.Diagnostics.DebuggerNonUserCode()]
 		public virtual int Count { get; set; }
 		/// <summary>
+		/// (Maps to the 'CacheInvalidate.Reason' database field)
+		/// </summary>
+		[Column(Name = "Reason", DbType = "VarChar (20)", CanBeNull = true, IsPrimaryKey = false)]
+		[System.Diagnostics.DebuggerNonUserCode()]
+		public virtual string Reason { get; set; }
+		/// <summary>
 		/// (Maps to the 'CacheInvalidate.RepositoryId' database field)
 		/// </summary>
 		[Column(Name = "RepositoryId", DbType = "Int", CanBeNull = false, IsPrimaryKey = false)]
@@ -113,6 +119,12 @@ namespace Gravitybox.Datastore.EFDAL
 		[Column(Name = "RowId", DbType = "BigInt", CanBeNull = false, IsPrimaryKey = true)]
 		[System.Diagnostics.DebuggerNonUserCode()]
 		public virtual long RowId { get; set; }
+		/// <summary>
+		/// (Maps to the 'CacheInvalidate.Subkey' database field)
+		/// </summary>
+		[Column(Name = "Subkey", DbType = "VarChar (50)", CanBeNull = true, IsPrimaryKey = false)]
+		[System.Diagnostics.DebuggerNonUserCode()]
+		public virtual string Subkey { get; set; }
 
 		#endregion
 

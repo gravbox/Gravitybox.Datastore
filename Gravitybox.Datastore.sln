@@ -1,3 +1,4 @@
+
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.26730.12
@@ -21,6 +22,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gravitybox.Datastore.EFDAL"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gravitybox.Datastore.Install", "Gravitybox.Datastore.Install\Gravitybox.Datastore.Install.csproj", "{7EE75F7F-B5F5-4380-94B7-794941545E88}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gravitybox.Datastore.Configuration", "Gravitybox.Datastore.Configuration\Gravitybox.Datastore.Configuration.csproj", "{CEF31B1E-546D-4038-8EEC-F92C1397A05D}"
+EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{AA300BF1-5A6E-4F9B-9FF5-B531FC06E1E8}"
 	ProjectSection(SolutionItems) = preProject
 		.nuget\NuGet.Config = .nuget\NuGet.Config
@@ -29,6 +32,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{AA300B
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gravitybox.Datastore.Util.TestHarness", "Gravitybox.Datastore.Util.TestHarness\Gravitybox.Datastore.Util.TestHarness.csproj", "{CCC874C5-EA54-450F-B947-63B9A36F4734}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gravitybox.Datastore.Util.ServerTest", "Gravitybox.Datastore.Util.ServerTest\Gravitybox.Datastore.Util.ServerTest.csproj", "{7EB59B28-A0FB-48BF-8C16-080365DC9338}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -100,6 +105,16 @@ Global
 		{7EE75F7F-B5F5-4380-94B7-794941545E88}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{7EE75F7F-B5F5-4380-94B7-794941545E88}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{7EE75F7F-B5F5-4380-94B7-794941545E88}.Release|x86.ActiveCfg = Release|Any CPU
+		{CEF31B1E-546D-4038-8EEC-F92C1397A05D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CEF31B1E-546D-4038-8EEC-F92C1397A05D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CEF31B1E-546D-4038-8EEC-F92C1397A05D}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{CEF31B1E-546D-4038-8EEC-F92C1397A05D}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{CEF31B1E-546D-4038-8EEC-F92C1397A05D}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{CEF31B1E-546D-4038-8EEC-F92C1397A05D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CEF31B1E-546D-4038-8EEC-F92C1397A05D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CEF31B1E-546D-4038-8EEC-F92C1397A05D}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{CEF31B1E-546D-4038-8EEC-F92C1397A05D}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{CEF31B1E-546D-4038-8EEC-F92C1397A05D}.Release|x86.ActiveCfg = Release|Any CPU
 		{CCC874C5-EA54-450F-B947-63B9A36F4734}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{CCC874C5-EA54-450F-B947-63B9A36F4734}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CCC874C5-EA54-450F-B947-63B9A36F4734}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
@@ -112,6 +127,18 @@ Global
 		{CCC874C5-EA54-450F-B947-63B9A36F4734}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{CCC874C5-EA54-450F-B947-63B9A36F4734}.Release|x86.ActiveCfg = Release|Any CPU
 		{CCC874C5-EA54-450F-B947-63B9A36F4734}.Release|x86.Build.0 = Release|Any CPU
+		{7EB59B28-A0FB-48BF-8C16-080365DC9338}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7EB59B28-A0FB-48BF-8C16-080365DC9338}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7EB59B28-A0FB-48BF-8C16-080365DC9338}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{7EB59B28-A0FB-48BF-8C16-080365DC9338}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{7EB59B28-A0FB-48BF-8C16-080365DC9338}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{7EB59B28-A0FB-48BF-8C16-080365DC9338}.Debug|x86.Build.0 = Debug|Any CPU
+		{7EB59B28-A0FB-48BF-8C16-080365DC9338}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7EB59B28-A0FB-48BF-8C16-080365DC9338}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7EB59B28-A0FB-48BF-8C16-080365DC9338}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{7EB59B28-A0FB-48BF-8C16-080365DC9338}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{7EB59B28-A0FB-48BF-8C16-080365DC9338}.Release|x86.ActiveCfg = Release|Any CPU
+		{7EB59B28-A0FB-48BF-8C16-080365DC9338}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

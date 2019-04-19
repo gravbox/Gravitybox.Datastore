@@ -124,7 +124,7 @@ namespace Gravitybox.Datastore.EFDAL
 		private static Dictionary<string, SequentialIdGenerator> _sequentialIdGeneratorCache = new Dictionary<string, SequentialIdGenerator>();
 		private static object _seqCacheLock = new object();
 
-		private const string _version = "2.1.0.0.66";
+		private const string _version = "2.1.0.0.67";
 		private const string _modelKey = "c4808261-57ef-4c4b-9c5c-b199c70e73ae";
 
 		/// <summary />
@@ -273,6 +273,8 @@ namespace Gravitybox.Datastore.EFDAL
 		partial void OnBeforeSaveChanges(ref bool cancel);
 		partial void OnAfterSaveChanges();
 
+		private static List<Tuple<string, string>> _tableMappings = new List<Tuple<string, string>>();
+		protected internal static List<Tuple<string, string>> _TableMappings => _tableMappings;
 		/// <summary>
 		/// Model creation event
 		/// </summary>
@@ -304,6 +306,23 @@ namespace Gravitybox.Datastore.EFDAL
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.ServiceInstance>().ToTable("ServiceInstance", "dbo");
 			#endregion
 
+			#region Load Mapper
+			_tableMappings.Add(new Tuple<string, string>("dbo", "AppliedPatch"));
+			_tableMappings.Add(new Tuple<string, string>("dbo", "CacheInvalidate"));
+			_tableMappings.Add(new Tuple<string, string>("dbo", "ConfigurationSetting"));
+			_tableMappings.Add(new Tuple<string, string>("dbo", "DeleteQueue"));
+			_tableMappings.Add(new Tuple<string, string>("dbo", "DeleteQueueItem"));
+			_tableMappings.Add(new Tuple<string, string>("dbo", "Housekeeping"));
+			_tableMappings.Add(new Tuple<string, string>("dbo", "LockStat"));
+			_tableMappings.Add(new Tuple<string, string>("dbo", "Repository"));
+			_tableMappings.Add(new Tuple<string, string>("dbo", "RepositoryActionType"));
+			_tableMappings.Add(new Tuple<string, string>("dbo", "RepositoryLog"));
+			_tableMappings.Add(new Tuple<string, string>("dbo", "RepositoryStat"));
+			_tableMappings.Add(new Tuple<string, string>("dbo", "Server"));
+			_tableMappings.Add(new Tuple<string, string>("dbo", "ServerStat"));
+			_tableMappings.Add(new Tuple<string, string>("dbo", "ServiceInstance"));
+			#endregion
+
 			#region Setup Fields
 
 			//Field setup for AppliedPatch entity
@@ -314,8 +333,10 @@ namespace Gravitybox.Datastore.EFDAL
 			//Field setup for CacheInvalidate entity
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate>().Property(d => d.AddedDate).IsRequired();
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate>().Property(d => d.Count).IsRequired();
+			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate>().Property(d => d.Reason).IsOptional().HasMaxLength(20).HasColumnType("VARCHAR");
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate>().Property(d => d.RepositoryId).IsRequired();
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate>().Property(d => d.RowId).IsRequired().HasDatabaseGeneratedOption(System.ComponentModel.DataAnnotations.Schema.DatabaseGeneratedOption.Identity);
+			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.CacheInvalidate>().Property(d => d.Subkey).IsOptional().HasMaxLength(50).HasColumnType("VARCHAR");
 
 			//Field setup for ConfigurationSetting entity
 			modelBuilder.Entity<Gravitybox.Datastore.EFDAL.Entity.ConfigurationSetting>().Property(d => d.ID).IsRequired().HasDatabaseGeneratedOption(System.ComponentModel.DataAnnotations.Schema.DatabaseGeneratedOption.Identity);
@@ -1179,24 +1200,40 @@ namespace Gravitybox.Datastore.EFDAL
 	}
 
 	#region DbInterceptor
-	internal class DbInterceptor : System.Data.Entity.Infrastructure.Interception.IDbCommandInterceptor
+	public partial class DbInterceptor : System.Data.Entity.Infrastructure.Interception.IDbCommandInterceptor
 	{
+		/// <summary />
+		partial void OnNonQueryExecuting(System.Data.Common.DbCommand command, System.Data.Entity.Infrastructure.Interception.DbCommandInterceptionContext<int> interceptionContext);
+		/// <summary />
+		partial void OnNonQueryExecuted(System.Data.Common.DbCommand command, System.Data.Entity.Infrastructure.Interception.DbCommandInterceptionContext<int> interceptionContext);
+		/// <summary />
+		partial void OnReaderExecuting(System.Data.Common.DbCommand command, System.Data.Entity.Infrastructure.Interception.DbCommandInterceptionContext<System.Data.Common.DbDataReader> interceptionContext);
+		/// <summary />
+		partial void OnReaderExecuted(System.Data.Common.DbCommand command, System.Data.Entity.Infrastructure.Interception.DbCommandInterceptionContext<System.Data.Common.DbDataReader> interceptionContext);
+		/// <summary />
+		partial void OnScalarExecuting(System.Data.Common.DbCommand command, System.Data.Entity.Infrastructure.Interception.DbCommandInterceptionContext<object> interceptionContext);
+		/// <summary />
+		partial void OnScalarExecuted(System.Data.Common.DbCommand command, System.Data.Entity.Infrastructure.Interception.DbCommandInterceptionContext<object> interceptionContext);
 		#region IDbCommandInterceptor Members
 
 		void System.Data.Entity.Infrastructure.Interception.IDbCommandInterceptor.NonQueryExecuted(System.Data.Common.DbCommand command, System.Data.Entity.Infrastructure.Interception.DbCommandInterceptionContext<int> interceptionContext)
 		{
+			this.OnNonQueryExecuted(command, interceptionContext);
 		}
 
 		void System.Data.Entity.Infrastructure.Interception.IDbCommandInterceptor.NonQueryExecuting(System.Data.Common.DbCommand command, System.Data.Entity.Infrastructure.Interception.DbCommandInterceptionContext<int> interceptionContext)
 		{
+			this.OnNonQueryExecuting(command, interceptionContext);
 		}
 
 		void System.Data.Entity.Infrastructure.Interception.IDbCommandInterceptor.ReaderExecuted(System.Data.Common.DbCommand command, System.Data.Entity.Infrastructure.Interception.DbCommandInterceptionContext<System.Data.Common.DbDataReader> interceptionContext)
 		{
+			this.OnReaderExecuted(command, interceptionContext);
 		}
 
 		void System.Data.Entity.Infrastructure.Interception.IDbCommandInterceptor.ReaderExecuting(System.Data.Common.DbCommand command, System.Data.Entity.Infrastructure.Interception.DbCommandInterceptionContext<System.Data.Common.DbDataReader> interceptionContext)
 		{
+			this.OnReaderExecuting(command, interceptionContext);
 			try
 			{
 				//If this is a tenant table then rig query plan for this specific tenant
@@ -1216,10 +1253,12 @@ namespace Gravitybox.Datastore.EFDAL
 
 		void System.Data.Entity.Infrastructure.Interception.IDbCommandInterceptor.ScalarExecuted(System.Data.Common.DbCommand command, System.Data.Entity.Infrastructure.Interception.DbCommandInterceptionContext<object> interceptionContext)
 		{
+			this.OnScalarExecuted(command, interceptionContext);
 		}
 
 		void System.Data.Entity.Infrastructure.Interception.IDbCommandInterceptor.ScalarExecuting(System.Data.Common.DbCommand command, System.Data.Entity.Infrastructure.Interception.DbCommandInterceptionContext<object> interceptionContext)
 		{
+			this.OnScalarExecuting(command, interceptionContext);
 		}
 
 		#endregion

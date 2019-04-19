@@ -3,6 +3,8 @@ using Gravitybox.Datastore.EFDAL;
 using Gravitybox.Datastore.EFDAL.Entity;
 using System;
 using System.Collections.Generic;
+using System.Data;
+using System.Data.SqlClient;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
@@ -118,22 +120,24 @@ namespace Gravitybox.Datastore.Server.Core.Housekeeping
                                     if (parentSchema != null && parentSchema.DimensionList.Any(x => x.DIdx == dimension.DIdx))
                                         listTable = SqlHelper.GetListTableName(schema.ParentID.Value, dimension.DIdx);
 
+                                    var newParam = new SqlParameter { DbType = DbType.Int64, IsNullable = false, ParameterName = $"@ParentRowId", Value = dItem.RowId };
+
                                     var sbList = new StringBuilder();
                                     sbList.AppendLine($"--MARKER 19");
-                                    sbList.AppendLine($"SET ROWCOUNT {CHUNKSIZE}");
+                                    sbList.AppendLine($"SET ROWCOUNT {CHUNKSIZE};");
                                     sbList.AppendLine("set nocount off;");
                                     sbList.AppendLine($"WITH S([{SqlHelper.RecordIdxField}])");
                                     sbList.AppendLine("AS");
                                     sbList.AppendLine("(");
                                     sbList.AppendLine($"select [RecordIdx] from [DeleteQueueItem] {SqlHelper.NoLockText()}");
-                                    sbList.AppendLine($"where [ParentRowId] = {dItem.RowId}");
+                                    sbList.AppendLine($"where [ParentRowId] = {newParam.ParameterName}");
                                     sbList.AppendLine(")");
                                     sbList.AppendLine($"DELETE FROM [{listTable}]");
                                     sbList.AppendLine($"FROM S inner join [{listTable}] on S.[{SqlHelper.RecordIdxField}] = [{listTable}].[{SqlHelper.RecordIdxField}];");
                                     var lastCount = 0;
                                     do
                                     {
-                                        lastCount = SqlHelper.ExecuteSql(ConfigHelper.ConnectionString, sbList.ToString(), null);
+                                        lastCount = SqlHelper.ExecuteSql(ConfigHelper.ConnectionString, sbList.ToString(), new[] { newParam });
                                     } while (lastCount >= CHUNKSIZE);
 
                                     timer.Stop();

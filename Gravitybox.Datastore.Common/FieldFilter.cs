@@ -12,6 +12,8 @@ namespace Gravitybox.Datastore.Common
     [Serializable]
     [KnownType(typeof(int[]))]
     [KnownType(typeof(string[]))]
+    [KnownType(typeof(bool[]))]
+    [KnownType(typeof(int[]))]
     [KnownType(typeof(long[]))]
     public class FieldFilter : Gravitybox.Datastore.Common.IFieldFilter, System.ICloneable
     {
@@ -122,12 +124,13 @@ namespace Gravitybox.Datastore.Common
                 {
                     var gff = this as Gravitybox.Datastore.Common.GeoCodeFieldFilter;
                     if (gff != null)
-                        retval = this.Name + "," + this.Comparer.ToString() + "," + gff.Latitude.ToString() + "," + gff.Longitude.ToString() + "," + gff.Radius.ToString() + "|";
+                        retval = $"{this.Name},{this.Comparer},{gff.Latitude},{gff.Longitude},{gff.Radius}|";
                 }
                 else if (this.DataType == RepositorySchema.DataTypeConstants.List)
                 {
                     if (f1.Value != null)
                     {
+                        //TODO: handle different array types and null values
                         var arr1 = (string[])f1.Value;
                         retval = this.Name + "," + this.Comparer.ToString() + "," + string.Join("^^", arr1) + "|";
                     }
@@ -137,16 +140,22 @@ namespace Gravitybox.Datastore.Common
                     if (f1.Value != null)
                     {
                         var v = f1.Value.ToString();
-                        if (f1.Value.GetType() == typeof(int[]))
+                        if (f1.Value.GetType() == typeof(string[]))
+                            v = string.Join("^", ((string[])f1.Value));
+                        else if (f1.Value.GetType() == typeof(int[]))
                             v = string.Join("^", ((int[])f1.Value));
+                        else if (f1.Value.GetType() == typeof(bool[]))
+                            v = string.Join("^", ((bool[])f1.Value));
                         else if (f1.Value.GetType() == typeof(long[]))
                             v = string.Join("^", ((long[])f1.Value));
+                        else
+                            v = f1.Value.ToString();
 
-                        retval = this.Name + "," + this.Comparer.ToString() + "," + v + "|";
+                        retval = $"{this.Name},{this.Comparer},{v}|";
                     }
                     else
                     {
-                        retval = this.Name + "," + this.Comparer.ToString() + ",NULL|";
+                        retval = $"{this.Name},{this.Comparer},NULL|";
                     }
                 }
 

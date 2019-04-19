@@ -26,7 +26,6 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
         public string dimensionValueTableParent = null;
         public string dimensionTableParent = null;
         public string dimensionValueTable = null;
-        public string dimensionTable = null;
         public RepositorySchema parentSchema = null;
         public List<SqlParameter> parameters = null;
         public DataQuery query = null;
