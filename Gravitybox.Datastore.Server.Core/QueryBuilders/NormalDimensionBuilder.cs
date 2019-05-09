@@ -176,6 +176,9 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
                                         .SelectMany(x => x.RefinementList)
                                         .ToDictionary(x => x.DVIdx, x => x);
 
+                    //hash dimensions for faster access
+                    var dimensionHash = _configuration.retval.DimensionList.ToDictionary(x => x.DIdx, x => x);
+
                     for (var ii = 0; ii < _configuration.dimensionGroups; ii++) //loop for each 32 item group
                     {
                         var tt = _datset.Tables[ii];
@@ -185,16 +188,14 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
                             var wasFound = false;
                             for (var jj = 1; jj < tt.Columns.Count; jj++)
                             {
-                                if (dr[jj] != System.DBNull.Value)
+                                if (dr[jj] != DBNull.Value)
                                 {
-                                    long dvidx = 0;
-                                    if (dr[jj] != DBNull.Value) dvidx = (long)dr[jj];
+                                    var dvidx = (long)dr[jj];
                                     if (dvidx != 0)
                                     {
-                                        if (allRefinements.ContainsKey(dvidx))
+                                        if (allRefinements.TryGetValue(dvidx, out IRefinementItem v))
                                         {
-                                            var v = allRefinements[dvidx];
-                                            var newDimension = _configuration.retval.DimensionList[(ii * GBSize) + jj - 1];
+                                            var newDimension = dimensionHash[v.DIdx];
                                             var rItem = new RefinementItem
                                             {
                                                 DVIdx = dvidx,

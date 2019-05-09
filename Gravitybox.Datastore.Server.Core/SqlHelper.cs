@@ -46,7 +46,6 @@ namespace Gravitybox.Datastore.Server.Core
         private static Cache<string, RepositorySchema> _updateDataSchemaCache = new Cache<string, RepositorySchema>(new TimeSpan(0, 30, 0), 4391);
         private static System.Collections.Concurrent.ConcurrentDictionary<Guid, DateTime> _childTableRefresh = new System.Collections.Concurrent.ConcurrentDictionary<Guid, DateTime>();
         private static System.Collections.Concurrent.ConcurrentDictionary<Guid, int> _permissionCount = new System.Collections.Concurrent.ConcurrentDictionary<Guid, int>();
-        private static bool _isDefragging = false;
         private static System.Timers.Timer _timerUpdateChildTables = null;
 
         #endregion
@@ -3024,6 +3023,10 @@ namespace Gravitybox.Datastore.Server.Core
 
                     if (Extensions.CanConvertStringList(ff.Value))
                         ffValue = ((Array)ff.Value).ToStringList("^");
+                    else if (ffValue?.Contains('^') == true)
+                    {
+                        //Do Nothing
+                    }
                     else
                     {
                         input = GetValueBool(ff.Value);
@@ -3324,6 +3327,10 @@ namespace Gravitybox.Datastore.Server.Core
                     if (ff.Value is string && IsContainsComparer(ff.Comparer)) ffValue = (string)ff.Value;
                     if (ff.Value?.GetType() == typeof(int[]))
                         ffValue = ((Array)ff.Value).ToStringList("^");
+                    else if (ffValue?.Contains('^') == true)
+                    {
+                        //Do Nothing
+                    }
                     else
                     {
                         input = GetValueInt(ff.Value);
@@ -3495,6 +3502,10 @@ namespace Gravitybox.Datastore.Server.Core
                     if (ff.Value is string && IsContainsComparer(ff.Comparer)) ffValue = (string)ff.Value;
                     if (ff.Value?.GetType() == typeof(long[]))
                         ffValue = ((Array)ff.Value).ToStringList("^");
+                    else if (ffValue?.Contains('^') == true)
+                    {
+                        //Do Nothing
+                    }
                     else
                     {
                         input = GetValueInt64(ff.Value);
@@ -4741,13 +4752,13 @@ namespace Gravitybox.Datastore.Server.Core
 
         #region ClearCache
 
-        public static void ClearCache(string connectionString)
+        internal static void ClearCache()
         {
             try
             {
                 //Only run if necessary
                 if (!ConfigHelper.AllowQueryCacheClearing) return;
-                ExecuteSql(connectionString, "DBCC FreeProcCache");
+                ExecuteSql(ConfigHelper.ConnectionString, "DBCC FreeProcCache");
                 LoggerCQ.LogDebug("Database ClearCache");
             }
             catch (Exception ex)
@@ -4760,7 +4771,7 @@ namespace Gravitybox.Datastore.Server.Core
 
         #region LogRepositoryStats
 
-        public static void LogRepositoryStats(string connectionString)
+        internal static void LogRepositoryStats()
         {
             var timer = Stopwatch.StartNew();
             try
@@ -4772,11 +4783,11 @@ namespace Gravitybox.Datastore.Server.Core
                     {
                         var tableName = GetTableName(r);
                         var sql = $"select count(*) from [{tableName}] " + NoLockText();
-                        var ds = GetDataset(connectionString, sql);
+                        var ds = GetDataset(ConfigHelper.ConnectionString, sql);
                         if (ds.Tables.Count == 1 && ds.Tables[0].Rows.Count == 1)
                         {
                             var count = (int)ds.Tables[0].Rows[0][0];
-                            ExecuteSql(connectionString, $"update [Repository] set [ItemCount] = {count} where [UniqueKey] = '{r}'");
+                            ExecuteSql(ConfigHelper.ConnectionString, $"update [Repository] set [ItemCount] = {count} where [UniqueKey] = '{r}'");
                         }
                     }
                 }
@@ -4796,18 +4807,16 @@ namespace Gravitybox.Datastore.Server.Core
 
         #region DefragFTS
 
-        public static void DefragFTS(string connectionString)
+        internal static void DefragFTS()
         {
             if (!ConfigHelper.DefragIndexes) return;
-            if (_isDefragging) return;
             if (DateTime.Now.Date.DayOfWeek != DayOfWeek.Saturday) return;
 
-            _isDefragging = true;
             var timer = Stopwatch.StartNew();
             try
             {
                 LoggerCQ.LogDebug($"DefragFTS Start: Processor={SystemCore.LastProcessor}");
-                using (var context = new DatastoreEntities(connectionString))
+                using (var context = new DatastoreEntities(ConfigHelper.ConnectionString))
                 {
                     var repositoryKeyList = context.Repository.Where(x => !x.IsDeleted && x.IsInitialized).Select(x => x.UniqueKey).ToList();
                     foreach (var id in repositoryKeyList)
@@ -4820,7 +4829,7 @@ namespace Gravitybox.Datastore.Server.Core
                         sb.AppendLine($"ALTER FULLTEXT CATALOG [{catalogName}] REORGANIZE");
                         try
                         {
-                            ExecuteSql(connectionString, sb.ToString(), null, false, false, 300);
+                            ExecuteSql(ConfigHelper.ConnectionString, sb.ToString(), null, false, false, 300);
                         }
                         catch (SqlException ex)
                         {
@@ -4843,7 +4852,6 @@ namespace Gravitybox.Datastore.Server.Core
             {
                 timer.Stop();
                 LoggerCQ.LogDebug($"DefragFTS: Elapsed={timer.ElapsedMilliseconds}");
-                _isDefragging = false;
             }
         }
 
@@ -4851,17 +4859,15 @@ namespace Gravitybox.Datastore.Server.Core
 
         #region DefragIndexes
 
-        public static void DefragIndexes(string connectionString)
+        internal static void DefragIndexes()
         {
             if (!ConfigHelper.DefragIndexes) return;
-            if (_isDefragging) return;
             if (SystemCore.LastProcessor >= SystemCore.ProcessorThreshold)
             {
                 LoggerCQ.LogDebug($"DefragIndexes Skipped: Processor={SystemCore.LastProcessor}");
                 return;
             }
 
-            _isDefragging = true;
             var count = 0;
             var timer = Stopwatch.StartNew();
             try
@@ -4886,11 +4892,13 @@ namespace Gravitybox.Datastore.Server.Core
                 sb.AppendLine("ORDER BY indexstats.page_count");
                 sb.AppendLine();
 
-                var builder = new SqlConnectionStringBuilder(connectionString);
+                var builder = new SqlConnectionStringBuilder(ConfigHelper.ConnectionString);
                 var databaseName = builder.InitialCatalog;
 
-                var ds = GetDataset(connectionString, sb.ToString(), timeOut: 120, maxRetry: 0);
+                var ds = GetDataset(ConfigHelper.ConnectionString, sb.ToString(), timeOut: 120, maxRetry: 0);
                 if (ds.Tables.Count != 1) return;
+
+                LoggerCQ.LogDebug($"DefragIndexes BeforeDefrag: Count={ds.Tables[0].Rows.Count}");
 
                 //Look through all indexes and defrag
                 var processed = 0;
@@ -4907,7 +4915,7 @@ namespace Gravitybox.Datastore.Server.Core
                         try
                         {
                             //Run SQL with 30 minute timeout
-                            var results = GetDataset(connectionString,
+                            var results = GetDataset(ConfigHelper.ConnectionString,
                                 $"DBCC INDEXDEFRAG ([{databaseName}], '{tableName}', [{indexName}])", new List<SqlParameter>(),
                                 timeOut: 1800, maxRetry: 0);
                             timer2.Stop();
@@ -4926,7 +4934,7 @@ namespace Gravitybox.Datastore.Server.Core
                         catch (Exception ex)
                         {
                             //Log error and move to next index
-                            LoggerCQ.LogError(ex, $"TableName={tableName}, IndexName={indexName}");
+                            LoggerCQ.LogError($"TableName={tableName}, IndexName={indexName}, Error={ex.Message}");
                         }
                     }
 
@@ -4955,7 +4963,6 @@ namespace Gravitybox.Datastore.Server.Core
             {
                 timer.Stop();
                 LoggerCQ.LogDebug($"DefragIndexes: Count={count}, Elapsed={timer.ElapsedMilliseconds}");
-                _isDefragging = false;
             }
         }
 
@@ -4963,7 +4970,7 @@ namespace Gravitybox.Datastore.Server.Core
 
         #region CleanLogs
 
-        public static void CleanLogs(string connectionString)
+        internal static void CleanLogs()
         {
             if (SystemCore.LastProcessor >= SystemCore.ProcessorThreshold)
             {
@@ -4971,7 +4978,6 @@ namespace Gravitybox.Datastore.Server.Core
                 return;
             }
 
-            _isDefragging = true;
             var timer = Stopwatch.StartNew();
             var count = 0;
             try
@@ -4992,7 +4998,7 @@ namespace Gravitybox.Datastore.Server.Core
                     RetryHelper.DefaultRetryPolicy(5)
                         .Execute(() =>
                         {
-                            tempCount = ExecuteSql(connectionString, sb.ToString(), null, false);
+                            tempCount = ExecuteSql(ConfigHelper.ConnectionString, sb.ToString(), null, false);
                             count += tempCount;
                         });
                 }
@@ -5006,7 +5012,7 @@ namespace Gravitybox.Datastore.Server.Core
                     RetryHelper.DefaultRetryPolicy(5)
                         .Execute(() =>
                         {
-                            tempCount = ExecuteSql(connectionString, sb.ToString(), null, false);
+                            tempCount = ExecuteSql(ConfigHelper.ConnectionString, sb.ToString(), null, false);
                             count += tempCount;
                         });
                 }
@@ -5020,7 +5026,7 @@ namespace Gravitybox.Datastore.Server.Core
                     RetryHelper.DefaultRetryPolicy(5)
                         .Execute(() =>
                         {
-                            tempCount = ExecuteSql(connectionString, sb.ToString(), null, false);
+                            tempCount = ExecuteSql(ConfigHelper.ConnectionString, sb.ToString(), null, false);
                             count += tempCount;
                         });
                 }
@@ -5034,7 +5040,7 @@ namespace Gravitybox.Datastore.Server.Core
                     RetryHelper.DefaultRetryPolicy(5)
                         .Execute(() =>
                         {
-                            tempCount = ExecuteSql(connectionString, sb.ToString(), null, false);
+                            tempCount = ExecuteSql(ConfigHelper.ConnectionString, sb.ToString(), null, false);
                             count += tempCount;
                         });
                 }
@@ -5048,7 +5054,6 @@ namespace Gravitybox.Datastore.Server.Core
             {
                 timer.Stop();
                 LoggerCQ.LogDebug($"CleanLogs: Count={count}, Processor={SystemCore.LastProcessor}, Elapsed={timer.ElapsedMilliseconds}");
-                _isDefragging = false;
             }
         }
 

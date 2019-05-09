@@ -196,7 +196,7 @@ namespace Gravitybox.Datastore.Server.Core
 
                 //Every 5 minutes perform housekeeping
 #if DEBUG
-                _timerHouseKeeping = new System.Timers.Timer(30000);
+                _timerHouseKeeping = new System.Timers.Timer(3000);
 #else
                 _timerHouseKeeping = new System.Timers.Timer(300000);
 #endif
@@ -456,22 +456,25 @@ namespace Gravitybox.Datastore.Server.Core
         }
 
         private DateTime _lastHouseKeeping = DateTime.MinValue;
+        private bool _isHouseKeeping = false;
         private void _timerHouseKeeping_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
-            _timerHouseKeeping.Stop();
-            DataManager.IsActive = false;
+            if (_isHouseKeeping) return;
+            _isHouseKeeping = true;
             try
             {
-                //If been more than 12 hours and it is between 3-4am and not run in the last 6 hours then run housekeeping
-                if (((DateTime.Now.Subtract(ConfigHelper.LastDefrag).TotalHours > 12) && (DateTime.Now.Hour == 3) && DateTime.Now.Subtract(_lastHouseKeeping).TotalHours > 6))
+                _timerHouseKeeping.Stop();
+                DataManager.IsActive = false;
+
+                //If been more than 12 hours and it is between 3-4am and not run on this date then run housekeeping
+                if (((DateTime.Now.Subtract(ConfigHelper.LastDefrag).TotalHours > 12) && (DateTime.Now.Hour == 3) && DateTime.Now.Date > _lastHouseKeeping.Date))
                 {
-                    _lastHouseKeeping = DateTime.Now;
                     LoggerCQ.LogInfo("Housekeeping Start");
-                    SqlHelper.CleanLogs(ConfigHelper.ConnectionString);
-                    SqlHelper.DefragIndexes(ConfigHelper.ConnectionString);
-                    SqlHelper.DefragFTS(ConfigHelper.ConnectionString);
-                    SqlHelper.LogRepositoryStats(ConfigHelper.ConnectionString);
-                    SqlHelper.ClearCache(ConfigHelper.ConnectionString);
+                    SqlHelper.CleanLogs();
+                    SqlHelper.DefragIndexes();
+                    SqlHelper.DefragFTS();
+                    SqlHelper.LogRepositoryStats();
+                    SqlHelper.ClearCache();
                     LoggerCQ.LogInfo("Housekeeping End");
                 }
             }
@@ -481,8 +484,10 @@ namespace Gravitybox.Datastore.Server.Core
             }
             finally
             {
+                _lastHouseKeeping = DateTime.Now;
                 DataManager.IsActive = true;
                 _timerHouseKeeping.Start();
+                _isHouseKeeping = false;
             }
         }
 
