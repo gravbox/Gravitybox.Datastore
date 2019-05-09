@@ -27,9 +27,10 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
             //Try to get the Count objects from the cache
             //If not found it will be calculated below
             _lookupRefinement = ListDimensionCache.Get(_configuration.repositoryId, _newDimension.DIdx, _configuration.query);
+            this.IsCachehit = (_lookupRefinement != null);
         }
 
-        private bool IsCachehit { get { return _lookupRefinement != null; } }
+        private bool IsCachehit { get; set; }
 
         public Task GenerateSql()
         {
@@ -211,7 +212,10 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
                 {
                     //Put these in a lookup dictionary as there maybe thousands or more
                     //It makes lookup below much faster for these large sets
-                    _lookupRefinement = _newDimension.RefinementList.ToDictionary(x => x.DVIdx, z => z);
+                    if (!this.IsCachehit)
+                    {
+                        _lookupRefinement = _newDimension.RefinementList.ToDictionary(x => x.DVIdx, z => z);
+                    }
 
                     var recordCache = new Dictionary<long, List<string>>();
                     if (_configuration.query.IncludeRecords)

@@ -161,14 +161,14 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
                 {
                     lock (_configuration.retval)
                     {
-                        _configuration.retval.DimensionList = _configuration.nonListDimensionDefs
+                        _configuration.retval.DimensionList.AddRange(_configuration.nonListDimensionDefs
                         .Select(dimension => new DimensionItem()
                         {
                             DIdx = dimension.DIdx,
                             Name = dimension.Name,
                             Sortable = true,
                             NumericBreak = dimension.NumericBreak,
-                        }).ToList();
+                        }).ToList());
                     }
 
                     //Faster lookup. this way we do not need to select on every loop
