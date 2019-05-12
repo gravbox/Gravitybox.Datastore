@@ -26,7 +26,6 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
 
             //Try to get the Count objects from the cache
             //If not found it will be calculated below
-            _lookupRefinement = ListDimensionCache.Get(_configuration.repositoryId, _newDimension.DIdx, _configuration.query);
             this.IsCachehit = (_lookupRefinement != null);
         }
 

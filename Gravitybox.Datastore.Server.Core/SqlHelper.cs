@@ -2462,6 +2462,16 @@ namespace Gravitybox.Datastore.Server.Core
 
                 #endregion
 
+                //Setup the configuration object
+                configuration.retval = new DataQueryResults();
+                configuration.retval.DimensionList = new List<DimensionItem>();
+                configuration.retval.AppliedDimensionList = new List<DimensionItem>();
+                configuration.retval.AllDimensionList = new List<DimensionItem>();
+                configuration.retval.Query = configuration.query;
+                configuration.retval.QueryTime = DateTime.Now;
+                configuration.retval.VersionHash = RepositoryManager.GetSchemaHash(configuration.schema.ID);
+                configuration.retval.RecordList = new List<DataItem>();
+
                 var taskRB = new RecordBuilder(configuration);
                 var taskCount = new CountBuilder(configuration);
                 var taskDNL = new NormalDimensionBuilder(configuration);

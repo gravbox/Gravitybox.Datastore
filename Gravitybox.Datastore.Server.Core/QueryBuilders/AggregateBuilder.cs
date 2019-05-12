@@ -23,44 +23,52 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
         {
             return Task.Factory.StartNew(() =>
             {
-                //Do Nothing
-                if (_configuration.query.DerivedFieldList == null)
-                    return;
-
-                var aggList = _configuration.query.DerivedFieldList
-                    .Where(x => _configuration.schema.FieldList.Select(z => z.Name).Contains(x.Field))
-                    .ToList();
-
-                if (aggList.Count > 0)
+                try
                 {
-                    var sb = new StringBuilder();
-                    sb.AppendLine($"--MARKER 18" + _configuration.QueryPlanDebug);
-                    sb.Append("SELECT ");
-                    foreach (var field in aggList)
+                    //Do Nothing
+                    if (_configuration.query.DerivedFieldList == null)
+                        return;
+
+                    var aggList = _configuration.query.DerivedFieldList
+                        .Where(x => _configuration.schema.FieldList.Select(z => z.Name).Contains(x.Field))
+                        .ToList();
+
+                    if (aggList.Count > 0)
                     {
-                        switch (field.Action)
+                        var sb = new StringBuilder();
+                        sb.AppendLine($"--MARKER 18" + _configuration.QueryPlanDebug);
+                        sb.Append("SELECT ");
+                        foreach (var field in aggList)
                         {
-                            case AggregateOperationConstants.Count:
-                                sb.Append($"COUNT([Z].[{field.Field}]), ");
-                                break;
-                            case AggregateOperationConstants.Max:
-                                sb.Append($"MAX([Z].[{field.Field}]), ");
-                                break;
-                            case AggregateOperationConstants.Min:
-                                sb.Append($"MIN([Z].[{field.Field}]), ");
-                                break;
-                            case AggregateOperationConstants.Sum:
-                                sb.Append($"SUM([Z].[{field.Field}]), ");
-                                break;
-                            case AggregateOperationConstants.Distinct:
-                                sb.Append($"COUNT(DISTINCT [Z].[{field.Field}]), ");
-                                break;
+                            switch (field.Action)
+                            {
+                                case AggregateOperationConstants.Count:
+                                    sb.Append($"COUNT([Z].[{field.Field}]), ");
+                                    break;
+                                case AggregateOperationConstants.Max:
+                                    sb.Append($"MAX([Z].[{field.Field}]), ");
+                                    break;
+                                case AggregateOperationConstants.Min:
+                                    sb.Append($"MIN([Z].[{field.Field}]), ");
+                                    break;
+                                case AggregateOperationConstants.Sum:
+                                    sb.Append($"SUM([Z].[{field.Field}]), ");
+                                    break;
+                                case AggregateOperationConstants.Distinct:
+                                    sb.Append($"COUNT(DISTINCT [Z].[{field.Field}]), ");
+                                    break;
+                            }
                         }
+                        sb.AppendLine("0");
+                        sb.AppendLine($"FROM [{_configuration.dataTable}] Z {SqlHelper.NoLockText()}{_configuration.innerJoinClause}");
+                        sb.AppendLine($"WHERE {_configuration.whereClause}");
+                        _sql = sb.ToString();
                     }
-                    sb.AppendLine("0");
-                    sb.AppendLine($"FROM [{_configuration.dataTable}] Z {SqlHelper.NoLockText()}{_configuration.innerJoinClause}");
-                    sb.AppendLine($"WHERE {_configuration.whereClause}");
-                    _sql = sb.ToString();
+
+                }
+                catch (Exception ex)
+                {
+                    LoggerCQ.LogError(ex, $"AggregateBuilder: ID={_configuration.schema.ID}, Query=\"{_configuration.query.ToString()}\", Error={ex.Message}");
                 }
             });
         }
@@ -88,57 +96,65 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
         {
             return Task.Factory.StartNew(() =>
             {
-                //Do Nothing
-                if (_configuration.query.DerivedFieldList == null || string.IsNullOrEmpty(_sql))
-                    return;
-
-                var aggList = _configuration.query.DerivedFieldList.Where(x => _configuration.schema.FieldList.Select(z => z.Name).Contains(x.Field)).ToList();
-                if (aggList.Count > 0)
+                try
                 {
-                    if (_datset.Tables.Count == 1 && _datset.Tables[0].Rows.Count == 1)
+                    //Do Nothing
+                    if (_configuration.query.DerivedFieldList == null || string.IsNullOrEmpty(_sql))
+                        return;
+
+                    var aggList = _configuration.query.DerivedFieldList.Where(x => _configuration.schema.FieldList.Select(z => z.Name).Contains(x.Field)).ToList();
+                    if (aggList.Count > 0)
                     {
-                        var returnAggs = new List<DerivedFieldValue>();
-                        for (var ii = 0; ii < aggList.Count; ii++)
+                        if (_datset.Tables.Count == 1 && _datset.Tables[0].Rows.Count == 1)
                         {
-                            var orig = aggList[ii];
-                            var newAgg = new DerivedFieldValue() { Action = orig.Action, Field = orig.Field, Alias = orig.Alias, Value = null };
-                            if (orig.Action == AggregateOperationConstants.Count || orig.Action == AggregateOperationConstants.Distinct)
+                            var returnAggs = new List<DerivedFieldValue>();
+                            for (var ii = 0; ii < aggList.Count; ii++)
                             {
-                                newAgg.Value = (int)_datset.Tables[0].Rows[0][ii];
-                            }
-                            else
-                            {
-                                if (_datset.Tables[0].Rows[0][ii] is int)
-                                    newAgg.Value = (int)_datset.Tables[0].Rows[0][ii];
-                                else if (_datset.Tables[0].Rows[0][ii] is long)
-                                    newAgg.Value = (long)_datset.Tables[0].Rows[0][ii];
-                                else if (_datset.Tables[0].Rows[0][ii] is string)
-                                    newAgg.Value = (string)_datset.Tables[0].Rows[0][ii];
-                                else if (_datset.Tables[0].Rows[0][ii] is DateTime)
-                                    newAgg.Value = (DateTime)_datset.Tables[0].Rows[0][ii];
-                                else if (_datset.Tables[0].Rows[0][ii] is bool)
-                                    newAgg.Value = (bool)_datset.Tables[0].Rows[0][ii];
-                                else if (_datset.Tables[0].Rows[0][ii] == System.DBNull.Value)
+                                var orig = aggList[ii];
+                                var newAgg = new DerivedFieldValue() { Action = orig.Action, Field = orig.Field, Alias = orig.Alias, Value = null };
+                                if (orig.Action == AggregateOperationConstants.Count || orig.Action == AggregateOperationConstants.Distinct)
                                 {
-                                    switch (newAgg.Action)
-                                    {
-                                        case AggregateOperationConstants.Count: newAgg.Value = 0; break;
-                                        case AggregateOperationConstants.Sum: newAgg.Value = 0; break;
-                                    }
+                                    newAgg.Value = (int)_datset.Tables[0].Rows[0][ii];
                                 }
                                 else
-                                    throw new Exception("Unknown aggregate type returned");
+                                {
+                                    if (_datset.Tables[0].Rows[0][ii] is int)
+                                        newAgg.Value = (int)_datset.Tables[0].Rows[0][ii];
+                                    else if (_datset.Tables[0].Rows[0][ii] is long)
+                                        newAgg.Value = (long)_datset.Tables[0].Rows[0][ii];
+                                    else if (_datset.Tables[0].Rows[0][ii] is string)
+                                        newAgg.Value = (string)_datset.Tables[0].Rows[0][ii];
+                                    else if (_datset.Tables[0].Rows[0][ii] is DateTime)
+                                        newAgg.Value = (DateTime)_datset.Tables[0].Rows[0][ii];
+                                    else if (_datset.Tables[0].Rows[0][ii] is bool)
+                                        newAgg.Value = (bool)_datset.Tables[0].Rows[0][ii];
+                                    else if (_datset.Tables[0].Rows[0][ii] == System.DBNull.Value)
+                                    {
+                                        switch (newAgg.Action)
+                                        {
+                                            case AggregateOperationConstants.Count: newAgg.Value = 0; break;
+                                            case AggregateOperationConstants.Sum: newAgg.Value = 0; break;
+                                        }
+                                    }
+                                    else
+                                        throw new Exception("Unknown aggregate type returned");
+                                }
+
+                                returnAggs.Add(newAgg);
                             }
 
-                            returnAggs.Add(newAgg);
+                            lock (_configuration.retval)
+                            {
+                                _configuration.retval.DerivedFieldList = returnAggs.ToArray();
+                            }
+                            _configuration.PerfLoadAgg = true;
                         }
-
-                        lock (_configuration.retval)
-                        {
-                            _configuration.retval.DerivedFieldList = returnAggs.ToArray();
-                        }
-                        _configuration.PerfLoadAgg = true;
                     }
+
+                }
+                catch (Exception ex)
+                {
+                    LoggerCQ.LogError(ex, $"AggregateBuilder: ID={_configuration.schema.ID}, Query=\"{_configuration.query.ToString()}\", Error={ex.Message}");
                 }
             });
         }

@@ -59,31 +59,39 @@ namespace Gravitybox.Datastore.Server.Core
                 var dimensionMapper = new ConcurrentDictionary<long, Dictionary<long, List<long>>>();
                 var timerList = Stopwatch.StartNew();
                 Parallel.ForEach(listDimensionFields, new ParallelOptions { MaxDegreeOfParallelism = 4 }, (ditem) =>
-                  {
-                      var valueMapper = new Dictionary<long, List<long>>();
-                      dimensionMapper.TryAdd(ditem.DIdx, valueMapper);
-                      var dTable = SqlHelper.GetListTableName(_schema.ID, ditem.DIdx);
+                {
+                    try
+                    {
+                        var valueMapper = new Dictionary<long, List<long>>();
+                        dimensionMapper.TryAdd(ditem.DIdx, valueMapper);
+                        var dTable = SqlHelper.GetListTableName(_schema.ID, ditem.DIdx);
 
-                      //This is the fastest way I could find to load this data
-                      using (var connection = new SqlConnection(ConfigHelper.ConnectionString))
-                      {
-                          connection.Open();
-                          using (var command = new SqlCommand($"SELECT Y.[{SqlHelper.RecordIdxField}], Y.[DVIdx] FROM [{dTable}] Y {SqlHelper.NoLockText()} ORDER BY Y.[{SqlHelper.RecordIdxField}], Y.[DVIdx]", connection))
-                          {
-                              using (var reader = command.ExecuteReader())
-                              {
-                                  while (reader.Read())
-                                  {
-                                      var recordIndex = (long)reader[0];
-                                      var dvidx = (long)reader[1];
-                                      if (!valueMapper.ContainsKey(recordIndex))
-                                          valueMapper.Add(recordIndex, new List<long>());
-                                      valueMapper[recordIndex].Add(dvidx);
-                                  }
-                              }
-                          }
-                      }
-                  });
+                        //This is the fastest way I could find to load this data
+                        using (var connection = new SqlConnection(ConfigHelper.ConnectionString))
+                        {
+                            connection.Open();
+                            using (var command = new SqlCommand($"SELECT Y.[{SqlHelper.RecordIdxField}], Y.[DVIdx] FROM [{dTable}] Y {SqlHelper.NoLockText()} ORDER BY Y.[{SqlHelper.RecordIdxField}], Y.[DVIdx]", connection))
+                            {
+                                using (var reader = command.ExecuteReader())
+                                {
+                                    while (reader.Read())
+                                    {
+                                        var recordIndex = (long)reader[0];
+                                        var dvidx = (long)reader[1];
+                                        if (!valueMapper.ContainsKey(recordIndex))
+                                            valueMapper.Add(recordIndex, new List<long>());
+                                        valueMapper[recordIndex].Add(dvidx);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        LoggerCQ.LogError(ex);
+                        throw;
+                    }
+                });
                 timerList.Stop();
                 #endregion
 

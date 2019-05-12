@@ -24,100 +24,105 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
 
         public Task GenerateSql()
         {
-            //Console.WriteLine("NormalDimensionBuilder:GenerateSql:Start");
             return Task.Factory.StartNew(() =>
             {
-                //Nothing to do
-                if (_configuration == null)
-                    return;
-                else if (!_configuration.query.IncludeDimensions)
-                    return;
-
-                var sbSql = new StringBuilder();
-
-                //Use the 'GROUPING SETS' syntax for less hits and parallelism
-                _configuration.UseGroupingSets = false;
-                _configuration.dimensionGroups = 0;
-
-                if (_configuration.query.IncludeDimensions)
+                try
                 {
-                    var firstGroup = true;
-                    var tempDimList = _configuration.nonListDimensionDefs.ToList();
+                    //Nothing to do
+                    if (_configuration == null)
+                        return;
+                    else if (!_configuration.query.IncludeDimensions)
+                        return;
 
-                    //Remove normal dimensions that are already in the Query "DimensionValueList" since these will not show up in the returned dimension list
-                    //These would cause a useless query where any data returned is ignored anyway
-                    if (_configuration.query.DimensionValueList?.Any() == true && !_configuration.query.IncludeAllDimensions && !_configuration.query.IncludeEmptyDimensions)
-                    {
-                        _configuration.query.DimensionValueList.ForEach(x => tempDimList.RemoveAll(z => z.DIdx == Extensions.GetDIdxFromDVIdx(x)));
-                    }
+                    var sbSql = new StringBuilder();
 
-                    var subList = tempDimList.Take(GBSize).Select(x => $"[Z].[__d{x.TokenName}]").ToList();
-                    while (subList.Count > 0)
+                    //Use the 'GROUPING SETS' syntax for less hits and parallelism
+                    _configuration.UseGroupingSets = false;
+                    _configuration.dimensionGroups = 0;
+
+                    if (_configuration.query.IncludeDimensions)
                     {
-                        if (_configuration.hasFilteredListDims)
+                        var firstGroup = true;
+                        var tempDimList = _configuration.nonListDimensionDefs.ToList();
+
+                        //Remove normal dimensions that are already in the Query "DimensionValueList" since these will not show up in the returned dimension list
+                        //These would cause a useless query where any data returned is ignored anyway
+                        if (_configuration.query.DimensionValueList?.Any() == true && !_configuration.query.IncludeAllDimensions && !_configuration.query.IncludeEmptyDimensions)
                         {
-                            var subListNaked = tempDimList.Take(GBSize).Select(x => $"[__d{x.TokenName}]").ToList();
-                            var subListTVar = tempDimList.Take(GBSize).Select(x => $"T.[__d{x.TokenName}]").ToList();
-                            sbSql.AppendLine($"--MARKER 37" + _configuration.QueryPlanDebug);
-                            sbSql.AppendLine($"WITH T ([{SqlHelper.RecordIdxField}],{subListNaked.ToCommaList()}) AS (");
-                            sbSql.AppendLine($"SELECT DISTINCT [Z].[{SqlHelper.RecordIdxField}],{subList.ToCommaList()}");
-                            sbSql.AppendLine($"FROM [{_configuration.dataTable}] Z {SqlHelper.NoLockText()}{_configuration.innerJoinClause} ");
-                            sbSql.AppendLine($"WHERE {_configuration.whereClause})");
-                            sbSql.AppendLine($"SELECT count(*),{subListTVar.ToCommaList()}");
-                            sbSql.AppendLine($"FROM T {SqlHelper.NoLockText()}");
-                            sbSql.AppendLine("group by grouping sets (");
-                            sbSql.AppendLine(subListTVar.ToCommaList());
-                            sbSql.AppendLine(");");
+                            _configuration.query.DimensionValueList.ForEach(x => tempDimList.RemoveAll(z => z.DIdx == Extensions.GetDIdxFromDVIdx(x)));
                         }
-                        else
+
+                        var subList = tempDimList.Take(GBSize).Select(x => $"[Z].[__d{x.TokenName}]").ToList();
+                        while (subList.Count > 0)
                         {
-                            sbSql.AppendLine($"--MARKER 38" + _configuration.QueryPlanDebug);
-                            sbSql.Append("SELECT count(*)");
-                            var realFieldList = tempDimList.Take(GBSize).ToList();
-                            foreach (var item in realFieldList)
+                            if (_configuration.hasFilteredListDims)
                             {
-                                var fieldName = $"[Z].[__d{item.TokenName}]";
-                                if (_configuration.schema.FieldList.Any(x => x == item)) sbSql.Append(", " + fieldName);
-                                else sbSql.Append(", NULL AS " + fieldName.Replace("[Z].", string.Empty));
+                                var subListNaked = tempDimList.Take(GBSize).Select(x => $"[__d{x.TokenName}]").ToList();
+                                var subListTVar = tempDimList.Take(GBSize).Select(x => $"T.[__d{x.TokenName}]").ToList();
+                                sbSql.AppendLine($"--MARKER 37" + _configuration.QueryPlanDebug);
+                                sbSql.AppendLine($"WITH T ([{SqlHelper.RecordIdxField}],{subListNaked.ToCommaList()}) AS (");
+                                sbSql.AppendLine($"SELECT DISTINCT [Z].[{SqlHelper.RecordIdxField}],{subList.ToCommaList()}");
+                                sbSql.AppendLine($"FROM [{_configuration.dataTable}] Z {SqlHelper.NoLockText()}{_configuration.innerJoinClause} ");
+                                sbSql.AppendLine($"WHERE {_configuration.whereClause})");
+                                sbSql.AppendLine($"SELECT count(*),{subListTVar.ToCommaList()}");
+                                sbSql.AppendLine($"FROM T {SqlHelper.NoLockText()}");
+                                sbSql.AppendLine("group by grouping sets (");
+                                sbSql.AppendLine(subListTVar.ToCommaList());
+                                sbSql.AppendLine(");");
+                            }
+                            else
+                            {
+                                sbSql.AppendLine($"--MARKER 38" + _configuration.QueryPlanDebug);
+                                sbSql.Append("SELECT count(*)");
+                                var realFieldList = tempDimList.Take(GBSize).ToList();
+                                foreach (var item in realFieldList)
+                                {
+                                    var fieldName = $"[Z].[__d{item.TokenName}]";
+                                    if (_configuration.schema.FieldList.Any(x => x == item)) sbSql.Append(", " + fieldName);
+                                    else sbSql.Append(", NULL AS " + fieldName.Replace("[Z].", string.Empty));
+                                }
+                                sbSql.AppendLine();
+
+                                sbSql.AppendLine($"FROM [{_configuration.dataTable}] Z {SqlHelper.NoLockText()}{_configuration.innerJoinClause} ");
+                                sbSql.AppendLine($"WHERE {_configuration.whereClause} ");
+                                sbSql.AppendLine("group by grouping sets (");
+                                sbSql.Append((firstGroup ? "()," : string.Empty)); //The "()" is the COUNT field = no grouping
+
+                                var index = 0;
+                                foreach (var item in realFieldList)
+                                {
+                                    var fieldName = $"[Z].[__d{item.TokenName}]";
+                                    if (index > 0) sbSql.Append(",");
+                                    if (_configuration.schema.FieldList.Any(x => x == item)) sbSql.Append(fieldName);
+                                    else sbSql.Append("()");
+                                    index++;
+                                }
+
+                                sbSql.AppendLine(")");
+                                _configuration.UseGroupingSets = true;
                             }
                             sbSql.AppendLine();
-
-                            sbSql.AppendLine($"FROM [{_configuration.dataTable}] Z {SqlHelper.NoLockText()}{_configuration.innerJoinClause} ");
-                            sbSql.AppendLine($"WHERE {_configuration.whereClause} ");
-                            sbSql.AppendLine("group by grouping sets (");
-                            sbSql.Append((firstGroup ? "()," : string.Empty)); //The "()" is the COUNT field = no grouping
-
-                            var index = 0;
-                            foreach (var item in realFieldList)
-                            {
-                                var fieldName = $"[Z].[__d{item.TokenName}]";
-                                if (index > 0) sbSql.Append(",");
-                                if (_configuration.schema.FieldList.Any(x => x == item)) sbSql.Append(fieldName);
-                                else sbSql.Append("()");
-                                index++;
-                            }
-
-                            sbSql.AppendLine(")");
-                            _configuration.UseGroupingSets = true;
+                            tempDimList = tempDimList.Skip(GBSize).ToList();
+                            subList = tempDimList.Take(GBSize).Select(x => $"[Z].[__d{x.TokenName}]").ToList();
+                            _configuration.dimensionGroups++;
+                            firstGroup = false;
+                            _doExecute = true;
                         }
-                        sbSql.AppendLine();
-                        tempDimList = tempDimList.Skip(GBSize).ToList();
-                        subList = tempDimList.Take(GBSize).Select(x => $"[Z].[__d{x.TokenName}]").ToList();
-                        _configuration.dimensionGroups++;
-                        firstGroup = false;
-                        _doExecute = true;
                     }
+                    _sql = sbSql.ToString()
+                        .Replace($" AND {SqlHelper.EmptyWhereClause}", string.Empty)
+                        .Replace($" WHERE {SqlHelper.EmptyWhereClause}", string.Empty);
+
                 }
-                _sql = sbSql.ToString()
-                    .Replace($" AND {SqlHelper.EmptyWhereClause}", string.Empty)
-                    .Replace($" WHERE {SqlHelper.EmptyWhereClause}", string.Empty);
-                //Console.WriteLine("NormalDimensionBuilder:GenerateSql:Complete");
+                catch (Exception ex)
+                {
+                    LoggerCQ.LogError(ex, $"NormalDimensionBuilder: ID={_configuration.schema.ID}, Query=\"{_configuration.query.ToString()}\", Error={ex.Message}");
+                }
             });
         }
 
         public Task Execute()
         {
-            //Console.WriteLine("NormalDimensionBuilder:Execute:Start");
             return Task.Factory.StartNew(() =>
             {
                 //Nothing to do
@@ -143,96 +148,105 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
                         LoggerCQ.LogError(ex, $"NormalDimensionBuilder: ID={_configuration.schema.ID}, Query=\"{_configuration.query.ToString()}\", Error={ex.Message}");
                     }
                 }
-                //Console.WriteLine("NormalDimensionBuilder:Execute:Complete");
             });
         }
 
         public Task Load()
         {
-            //Console.WriteLine("NormalDimensionBuilder:Load:Start");
             return Task.Factory.StartNew(() =>
             {
-                //Nothing to do
-                if (!_configuration.query.IncludeDimensions)
-                    return;
-                if (_datset == null) return;
-
-                if (_configuration.query.IncludeDimensions)
+                try
                 {
-                    lock (_configuration.retval)
+                    //Nothing to do
+                    if (!_configuration.query.IncludeDimensions)
+                        return;
+                    if (_datset == null) return;
+
+                    if (_configuration.query.IncludeDimensions)
                     {
-                        _configuration.retval.DimensionList.AddRange(_configuration.nonListDimensionDefs
-                        .Select(dimension => new DimensionItem()
+                        lock (_configuration.retval)
                         {
-                            DIdx = dimension.DIdx,
-                            Name = dimension.Name,
-                            Sortable = true,
-                            NumericBreak = dimension.NumericBreak,
-                        }).ToList());
-                    }
-
-                    //Faster lookup. this way we do not need to select on every loop
-                    var allRefinements = _configuration.dimensionList
-                                        .SelectMany(x => x.RefinementList)
-                                        .ToDictionary(x => x.DVIdx, x => x);
-
-                    //hash dimensions for faster access
-                    var dimensionHash = _configuration.retval.DimensionList.ToDictionary(x => x.DIdx, x => x);
-
-                    for (var ii = 0; ii < _configuration.dimensionGroups; ii++) //loop for each 32 item group
-                    {
-                        var tt = _datset.Tables[ii];
-                        foreach (DataRow dr in tt.Rows)
-                        {
-                            var count = (int)dr[0];
-                            var wasFound = false;
-                            for (var jj = 1; jj < tt.Columns.Count; jj++)
-                            {
-                                if (dr[jj] != DBNull.Value)
+                            _configuration.retval.DimensionList.AddRange(_configuration.nonListDimensionDefs
+                                .Select(dimension => new DimensionItem()
                                 {
-                                    var dvidx = (long)dr[jj];
-                                    if (dvidx != 0)
-                                    {
-                                        if (allRefinements.TryGetValue(dvidx, out IRefinementItem v))
-                                        {
-                                            var newDimension = dimensionHash[v.DIdx];
-                                            var rItem = new RefinementItem
-                                            {
-                                                DVIdx = dvidx,
-                                                FieldValue = v.FieldValue,
-                                                Count = count,
-                                                DIdx = newDimension.DIdx,
-                                            };
-
-                                            if (newDimension.NumericBreak != null)
-                                            {
-                                                rItem.MinValue = rItem.FieldValue.ToInt64();
-                                                if (rItem.MinValue != null)
-                                                    rItem.MaxValue = rItem.MinValue + newDimension.NumericBreak;
-                                            }
-                                            newDimension.RefinementList.Add(rItem);
-                                            wasFound = true;
-                                        }
-                                    }
-                                    break;
-                                }
-                            }
-
-                            //This is the non-group, COUNT value
-                            if (!wasFound && _configuration.UseGroupingSets && _configuration.retval.TotalRecordCount < count)
-                            {
-                                lock (_configuration.retval)
-                                {
-                                    _configuration.retval.TotalRecordCount = count;
-                                }
-                            }
-
+                                    DIdx = dimension.DIdx,
+                                    Name = dimension.Name,
+                                    Sortable = true,
+                                    NumericBreak = dimension.NumericBreak,
+                                }).ToList());
                         }
-                    }
 
-                    _configuration.PerfLoadNDim = true;
-                } //IncludeDimensions
-                //Console.WriteLine("NormalDimensionBuilder:Load:Complete");
+                        //Faster lookup. this way we do not need to select on every loop
+                        var allRefinements = _configuration.dimensionList
+                                            .SelectMany(x => x.RefinementList)
+                                            .ToDictionary(x => x.DVIdx, x => x);
+
+                        //hash dimensions for faster access
+                        Dictionary<long, DimensionItem> dimensionHash = null;
+                        lock (_configuration.retval)
+                        {
+                            dimensionHash = _configuration.retval.DimensionList.ToDictionary(x => x.DIdx, x => x);
+                        }
+
+                        for (var ii = 0; ii < _configuration.dimensionGroups; ii++) //loop for each 32 item group
+                        {
+                            var tt = _datset.Tables[ii];
+                            foreach (DataRow dr in tt.Rows)
+                            {
+                                var count = (int)dr[0];
+                                var wasFound = false;
+                                for (var jj = 1; jj < tt.Columns.Count; jj++)
+                                {
+                                    if (dr[jj] != DBNull.Value)
+                                    {
+                                        var dvidx = (long)dr[jj];
+                                        if (dvidx != 0)
+                                        {
+                                            if (allRefinements.TryGetValue(dvidx, out IRefinementItem v))
+                                            {
+                                                var newDimension = dimensionHash[v.DIdx];
+                                                var rItem = new RefinementItem
+                                                {
+                                                    DVIdx = dvidx,
+                                                    FieldValue = v.FieldValue,
+                                                    Count = count,
+                                                    DIdx = newDimension.DIdx,
+                                                };
+
+                                                if (newDimension.NumericBreak != null)
+                                                {
+                                                    rItem.MinValue = rItem.FieldValue.ToInt64();
+                                                    if (rItem.MinValue != null)
+                                                        rItem.MaxValue = rItem.MinValue + newDimension.NumericBreak;
+                                                }
+                                                newDimension.RefinementList.Add(rItem);
+                                                wasFound = true;
+                                            }
+                                        }
+                                        break;
+                                    }
+                                }
+
+                                //This is the non-group, COUNT value
+                                if (!wasFound && _configuration.UseGroupingSets && _configuration.retval.TotalRecordCount < count)
+                                {
+                                    lock (_configuration.retval)
+                                    {
+                                        _configuration.retval.TotalRecordCount = count;
+                                    }
+                                }
+
+                            }
+                        }
+
+                        _configuration.PerfLoadNDim = true;
+
+                    } //IncludeDimensions
+                }
+                catch (Exception ex)
+                {
+                    LoggerCQ.LogError(ex, $"NormalDimensionBuilder: ID={_configuration.schema.ID}, Query=\"{_configuration.query.ToString()}\", Error={ex.Message}");
+                }
             });
         }
 
