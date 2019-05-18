@@ -2747,7 +2747,7 @@ namespace Gravitybox.Datastore.Server.Core
                             if (!prepList.ContainsKey(dItem)) prepList.Add(dItem, new List<long>());
                             prepList[dItem].Add(dvidx);
                         }
-                        else
+                        else if (dvidx != 0)
                         {
                             LoggerCQ.LogWarning($"GetWhereClause could not find dimension {dvidx}");
                         }

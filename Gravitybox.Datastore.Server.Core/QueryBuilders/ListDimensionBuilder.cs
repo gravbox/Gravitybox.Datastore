@@ -24,6 +24,8 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
             this._configuration = configuration;
             this._newDimension = newDimension;
 
+            _lookupRefinement = ListDimensionCache.Get(_configuration.repositoryId, _newDimension.DIdx, _configuration.query);
+
             //Try to get the Count objects from the cache
             //If not found it will be calculated below
             this.IsCachehit = (_lookupRefinement != null);
@@ -211,7 +213,7 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
                 {
                     //Put these in a lookup dictionary as there maybe thousands or more
                     //It makes lookup below much faster for these large sets
-                    if (!this.IsCachehit)
+                    if (!this.IsCachehit || (_lookupRefinement == null) || (_lookupRefinement?.Count == 0 && _newDimension.RefinementList.Any()))
                     {
                         _lookupRefinement = _newDimension.RefinementList.ToDictionary(x => x.DVIdx, z => z);
                     }

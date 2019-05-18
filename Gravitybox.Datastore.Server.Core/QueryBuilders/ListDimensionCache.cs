@@ -77,17 +77,13 @@ namespace Gravitybox.Datastore.Server.Core.QueryBuilders
 
         public static void Add(int repositoryId, long didx, DataQuery query, Dictionary<long, IRefinementItem> data)
         {
-            var cacheKey = didx + "|" + query.CoreWhereHashCode();
+            var cacheKey = $"{didx}|{query.CoreWhereHashCode()}";
             var rLookup = _cache.GetOrAdd(repositoryId, key => new ConcurrentDictionary<string, LDCacheItem>());
             var b = rLookup.TryAdd(cacheKey, new LDCacheItem { Cache = data });
         }
 
         public static Dictionary<long, IRefinementItem> Get(int repositoryId, long didx, DataQuery query)
         {
-            //If the dimensions are not needed then assume cached already since all counts will be zero anyway
-            if (!query.IncludeDimensions)
-                return new Dictionary<long, IRefinementItem>();
-
             var cacheKey = $"{didx}|{query.CoreWhereHashCode()}";
             lock (_cache)
             {
