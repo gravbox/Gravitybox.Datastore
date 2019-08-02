@@ -249,7 +249,7 @@ namespace Gravitybox.Datastore.Server.Core
                                 }
 
                                 //for unique values if not exist then insert
-                                foreach (var v in values)
+                                foreach (var v in values?.Where(x => x != null).ToList())
                                 {
                                     var needSave = false;
                                     var paramIndex = 0;
